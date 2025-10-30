@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>무드 페이지 상세</h2>
+
+{% if entry %}
+  <p><strong>날짜:</strong> {{ entry[1] }}</p>
+  <p><strong>일기 내용:</strong> {{ entry[2] }}</p>
+
+  <hr>
+
+  <h3>감정 분석 결과</h3>
+
+  {% if sentiment %}
+    <p><strong>요약:</strong> {{ sentiment.summary }}</p>
+
+    <p><strong>감정 키워드:</strong>
+      {% for kw in sentiment.keywords %}
+        <span style="background:#e0f7fa;padding:4px 8px;border-radius:6px;margin-right:5px;">{{ kw }}</span>
+      {% endfor %}
+    </p>
+
+    <h4>감정 지수</h4>
+    <canvas id="emotionChart"></canvas>
+
+    <script>
+      const emotionData = {{ sentiment.emotion_scores | tojson }};
+      const ctx = document.getElementById("emotionChart");
+      new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: Object.keys(emotionData),
+          datasets: [{
+            data: Object.values(emotionData)
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'bottom' } }
+        }
+      });
+    </script>
+
+    <h4>긍정 / 부정 비율</h4>
+    <canvas id="ratioChart"></canvas>
+
+<script>
+  const ratioData = {{ sentiment.pos_neg_ratio | tojson }};
+  const ctx2 = document.getElementById("ratioChart");
+
+  new Chart(ctx2, {
+    type: 'bar',
+    data: {
+      labels: ['감정 비율'],
+      datasets: [
+        {
+          label: '긍정',
+          data: [ratioData.positive * 100],
+          backgroundColor: '#4caf50'
+        },
+        {
+          label: '부정',
+          data: [ratioData.negative * 100],
+          backgroundColor: '#f44336'
+        }
+      ]
+    },
+    options: {
+      indexAxis: 'y',              // 가로 막대
+      responsive: true,
+      scales: {
+        x: {
+          stacked: true,
+          max: 100,                // 100% 기준
+          ticks: { callback: v => v + '%' }
+        },
+        y: { stacked: true }
+      },
+      plugins: {
+        legend: {
+          position: 'bottom'
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => ctx.dataset.label + ': ' + ctx.raw.toFixed(1) + '%'
+          }
+        }
+      }
+    }
+  });
+</script>
+  {% else %}
+    <p>감정 분석 결과가 없습니다.</p>
+  {% endif %}
+
+  <hr>
+
+  {% if entry[5] %}
+    <h3>사진</h3>
+    <img src="{{ url_for('static', filename=entry[5].split('static/')[-1]) }}" width="300">
+  {% endif %}
+
+  {% if palette %}
+    <h3>무드 팔레트</h3>
+    <div style="display:flex;gap:10px;">
+      {% for color in palette %}
+        <div style="width:40px;height:40px;border-radius:6px;border:1px solid #ccc;background:{{ color }}"></div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% else %}
+  <p>해당 일기를 찾을 수 없습니다.</p>
+{% endif %}
+{% endblock %}

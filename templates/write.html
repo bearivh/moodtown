@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>오늘의 일기 작성</h2>
+<form method="POST" enctype="multipart/form-data">
+  <label for="date">날짜 선택:</label><br>
+  <input type="date" name="date" required><br><br>
+
+  <textarea name="content" rows="8" placeholder="오늘 하루를 기록해보세요..." required></textarea><br>
+
+  <input type="file" name="image" accept="image/*"><br><br>
+  <button type="submit">작성 완료</button>
+</form>
+{% endblock %}

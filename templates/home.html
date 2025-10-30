@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<section>
+  <h1>MoodPage</h1>
+  <p>하루의 감정을 기록하고 분석하는 나만의 무드 일기장</p>
+  <a href="{{ url_for('write') }}" class="btn">일기 쓰기 시작하기</a>
+</section>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>나의 무드 아카이브</h2>
+
+{% if entries %}
+  <ul>
+    {% for e in entries %}
+      {% set sentiment = e[3] | safe %}
+      <li>
+        <a href="{{ url_for('mood_page', entry_id=e[0]) }}">
+          <strong>{{ e[1] }}</strong>
+        </a>
+        <a href="{{ url_for('delete', entry_id=e[0]) }}" style="color:red;">[삭제]</a>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p>아직 작성된 일기가 없습니다.</p>
+{% endif %}
+{% endblock %}

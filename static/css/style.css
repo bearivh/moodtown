@@ -1,26 +1,178 @@
+/* ====== 기본 스타일 ====== */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+
 body {
-  font-family: "Pretendard", sans-serif;
   background-color: #fafafa;
-  text-align: center;
-  padding: 40px;
+  color: #333;
+  line-height: 1.6;
 }
 
-textarea {
-  width: 80%;
-  padding: 10px;
-  font-size: 16px;
+/* ====== 헤더 / 내비게이션 ====== */
+header {
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  padding: 1rem 2rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
-button {
-  padding: 10px 20px;
-  font-size: 16px;
-  cursor: pointer;
-  background-color: #4a90e2;
+nav {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+}
+
+nav a {
+  text-decoration: none;
+  color: #333;
+  font-weight: 500;
+  transition: 0.2s;
+}
+
+nav a:hover {
+  color: #009688;
+}
+
+/* ====== 공통 레이아웃 ====== */
+main {
+  max-width: 800px;
+  margin: 2rem auto;
+  background: #fff;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.05);
+}
+
+/* ====== 버튼 ====== */
+button, .btn {
+  background-color: #009688;
   color: white;
   border: none;
   border-radius: 6px;
+  padding: 10px 20px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
 }
 
-button:hover {
-  background-color: #357ab8;
+button:hover, .btn:hover {
+  background-color: #00796b;
+}
+
+/* ====== 홈 ====== */
+section {
+  text-align: center;
+  padding: 3rem 1rem;
+}
+
+section h1 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: #222;
+}
+
+section p {
+  color: #666;
+  margin-bottom: 2rem;
+}
+
+/* ====== 일기 작성 ====== */
+textarea {
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+  font-size: 1rem;
+  resize: none;
+  margin-bottom: 1rem;
+  background-color: #fdfdfd;
+}
+
+input[type="file"] {
+  margin-bottom: 1rem;
+}
+
+/* ====== 아카이브 ====== */
+ul {
+  list-style: none;
+}
+
+ul li {
+  background: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  padding: 1rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.2s;
+}
+
+ul li:hover {
+  background: #f0fdfb;
+}
+
+ul li a {
+  color: #333;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+ul li a:hover {
+  color: #009688;
+}
+
+/* ====== 무드 페이지 (상세보기) ====== */
+h2, h3 {
+  color: #222;
+  margin-bottom: 0.8rem;
+}
+
+p {
+  margin-bottom: 0.5rem;
+}
+
+img {
+  border-radius: 12px;
+  margin: 1rem 0;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+}
+
+/* 팔레트 박스 */
+.palette {
+  display: flex;
+  gap: 8px;
+}
+
+.palette div {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+/* ====== 반응형 ====== */
+@media (max-width: 600px) {
+  main {
+    padding: 1.2rem;
+  }
+
+  nav {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  button, .btn {
+    width: 100%;
+  }
 }

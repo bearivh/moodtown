@@ -1,4 +1,11 @@
 flask
-llama-cpp-python
+flask_sqlalchemy
+pandas
+matplotlib
+requests
+scikit-learn
+Pillow
 colorthief
-pillow
+llama-cpp-python
+transformers
+datetime
