@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>MoodPage</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script>
+    function showLoading() {
+      document.getElementById("loading").style.display = "block";
+    }
+  </script>
+</head>
+<body>
+  <h1>MoodPage</h1>
+
+  <form action="/analyze" method="POST" enctype="multipart/form-data" onsubmit="showLoading()">
+    <textarea name="diary" rows="8" placeholder="오늘 하루를 기록해보세요..." required></textarea><br>
+    <input type="file" name="image" accept="image/*"><br><br>
+    <button type="submit">분석하기</button>
+  </form>
+
+  <div id="loading" style="display:none;">
+    <h3>🕒 분석 중입니다... (약 30~40초 소요)</h3>
+  </div>
+</body>
+</html>

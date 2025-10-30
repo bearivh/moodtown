@@ -1,0 +1,26 @@
+body {
+  font-family: "Pretendard", sans-serif;
+  background-color: #fafafa;
+  text-align: center;
+  padding: 40px;
+}
+
+textarea {
+  width: 80%;
+  padding: 10px;
+  font-size: 16px;
+}
+
+button {
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+}
+
+button:hover {
+  background-color: #357ab8;
+}

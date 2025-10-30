@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>오늘의 MoodPage 결과</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <h1>오늘의 MoodPage</h1>
+
+  <!-- result.html 중 일부 -->
+  <h2>감정 분석 결과</h2>
+  <p>{{ emotions }}</p>
+
+  <h2>일기 요약</h2>
+  <p>{{ summary }}</p>
+
+  {% if image_path %}
+    <h2>업로드된 사진</h2>
+    <img src="{{ image_path }}" width="300">
+
+    {% if image_mood %}
+      <h3>사진 분위기</h3>
+      <p>{{ image_mood }}</p>
+    {% endif %}
+
+    {% if palette %}
+      <h3>색상 팔레트</h3>
+      <div style="display:flex;">
+        {% for color in palette %}
+          <div style="background-color: {{ color }}; width:40px; height:40px;"></div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endif %}
+
+
+  <br><a href="/">돌아가기</a>
+</body>
+</html>
