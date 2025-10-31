@@ -3,107 +3,159 @@
 <h2>무드 페이지 상세</h2>
 
 {% if entry %}
+  <!-- 기본 정보 -->
   <p><strong>날짜:</strong> {{ entry[1] }}</p>
-  <p><strong>일기 내용:</strong> {{ entry[2] }}</p>
+  <p><strong>일기 내용:</strong></p>
+  <div style="white-space: pre-line; background:#fafafa; padding:10px; border-radius:8px; margin-bottom:20px;">
+    {{ entry[2] }}
+  </div>
 
   <hr>
 
+  <!-- 감정 분석 결과 -->
   <h3>감정 분석 결과</h3>
 
   {% if sentiment %}
-    <p><strong>요약:</strong> {{ sentiment.summary }}</p>
+    {% if sentiment.summary %}
+      <p><strong>요약:</strong> {{ sentiment.summary }}</p>
+    {% endif %}
 
-    <p><strong>감정 키워드:</strong>
-      {% for kw in sentiment.keywords %}
-        <span style="background:#e0f7fa;padding:4px 8px;border-radius:6px;margin-right:5px;">{{ kw }}</span>
-      {% endfor %}
-    </p>
+    {% if sentiment.keywords %}
+      <p><strong>감정 키워드:</strong>
+        {% for kw in sentiment.keywords %}
+          <span style="background:#e0f7fa; padding:4px 8px; border-radius:6px; margin-right:5px;">{{ kw }}</span>
+        {% endfor %}
+      </p>
+    {% endif %}
 
+    <!-- 감정 지수 그래프 -->
     <h4>감정 지수</h4>
-    <canvas id="emotionChart"></canvas>
+    <canvas id="emotionChart" style="max-width:400px;"></canvas>
+
+    <!-- 긍/부정 비율 그래프 -->
+    <h4 style="margin-top:30px;">긍정 / 부정 비율</h4>
+    <canvas id="ratioChart" style="max-width:400px;"></canvas>
 
     <script>
+      // Flask에서 전달된 JSON 데이터 (파싱 불필요)
       const emotionData = {{ sentiment.emotion_scores | tojson }};
-      const ctx = document.getElementById("emotionChart");
-      new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: Object.keys(emotionData),
-          datasets: [{
-            data: Object.values(emotionData)
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: { legend: { position: 'bottom' } }
+      const ratioData = {{ sentiment.pos_neg_ratio | tojson }};
+
+      // 감정 지수 도넛 그래프
+      (() => {
+        const el = document.getElementById("emotionChart");
+        if (!el) return;
+
+        const labels = Object.keys(emotionData || {});
+        const values = Object.values(emotionData || {});
+        if (labels.length === 0) {
+          el.insertAdjacentHTML('beforebegin', '<p>⚠️ 감정 지수를 표시할 데이터가 없습니다.</p>');
+          el.remove();
+          return;
         }
-      });
-    </script>
 
-    <h4>긍정 / 부정 비율</h4>
-    <canvas id="ratioChart"></canvas>
-
-<script>
-  const ratioData = {{ sentiment.pos_neg_ratio | tojson }};
-  const ctx2 = document.getElementById("ratioChart");
-
-  new Chart(ctx2, {
-    type: 'bar',
-    data: {
-      labels: ['감정 비율'],
-      datasets: [
-        {
-          label: '긍정',
-          data: [ratioData.positive * 100],
-          backgroundColor: '#4caf50'
-        },
-        {
-          label: '부정',
-          data: [ratioData.negative * 100],
-          backgroundColor: '#f44336'
-        }
-      ]
-    },
-    options: {
-      indexAxis: 'y',              // 가로 막대
-      responsive: true,
-      scales: {
-        x: {
-          stacked: true,
-          max: 100,                // 100% 기준
-          ticks: { callback: v => v + '%' }
-        },
-        y: { stacked: true }
-      },
-      plugins: {
-        legend: {
-          position: 'bottom'
-        },
-        tooltip: {
-          callbacks: {
-            label: ctx => ctx.dataset.label + ': ' + ctx.raw.toFixed(1) + '%'
+        const ctx = el.getContext("2d");
+        new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels,
+            datasets: [{
+              data: values,
+              backgroundColor: [
+                '#4fc3f7', '#81c784', '#ffb74d', '#e57373', '#ba68c8', '#90a4ae'
+              ],
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { position: 'bottom' } }
           }
+        });
+      })();
+
+      // 긍정/부정 비율 스택 바
+      (() => {
+        const el = document.getElementById("ratioChart");
+        if (!el) return;
+
+        const pos = Number((ratioData.positive ?? 0) * 100);
+        const neg = Number((ratioData.negative ?? 0) * 100);
+        if ((pos + neg) <= 0) {
+          el.insertAdjacentHTML('beforebegin', '<p>⚠️ 긍/부정 비율 데이터를 표시할 수 없습니다.</p>');
+          el.remove();
+          return;
         }
-      }
-    }
-  });
-</script>
+
+        const ctx = el.getContext("2d");
+        new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: ['감정 비율'],
+            datasets: [
+              {
+                label: '긍정',
+                data: [pos],
+                backgroundColor: '#4caf50',
+                borderRadius: 8
+              },
+              {
+                label: '부정',
+                data: [neg],
+                backgroundColor: '#f44336',
+                borderRadius: 8
+              }
+            ]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            scales: {
+              x: {
+                stacked: true,
+                max: 100,
+                ticks: { callback: v => v + '%' }
+              },
+              y: { stacked: true }
+            },
+            plugins: { legend: { position: 'bottom' } }
+          }
+        });
+      })();
+    </script>
   {% else %}
     <p>감정 분석 결과가 없습니다.</p>
   {% endif %}
 
   <hr>
 
-  {% if entry[5] %}
-    <h3>사진</h3>
-    <img src="{{ url_for('static', filename=entry[5].split('static/')[-1]) }}" width="300">
+  <!-- 업로드한 사진 -->
+  {% if entry[4] %}
+    <h3>업로드한 사진</h3>
+    <img src="{{ url_for('static', filename=entry[4].replace('static/', '')) }}"
+         alt="Uploaded photo"
+         style="width:320px; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.15); margin-bottom:20px;">
   {% endif %}
 
+  <!-- 사진 분석 결과 -->
+  {% if sentiment.photo_description or sentiment.photo_mood %}
+    <div style="margin-top:20px; padding:15px; border-radius:12px; background:#fafafa; box-shadow:inset 0 0 5px rgba(0,0,0,0.05);">
+      <h3>📸 사진 분석 결과</h3>
+      {% if sentiment.photo_description %}
+        <p><strong>사진 설명:</strong> {{ sentiment.photo_description }}</p>
+      {% endif %}
+      {% if sentiment.photo_mood %}
+        <p><strong>사진에서 느껴지는 분위기:</strong> {{ sentiment.photo_mood }}</p>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <!-- 색상 팔레트 -->
   {% if palette %}
-    <h3>무드 팔레트</h3>
-    <div style="display:flex;gap:10px;">
+    <h3 style="margin-top:30px;">무드 팔레트</h3>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
       {% for color in palette %}
-        <div style="width:40px;height:40px;border-radius:6px;border:1px solid #ccc;background:{{ color }}"></div>
+        <div style="width:40px; height:40px; border-radius:6px; border:1px solid #ccc; background:{{ color }}"></div>
       {% endfor %}
     </div>
   {% endif %}

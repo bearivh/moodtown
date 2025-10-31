@@ -9,3 +9,4 @@ colorthief
 llama-cpp-python
 transformers
 datetime
+torch
