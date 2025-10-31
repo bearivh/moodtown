@@ -1,5 +1,9 @@
+import os
+os.environ["TERM"] = "xterm"  # colorama가 ANSI 모드로 강제
+import colorama
+colorama.deinit()  # Windows 콘솔 컬러 변환 비활성화
 from flask import Flask, render_template, request, redirect, url_for, flash
-import os, json
+import json
 from werkzeug.utils import secure_filename
 from datetime import datetime
 
@@ -8,6 +12,8 @@ from models.sentiment_model import analyze_diary
 from utils.color_extractor import extract_palette
 
 import sys, click
+import pdfkit
+from flask import make_response
 
 app = Flask(__name__)
 # 업로드 실제 저장 폴더(절대경로)
@@ -77,6 +83,36 @@ def mood_page(entry_id):
 
     return render_template('mood_page.html', entry=entry, sentiment=sentiment, palette=palette)
 
+
+@app.route('/mood/<int:entry_id>/pdf')
+def mood_pdf(entry_id):
+    entry = get_entry_by_id(entry_id)
+    if not entry:
+        return "해당 일기를 찾을 수 없습니다.", 404
+
+    try:
+        sentiment = json.loads(entry[3]) if entry[3] else {}
+        palette = json.loads(entry[5]) if entry[5] else []
+    except Exception:
+        sentiment, palette = {}, []
+
+    # PDF 전용 템플릿 렌더링
+    rendered_html = render_template(
+        "mood_pdf.html",
+        entry=entry,
+        sentiment=sentiment,
+        palette=palette
+    )
+
+    # PDF 생성
+    pdf = pdfkit.from_string(rendered_html, False)
+
+    # 응답으로 전송 (다운로드)
+    response = make_response(pdf)
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'attachment; filename=mood_{entry_id}.pdf'
+    return response
+
 @app.route('/delete/<int:entry_id>')
 def delete(entry_id):
     delete_entry(entry_id)
@@ -98,3 +134,11 @@ click.echo = _safe_echo
 
 os.environ["FLASK_RUN_FROM_CLI"] = "false"
 app.run(debug=True, use_reloader=False)
+
+if __name__ == "__main__":
+    import sys
+    import colorama
+    colorama.deinit()
+    sys.stdout.reconfigure(encoding='utf-8')
+    
+    app.run(debug=True, use_reloader=False)

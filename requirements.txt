@@ -10,3 +10,6 @@ llama-cpp-python
 transformers
 datetime
 torch
+reportlab
+pdfkit
+joblib

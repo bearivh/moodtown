@@ -21,8 +21,8 @@ print(f"[moodPage] Loading Llama model from {MODEL_PATH} ...")
 model = Llama(
     model_path=MODEL_PATH,
     n_ctx=2048,
-    n_gpu_layers=-1,   # GPU 있으면 최대한 올리기
-    n_batch=512,       # 추론 속도 향상
+    n_gpu_layers=-1,
+    n_batch=512,
     use_mlock=True,
     use_mmap=True,
     verbose=False
@@ -31,82 +31,45 @@ print("[moodPage] ✅ Llama model loaded.")
 
 
 # ==============================
-# 1) 안정적인 JSON 추출기
-#   - <BEGIN_JSON> ... <END_JSON> 범위로 먼저 시도
-#   - 없으면 균형괄호로 첫 JSON 블록 추출
+# 1) JSON 안전 추출 함수
 # ==============================
 def extract_json(text: str):
     if not text:
         return {}
 
-    # 1) 코드펜스 제거
     cleaned = re.sub(r"```[\s\S]*?```", "", text).strip()
-
-    # 2) 태그 범위가 있으면 그 안만 취함
     m = re.search(r"<BEGIN_JSON>([\s\S]*?)<END_JSON>", cleaned)
     if m:
         candidate = m.group(1).strip()
     else:
-        # 3) 일반 출력: 첫 번째 JSON 블록만 추출 (균형괄호)
         start = cleaned.find("{")
-        if start == -1:
-            print("[moodPage] ⚠️ No '{' found in LLM output")
-            print("[RAW OUTPUT]", cleaned[:1000])
+        end = cleaned.rfind("}")
+        if start == -1 or end == -1:
+            print("[moodPage] ⚠️ JSON braces not found in output")
+            print("[RAW OUTPUT]", cleaned[:800])
             return {}
-        depth = 0
-        end = None
-        in_str = False
-        esc = False
-        for i in range(start, len(cleaned)):
-            ch = cleaned[i]
-            if in_str:
-                if esc:
-                    esc = False
-                elif ch == "\\":
-                    esc = True
-                elif ch == '"':
-                    in_str = False
-            else:
-                if ch == '"':
-                    in_str = True
-                elif ch == "{":
-                    depth += 1
-                elif ch == "}":
-                    depth -= 1
-                    if depth == 0:
-                        end = i + 1
-                        break
-        if end is None:
-            print("[moodPage] ⚠️ No matching '}' found for JSON")
-            print("[RAW OUTPUT]", cleaned[:1000])
-            return {}
-        candidate = cleaned[start:end]
+        candidate = cleaned[start:end + 1]
 
-    # 4) 줄 끝에 달린 주석류 제거 (태그 밖 노이즈 방지용)
-    candidate = candidate.split("\n#")[0].split("\n//")[0].strip()
-
-    # 5) 파싱
     try:
         return json.loads(candidate)
     except Exception as e:
         print("[moodPage] JSON parse failed:", e)
-        print("[RAW JSON CANDIDATE]", candidate[:2000])
+        print("[RAW JSON CANDIDATE]", candidate[:600])
         return {}
 
 
 # ==============================
-# 2) 프롬프트 (오직 JSON만, 한국어만, 태그로 감싸기)
+# 2) 프롬프트 정의
 # ==============================
 PROMPT_ANALYZE_DIARY = """\
-당신은 한국어 감정 분석기입니다.
-다음 일기를 읽고 **오직 하나의 JSON 객체만** 출력하세요.
-반드시 <BEGIN_JSON> 과 <END_JSON> 태그로 감싸고, 태그 밖에는 아무것도 출력하지 마세요.
-설명/예시/주석/마크다운/코드펜스는 절대 금지. 한국어로 작성.
+당신은 한국어 감정 분석 전문가입니다.
+다음 일기를 읽고 사용자의 감정을 정리하세요.
+오직 JSON만 출력하며, 태그 <BEGIN_JSON> ~ <END_JSON> 사이에 작성하세요.
+감정 요약이 아닌 '일기의 내용 요약'을 summary로 작성하세요.
 
-형식:
 <BEGIN_JSON>
 {
-  "summary": "일기의 전반적인 감정 요약",
+  "summary": "일기의 주요 사건과 내용 요약 (감정 분석이 아니라 스토리 요약)",
   "keywords": ["감정1", "감정2", ...],
   "emotion_scores": {"감정1": 20, "감정2": 30, ...},
   "pos_neg_ratio": {"positive": 0.6, "negative": 0.4}
@@ -115,17 +78,19 @@ PROMPT_ANALYZE_DIARY = """\
 """
 
 PROMPT_ANALYZE_PHOTO_TEMPLATE = """\
-당신은 한국어 이미지 감정 분석기입니다.
-다음은 이미지 자동 캡션입니다: "{caption}"
-이 사진에 무엇이 담겨 있고 어떤 분위기/감정이 느껴지는지 **오직 하나의 JSON 객체**로 출력하세요.
-반드시 <BEGIN_JSON> 과 <END_JSON> 태그로 감싸고, 태그 밖에는 아무것도 출력하지 마세요.
-설명/예시/주석/마크다운/코드펜스 금지.
+당신은 감정 분석 전문가입니다.
+다음은 사용자가 업로드한 사진의 자동 캡션입니다: "{caption}"
 
-형식:
+이 사진은 사용자의 하루 일기와 연관되어 있습니다.
+사진이 단순히 평온하다, 차분하다는 식의 묘사가 아니라,
+일기와 사진을 함께 고려했을 때, 사진이 전달하는 정서적 분위기를 분석하세요.
+정확하게 분위기나 정서를 나타내는 단어들을 사용하세요.
+
+오직 하나의 JSON만 출력하고 <BEGIN_JSON>과 <END_JSON>으로 감싸세요.
+
 <BEGIN_JSON>
 {
-  "photo_description": "사진 속 장면에 대한 구체적 설명",
-  "photo_mood": "사진에서 느껴지는 전반적 분위기"
+  "photo_mood": "사진이 일기 감정과 조화를 이루거나 대조되는 정서적 분위기"
 }
 <END_JSON>
 """
@@ -142,44 +107,50 @@ def analyze_diary(text: str, image_path: str = None):
     # ----- (A) 일기 감정 분석 -----
     diary_json = {}
     try:
-        diary_prompt = f"{PROMPT_ANALYZE_DIARY}\n\n일기 내용:\n{text}\n\n출력 시작:"
+        prompt = f"{PROMPT_ANALYZE_DIARY}\n\n일기 내용:\n{text}\n\n출력 시작:"
         print("[moodPage] Running Llama inference for diary analysis...")
 
-        diary_output = model(
-            diary_prompt,
-            max_tokens=320,      # 속도 개선
+        out = model(
+            prompt,
+            max_tokens=512,
             temperature=0.6,
             top_p=0.9,
-            stop=["<END_JSON>", "<|eot_id|>"]  # 태그 끝에서 강제 중단
+            stop=["<END_JSON>", "<|eot_id|>"]
         )
-        diary_text = diary_output["choices"][0]["text"]
-        # 참고용: 너무 긴 로그는 잘라서
-        print("[DEBUG] Diary Raw Output (head 500):", diary_text[:500].replace("\n", " "))
-        diary_json = extract_json(diary_text)
+        raw_text = out["choices"][0]["text"]
+        print("[DEBUG] Diary Raw Output (head 500):", raw_text[:500].replace("\n", " "))
+        diary_json = extract_json(raw_text)
     except Exception as e:
         print("[ERROR] Diary analysis failed:", e)
         diary_json = {}
 
-    # ----- (B) 사진 분석 (옵션) -----
+    # ----- (B) 사진 분석 -----
     photo_json = {}
     if image_path:
         try:
             caption = describe_image(image_path)
             print("[Image Caption]", caption)
 
-            photo_prompt = PROMPT_ANALYZE_PHOTO_TEMPLATE.format(caption=caption) + "\n출력 시작:"
+            # 캡션을 자연스러운 한국어로 번역 (짧고 감정 중심)
+            translate_prompt = f"Translate this caption into natural short Korean for emotional analysis: {caption}"
+            tr_out = model(translate_prompt, max_tokens=60)
+            caption_kr = tr_out["choices"][0]["text"].strip()
+            if not caption_kr:
+                caption_kr = caption  # fallback
+
+            photo_prompt = PROMPT_ANALYZE_PHOTO_TEMPLATE.replace("{caption}", caption_kr)
             print("[moodPage] Running Llama inference for photo analysis...")
 
-            photo_output = model(
+            out_photo = model(
                 photo_prompt,
-                max_tokens=200,  # 사진은 더 짧게
+                max_tokens=256,
                 temperature=0.6,
                 top_p=0.9,
                 stop=["<END_JSON>", "<|eot_id|>"]
             )
-            photo_text = photo_output["choices"][0]["text"]
-            print("[DEBUG] Photo Raw Output (head 500):", photo_text[:500].replace("\n", " "))
-            photo_json = extract_json(photo_text)
+            raw_photo = out_photo["choices"][0]["text"]
+            print("[DEBUG] Photo Raw Output (head 500):", raw_photo[:500].replace("\n", " "))
+            photo_json = extract_json(raw_photo)
         except Exception as e:
             print("[ERROR] Photo analysis failed:", e)
             photo_json = {}
@@ -190,68 +161,38 @@ def analyze_diary(text: str, image_path: str = None):
         "keywords": diary_json.get("keywords", []),
         "emotion_scores": diary_json.get("emotion_scores", {}),
         "pos_neg_ratio": diary_json.get("pos_neg_ratio", {}),
-        "photo_description": photo_json.get("photo_description", ""),
         "photo_mood": photo_json.get("photo_mood", "")
     }
 
-    # ----- (D) 정규화 (그래프 안전) -----
-    # emotion_scores → 숫자 보정
-    if not isinstance(result["emotion_scores"], dict):
-        result["emotion_scores"] = {}
-    norm_scores = {}
-    for k, v in result["emotion_scores"].items():
-        try:
-            iv = int(float(v))
-            iv = max(0, iv)
-        except Exception:
-            iv = 0
-        norm_scores[str(k)] = iv
-    result["emotion_scores"] = norm_scores
-
-    # ✅ pos/neg 비율 보정 — "모델 값 유지"가 원칙, 필요 시에만 정규화
-    posneg = result.get("pos_neg_ratio", {})
-    # 문자열로 들어온 경우 파싱
-    if isinstance(posneg, str):
-        try:
-            posneg = json.loads(posneg)
-        except Exception:
-            posneg = {}
-    # 값 꺼내기 & float 변환
-    def _to_float(x):
-        try:
-            return float(x)
-        except Exception:
-            return None
-
-    pos = _to_float(posneg.get("positive")) if isinstance(posneg, dict) else None
-    neg = _to_float(posneg.get("negative")) if isinstance(posneg, dict) else None
-
-    # 한쪽만 있으면 나머지는 1 - 값
-    if pos is None and neg is not None and 0 <= neg <= 1:
-        pos = 1.0 - neg
-    if neg is None and pos is not None and 0 <= pos <= 1:
-        neg = 1.0 - pos
-
-    # NaN/None 보정
-    if pos is None: pos = 0.0
-    if neg is None: neg = 0.0
-
-    # 음수 제거
-    pos = max(0.0, pos)
-    neg = max(0.0, neg)
-
-    # 합이 0이 아니면 "정규화만" 수행 (덮어쓰기 금지)
-    if (pos + neg) > 0:
-        total = pos + neg
-        pos = pos / total
-        neg = neg / total
+    # ----- (D) 감정 지수 정규화 (총합 100으로)
+    if isinstance(result["emotion_scores"], dict):
+        scores = {k: max(0, float(v)) for k, v in result["emotion_scores"].items() if isinstance(v, (int, float, str))}
+        total = sum(scores.values())
+        if total > 0:
+            result["emotion_scores"] = {k: round(v / total * 100, 1) for k, v in scores.items()}
+        else:
+            result["emotion_scores"] = {}
     else:
-        # 둘 다 0이면 디폴트는 부정 1.0 (사용자 기대를 반영)
-        pos, neg = 0.0, 1.0
+        result["emotion_scores"] = {}
 
-    result["pos_neg_ratio"] = {"positive": round(pos, 6), "negative": round(neg, 6)}
+    # ----- (E) 긍/부정 비율 정규화
+    posneg = result.get("pos_neg_ratio", {})
+    try:
+        pos = float(posneg.get("positive", 0))
+        neg = float(posneg.get("negative", 0))
+    except Exception:
+        pos, neg = 0.5, 0.5
+    if pos + neg == 0:
+        pos, neg = 0.5, 0.5
+    total = pos + neg
+    pos, neg = pos / total, neg / total
+    result["pos_neg_ratio"] = {"positive": round(pos, 3), "negative": round(neg, 3)}
 
-    # ----- (E) 최종 로그 -----
+    # ----- (F) photo_mood 기본값 (비었을 때 보완)
+    if not result["photo_mood"]:
+        result["photo_mood"] = "사진에서 뚜렷한 감정 분위기를 찾지 못함"
+
+    # ----- (G) 최종 출력 -----
     print("[DEBUG] FINAL RESULT BEFORE RETURN:")
     print(json.dumps(result, ensure_ascii=False, indent=2))
     print("============================\n")
