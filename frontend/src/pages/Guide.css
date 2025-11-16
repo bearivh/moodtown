@@ -1,6 +1,6 @@
 .guide-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #fef3c7 100%);
+  background: #f5f1e8;
   padding: 2rem 1rem;
 }
 
@@ -20,36 +20,37 @@
   left: 0;
   top: 50%;
   transform: translateY(-50%);
-  background: white;
-  border: 2px solid #fbbf24;
+  background: #faf8f3;
+  border: 2px solid #d4c4b0;
   border-radius: 0.5rem;
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
-  color: #92400e;
+  color: #6b5d4f;
   cursor: pointer;
   transition: all 0.3s ease;
   font-weight: 500;
 }
 
 .guide-back-button:hover {
-  background: #fef3c7;
-  border-color: #f59e0b;
+  background: #ede8df;
+  border-color: #b8a896;
   transform: translateY(-50%) translateX(-2px);
 }
 
 .guide-title {
   font-size: 2.5rem;
   font-weight: bold;
-  color: #1f2937;
+  color: #5a4a3a;
   margin: 0;
 }
 
 .guide-section {
-  background: white;
+  background: #faf8f3;
   border-radius: 1rem;
   padding: 2rem;
   margin-bottom: 2rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 12px rgba(90, 74, 58, 0.08), 0 2px 4px rgba(90, 74, 58, 0.05);
+  border: 1px solid #e8e0d5;
 }
 
 .guide-section-header {
@@ -58,7 +59,7 @@
   gap: 1rem;
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
-  border-bottom: 2px solid #fef3c7;
+  border-bottom: 2px solid #e8e0d5;
 }
 
 .guide-section-icon {
@@ -68,7 +69,7 @@
 .guide-section-title {
   font-size: 1.75rem;
   font-weight: bold;
-  color: #1f2937;
+  color: #6b5d4f;
   margin: 0;
 }
 
@@ -78,7 +79,7 @@
 
 .guide-intro-text {
   font-size: 1rem;
-  color: #4b5563;
+  color: #6b5d4f;
   margin-bottom: 1rem;
 }
 
@@ -93,16 +94,19 @@
 }
 
 .guide-place-card {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  background: #f7f4ef;
   border-radius: 0.75rem;
   padding: 1.5rem;
   text-align: center;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: 1px solid #e8e0d5;
+  box-shadow: 0 2px 6px rgba(90, 74, 58, 0.06);
 }
 
 .guide-place-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 12px -2px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 16px rgba(90, 74, 58, 0.12);
+  background: #f5f1e8;
 }
 
 .guide-place-icon {
@@ -113,13 +117,13 @@
 .guide-place-title {
   font-size: 1.25rem;
   font-weight: bold;
-  color: #1f2937;
+  color: #5a4a3a;
   margin-bottom: 0.75rem;
 }
 
 .guide-place-description {
   font-size: 0.875rem;
-  color: #4b5563;
+  color: #6b5d4f;
   line-height: 1.6;
   margin: 0;
 }

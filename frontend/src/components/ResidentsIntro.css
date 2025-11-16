@@ -6,7 +6,7 @@
   font-size: 1.875rem;
   font-weight: bold;
   text-align: center;
-  color: #1f2937;
+  color: #5a4a3a;
   margin-bottom: 2rem;
 }
 
@@ -19,9 +19,9 @@
 }
 
 .resident-card {
-  background: white;
+  background: #faf8f3;
   border-radius: 0.75rem;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 6px rgba(90, 74, 58, 0.06);
   padding: 1.5rem;
   text-align: center;
   transition: box-shadow 0.3s ease;
@@ -31,10 +31,12 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  border: 1px solid #e8e0d5;
 }
 
 .resident-card:hover {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 12px rgba(90, 74, 58, 0.12);
+  background: #f7f4ef;
 }
 
 .resident-avatar {
@@ -60,19 +62,19 @@
 
 .resident-name {
   font-weight: bold;
-  color: #1f2937;
+  color: #5a4a3a;
   margin-bottom: 0.25rem;
 }
 
 .resident-emotion {
   font-size: 0.875rem;
-  color: #4b5563;
+  color: #6b5d4f;
   margin-bottom: 0.25rem;
 }
 
 .resident-description {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: #6b5d4f;
 }
 
 .resident-speech-bubble {
@@ -80,15 +82,16 @@
   top: -2.5rem;
   left: 50%;
   transform: translateX(-50%);
-  background: white;
+  background: #faf8f3;
   padding: 0.5rem 0.75rem;
   border-radius: 1rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px rgba(90, 74, 58, 0.15);
   font-size: 0.75rem;
-  color: #1f2937;
+  color: #5a4a3a;
   white-space: nowrap;
   z-index: 10;
   animation: float 2s ease-in-out infinite;
+  border: 1px solid #e8e0d5;
 }
 
 .resident-speech-bubble::after {
@@ -101,7 +104,7 @@
   height: 0;
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
-  border-top: 6px solid white;
+  border-top: 6px solid #faf8f3;
 }
 
 @keyframes float {
@@ -114,9 +117,9 @@
 }
 
 .resident-intro-card {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  background: #f7f4ef;
   border-radius: 0.75rem;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 6px rgba(90, 74, 58, 0.06);
   padding: 1.5rem;
   text-align: center;
   transition: box-shadow 0.3s ease;
@@ -125,10 +128,12 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  border: 1px solid #e8e0d5;
 }
 
 .resident-intro-card:hover {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 12px rgba(90, 74, 58, 0.12);
+  background: #f5f1e8;
 }
 
 .resident-intro-icon {
@@ -139,13 +144,13 @@
 .resident-intro-title {
   font-size: 1.25rem;
   font-weight: bold;
-  color: #1f2937;
+  color: #5a4a3a;
   margin-bottom: 0.75rem;
 }
 
 .resident-intro-text {
   font-size: 0.875rem;
-  color: #4b5563;
+  color: #6b5d4f;
   line-height: 1.6;
   margin: 0;
 }
