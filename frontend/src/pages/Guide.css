@@ -1,0 +1,154 @@
+.guide-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #fef3c7 100%);
+  padding: 2rem 1rem;
+}
+
+.guide-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.guide-header {
+  text-align: center;
+  margin-bottom: 3rem;
+  position: relative;
+}
+
+.guide-back-button {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  background: white;
+  border: 2px solid #fbbf24;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  color: #92400e;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.guide-back-button:hover {
+  background: #fef3c7;
+  border-color: #f59e0b;
+  transform: translateY(-50%) translateX(-2px);
+}
+
+.guide-title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #1f2937;
+  margin: 0;
+}
+
+.guide-section {
+  background: white;
+  border-radius: 1rem;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.guide-section-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #fef3c7;
+}
+
+.guide-section-icon {
+  font-size: 2rem;
+}
+
+.guide-section-title {
+  font-size: 1.75rem;
+  font-weight: bold;
+  color: #1f2937;
+  margin: 0;
+}
+
+.guide-section-content {
+  line-height: 1.8;
+}
+
+.guide-intro-text {
+  font-size: 1rem;
+  color: #4b5563;
+  margin-bottom: 1rem;
+}
+
+.guide-intro-text:last-child {
+  margin-bottom: 0;
+}
+
+.guide-places-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.guide-place-card {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  text-align: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.guide-place-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 12px -2px rgba(0, 0, 0, 0.15);
+}
+
+.guide-place-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.guide-place-title {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #1f2937;
+  margin-bottom: 0.75rem;
+}
+
+.guide-place-description {
+  font-size: 0.875rem;
+  color: #4b5563;
+  line-height: 1.6;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .guide-title {
+    font-size: 2rem;
+  }
+  
+  .guide-section {
+    padding: 1.5rem;
+  }
+  
+  .guide-section-title {
+    font-size: 1.5rem;
+  }
+  
+  .guide-places-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .guide-back-button {
+    position: static;
+    transform: none;
+    margin-bottom: 1rem;
+  }
+  
+  .guide-header {
+    position: static;
+  }
+}
+

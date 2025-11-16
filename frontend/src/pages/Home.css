@@ -1,0 +1,196 @@
+.home-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 50%, #F5F5DC 100%);
+}
+
+.home-content {
+  flex: 1;
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.home-title-section {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.home-title {
+  font-size: 3rem;
+  font-weight: bold;
+  color: #2d3748;
+  margin-bottom: 1rem;
+}
+
+.home-subtitle {
+  font-size: 1.25rem;
+  color: #4a5568;
+  margin-bottom: 2rem;
+}
+
+.home-guide-section {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+}
+
+.home-guide-button {
+  padding: 1rem 2.5rem;
+  font-size: 1.25rem;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3);
+  font-weight: bold;
+}
+
+.home-guide-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(251, 191, 36, 0.4);
+}
+
+.home-guide-button:active {
+  transform: translateY(0);
+}
+
+.home-guide-hint {
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.home-date-section {
+  text-align: center;
+  margin-top: 2rem;
+  padding: 2rem;
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.home-date-label {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #2d3748;
+  margin-bottom: 1rem;
+}
+
+.home-date-input {
+  padding: 0.75rem 1rem;
+  font-size: 1.1rem;
+  border: 2px solid #4a5568;
+  border-radius: 8px;
+  background-color: #fff;
+  color: #2d3748;
+  cursor: pointer;
+  margin-bottom: 0.5rem;
+}
+
+.home-date-display {
+  font-size: 1rem;
+  color: #4a5568;
+  margin-top: 0.5rem;
+  font-weight: 500;
+}
+
+.home-date-hint {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.home-date-hint p {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+}
+
+.home-date-list {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.home-date-quick-select {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  background-color: #f3f4f6;
+  border: 2px solid #d1d5db;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #4a5568;
+}
+
+.home-date-quick-select:hover {
+  background-color: #e5e7eb;
+  transform: translateY(-2px);
+}
+
+.home-date-quick-select.active {
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+}
+
+.home-enter-section {
+  text-align: center;
+  margin-top: 2rem;
+  padding: 2rem;
+}
+
+.enter-village-button {
+  padding: 1.25rem 3rem;
+  font-size: 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  font-weight: bold;
+}
+
+.enter-village-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.enter-village-button:active {
+  transform: translateY(-1px);
+}
+
+.enter-village-hint {
+  margin-top: 1rem;
+  font-size: 1rem;
+  color: #4a5568;
+  font-style: italic;
+}
+
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+  .home-title {
+    font-size: 2rem;
+  }
+
+  .home-subtitle {
+    font-size: 1rem;
+  }
+
+  .enter-village-button {
+    font-size: 1.25rem;
+    padding: 1rem 2rem;
+  }
+}

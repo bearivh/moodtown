@@ -1,0 +1,493 @@
+.office-container {
+  min-height: 100vh;
+  background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 50%, #F5F5DC 100%);
+  padding: 2rem;
+}
+
+.office-header {
+  max-width: 1400px;
+  margin: 0 auto 2rem;
+}
+
+.office-back-button {
+  padding: 0.5rem 1rem;
+  background-color: rgba(255, 255, 255, 0.8);
+  border: 2px solid #4a5568;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 1rem;
+}
+
+.office-back-button:hover {
+  background-color: #fff;
+  transform: translateX(-2px);
+}
+
+.office-title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #2d3748;
+  margin-bottom: 0.5rem;
+}
+
+.office-subtitle {
+  font-size: 1.25rem;
+  color: #4a5568;
+}
+
+.office-date-notice {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid #fbbf24;
+  border-radius: 0.5rem;
+  display: inline-block;
+}
+
+.office-date-notice-text {
+  font-size: 0.875rem;
+  color: #92400e;
+  font-weight: 500;
+}
+
+.office-selected-date-stats {
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  border: 2px solid #818cf8;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  grid-column: 1 / -1;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.office-selected-date-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #3730a3;
+  margin-bottom: 1rem;
+}
+
+.office-selected-date-emotions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.office-selected-date-emotion-item {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.office-selected-date-emotion-name {
+  font-size: 0.875rem;
+}
+
+.office-selected-date-emotion-score {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.office-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.office-section-title {
+  font-size: 1.75rem;
+  font-weight: bold;
+  color: #2d3748;
+  margin-bottom: 1.5rem;
+}
+
+/* 캘린더 스타일 */
+.office-calendar-section {
+  background-color: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.calendar-nav-button {
+  padding: 0.5rem 1rem;
+  background-color: #f3f4f6;
+  border: 2px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.calendar-nav-button:hover {
+  background-color: #e5e7eb;
+  transform: scale(1.05);
+}
+
+.calendar-month {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #2d3748;
+}
+
+.calendar-grid {
+  margin-bottom: 2rem;
+}
+
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.calendar-weekday {
+  text-align: center;
+  font-weight: bold;
+  color: #4a5568;
+  padding: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.5rem;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  position: relative;
+  background-color: #fff;
+}
+
+.calendar-day:hover {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+  transform: scale(1.05);
+}
+
+.calendar-day.empty {
+  border: none;
+  background-color: transparent;
+  cursor: default;
+}
+
+.calendar-day.today {
+  border-color: #3b82f6;
+  background-color: #dbeafe;
+  font-weight: bold;
+}
+
+.calendar-day.selected {
+  border-color: #ef4444;
+  background-color: #fee2e2;
+  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+}
+
+.calendar-day-number {
+  font-size: 1rem;
+  color: #2d3748;
+  margin-bottom: 0.25rem;
+}
+
+.calendar-emotion-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: auto;
+}
+
+.calendar-diary-detail {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background-color: #f9fafb;
+  border-radius: 12px;
+  border: 2px solid #e5e7eb;
+}
+
+.diary-detail-title {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #2d3748;
+  margin-bottom: 1rem;
+}
+
+.diary-detail-empty {
+  color: #6b7280;
+  text-align: center;
+  padding: 2rem;
+}
+
+.diary-detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.diary-detail-item {
+  padding: 1rem;
+  background-color: #fff;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.diary-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.diary-detail-item-title {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #2d3748;
+}
+
+.diary-emotion-scores {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.emotion-score-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.diary-detail-content {
+  color: #4a5568;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+/* 통계 스타일 */
+.office-stats-section {
+  background-color: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stats-subtitle {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #2d3748;
+  margin-bottom: 1rem;
+  margin-top: 2rem;
+}
+
+.stats-subtitle:first-child {
+  margin-top: 0;
+}
+
+.stats-emotion-bars {
+  margin-bottom: 2rem;
+}
+
+.emotion-bars-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.emotion-bar-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.emotion-bar-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.emotion-bar-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #2d3748;
+}
+
+.emotion-bar-value {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: #4a5568;
+}
+
+.emotion-bar-container {
+  width: 100%;
+  height: 24px;
+  background-color: #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.emotion-bar {
+  height: 100%;
+  border-radius: 12px;
+  transition: width 0.3s ease;
+}
+
+.stats-trend-graph {
+  margin-top: 2rem;
+}
+
+.trend-graph-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.trend-graph-labels {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.trend-label {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.trend-label.positive {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.trend-label.negative {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.trend-graph-bars {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  height: 200px;
+  gap: 0.5rem;
+  padding: 1rem;
+  background-color: #f9fafb;
+  border-radius: 12px;
+  position: relative;
+  border-top: 1px solid #d1d5db;
+}
+
+.trend-day {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  gap: 0.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+.trend-day-bars {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.25rem;
+  width: 100%;
+  max-width: 40px;
+  position: relative;
+}
+
+.trend-bar {
+  width: 100%;
+  border-radius: 4px 4px 0 0;
+  transition: height 0.3s ease;
+  min-height: 2px;
+  cursor: pointer;
+}
+
+.trend-bar:hover {
+  opacity: 0.8;
+  transform: scaleY(1.05);
+}
+
+.trend-bar.positive {
+  background-color: #22c55e;
+}
+
+.trend-bar.negative {
+  background-color: #ef4444;
+}
+
+.trend-day-label {
+  font-size: 0.75rem;
+  color: #6b7280;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* 모바일 반응형 */
+@media (max-width: 1024px) {
+  .office-content {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .office-container {
+    padding: 1rem;
+  }
+
+  .calendar-day {
+    padding: 0.25rem;
+    font-size: 0.875rem;
+  }
+
+  .calendar-emotion-dot {
+    width: 6px;
+    height: 6px;
+  }
+
+  .trend-graph-bars {
+    height: 150px;
+    gap: 0.25rem;
+  }
+
+  .trend-day-bars {
+    max-width: 30px;
+  }
+
+  .diary-detail-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
+

@@ -1,0 +1,205 @@
+.village-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 50%, #F5F5DC 100%);
+}
+
+.village-content {
+  flex: 1;
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.village-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.village-back-button {
+  padding: 0.5rem 1rem;
+  background-color: rgba(255, 255, 255, 0.8);
+  border: 2px solid #4a5568;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.village-back-button:hover {
+  background-color: #fff;
+  transform: translateX(-2px);
+}
+
+.village-title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #2d3748;
+  margin: 0;
+}
+
+.village-date-display {
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.village-date-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #2d3748;
+  margin: 0;
+}
+
+.village-diary-status {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.diary-status-has,
+.diary-status-none {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.diary-status-icon {
+  font-size: 1.5rem;
+}
+
+.diary-status-text {
+  font-size: 1.1rem;
+  color: #2d3748;
+}
+
+.diary-status-has {
+  color: #22c55e;
+}
+
+.diary-status-none {
+  color: #f59e0b;
+}
+
+.village-places-section {
+  margin-top: 2rem;
+}
+
+.village-places-title {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #2d3748;
+  margin-bottom: 1.5rem;
+}
+
+.village-places-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.village-place-card {
+  background-color: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 2px solid transparent;
+}
+
+.village-place-card:hover:not(.village-place-disabled) {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  border-color: #4a5568;
+}
+
+.village-place-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: rgba(200, 200, 200, 0.5);
+}
+
+.village-place-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.village-place-name {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #2d3748;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.village-place-badge {
+  padding: 0.25rem 0.5rem;
+  background-color: #ef4444;
+  color: white;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  min-width: 20px;
+  text-align: center;
+  animation: bounce 1s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.village-place-description {
+  font-size: 1rem;
+  color: #4a5568;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+.village-place-hint {
+  font-size: 0.9rem;
+  color: #6366f1;
+  font-weight: 500;
+  text-align: right;
+}
+
+.village-place-disabled-hint {
+  font-size: 0.9rem;
+  color: #ef4444;
+  font-weight: 500;
+  text-align: right;
+}
+
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+  .village-content {
+    padding: 1rem;
+  }
+
+  .village-title {
+    font-size: 2rem;
+  }
+
+  .village-places-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .village-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+

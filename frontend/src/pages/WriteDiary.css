@@ -1,0 +1,372 @@
+.write-diary-container {
+  min-height: 100vh;
+  background: linear-gradient(to bottom, #f0f9ff, #f0fdf4);
+  padding: 2rem 1rem;
+}
+
+.write-diary-header {
+  max-width: 800px;
+  margin: 0 auto 2rem;
+  text-align: center;
+  position: relative;
+}
+
+.back-button {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 0.5rem 1rem;
+  background: #f3f4f6;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: #374151;
+  transition: all 0.2s ease;
+}
+
+.back-button:hover {
+  background: #e5e7eb;
+  color: #1f2937;
+}
+
+.write-diary-title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #1f2937;
+  margin-bottom: 0.5rem;
+}
+
+.write-diary-subtitle {
+  font-size: 1.125rem;
+  color: #6b7280;
+}
+
+.write-diary-form {
+  max-width: 800px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  transition: border-color 0.2s ease;
+  font-family: inherit;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.form-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-family: inherit;
+  resize: vertical;
+  transition: border-color 0.2s ease;
+  line-height: 1.6;
+}
+
+.form-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.character-count {
+  text-align: right;
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin-top: 0.25rem;
+}
+
+.emotions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+}
+
+.emotion-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.75rem;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.emotion-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.emotion-button-selected {
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.emotion-emoji {
+  font-size: 2rem;
+}
+
+.emotion-name {
+  font-size: 0.875rem;
+}
+
+.submit-button {
+  width: 100%;
+  padding: 1rem;
+  background: linear-gradient(to right, #3b82f6, #8b5cf6);
+  color: white;
+  border: none;
+  border-radius: 0.75rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  margin-top: 1rem;
+}
+
+.submit-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.submit-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.save-message {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+  text-align: center;
+  font-weight: 500;
+  animation: slideIn 0.3s ease;
+  white-space: pre-line; /* 여러 줄 메시지 지원 */
+  line-height: 1.6;
+}
+
+.save-message-success {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #10b981;
+}
+
+.save-message-error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #ef4444;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.existing-diary-warning {
+  padding: 1rem;
+  background: #fef3c7;
+  border: 2px solid #fbbf24;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+  color: #92400e;
+}
+
+.existing-diary-warning p {
+  margin: 0.5rem 0;
+  font-size: 0.875rem;
+}
+
+.existing-diary-warning-detail {
+  font-size: 0.75rem !important;
+  color: #78350f;
+  margin-top: 0.5rem;
+}
+
+.replace-confirm-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+.replace-confirm-content {
+  background: white;
+  border-radius: 1rem;
+  padding: 2rem;
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  animation: slideUp 0.3s ease;
+}
+
+.replace-confirm-content h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.5rem;
+  color: #1f2937;
+}
+
+.replace-confirm-content p {
+  margin: 0.5rem 0;
+  color: #374151;
+  line-height: 1.6;
+}
+
+.replace-confirm-content ul {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+  color: #4b5563;
+}
+
+.replace-confirm-content li {
+  margin: 0.5rem 0;
+  line-height: 1.6;
+}
+
+.replace-confirm-question {
+  font-weight: 600;
+  color: #1f2937;
+  margin-top: 1.5rem !important;
+}
+
+.replace-confirm-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.replace-confirm-button {
+  flex: 1;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.replace-confirm-button-cancel {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.replace-confirm-button-cancel:hover:not(:disabled) {
+  background: #e5e7eb;
+}
+
+.replace-confirm-button-confirm {
+  background: linear-gradient(to right, #ef4444, #dc2626);
+  color: white;
+}
+
+.replace-confirm-button-confirm:hover:not(:disabled) {
+  background: linear-gradient(to right, #dc2626, #b91c1c);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.replace-confirm-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .write-diary-title {
+    font-size: 2rem;
+  }
+  
+  .write-diary-form {
+    padding: 1.5rem;
+  }
+  
+  .emotions-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .back-button {
+    position: static;
+    transform: none;
+    margin-bottom: 1rem;
+  }
+  
+  .write-diary-header {
+    text-align: left;
+  }
+
+  .replace-confirm-content {
+    padding: 1.5rem;
+  }
+
+  .replace-confirm-buttons {
+    flex-direction: column;
+  }
+}
+

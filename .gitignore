@@ -1,0 +1,6 @@
+backend/venv/
+frontend/node_modules/
+**/__pycache__/
+*.pyc
+*.db
+감성대화말뭉치*.json

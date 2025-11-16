@@ -1,0 +1,59 @@
+.emotion-sky {
+  width: 100%;
+  height: 16rem;
+  position: relative;
+  overflow: hidden;
+  transition: all 1s ease-in-out;
+}
+
+.emotion-sky-clouds {
+  position: absolute;
+  inset: 0;
+}
+
+.emotion-sky-cloud {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  filter: blur(40px);
+}
+
+.cloud-1 {
+  top: 2.5rem;
+  left: 5rem;
+  width: 8rem;
+  height: 4rem;
+}
+
+.cloud-2 {
+  top: 5rem;
+  right: 8rem;
+  width: 10rem;
+  height: 5rem;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.cloud-3 {
+  top: 4rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 7rem;
+  height: 3.5rem;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.emotion-sky-label {
+  position: absolute;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+}
+
+.emotion-sky-label p {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+

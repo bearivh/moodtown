@@ -1,0 +1,72 @@
+.village-section {
+  margin-top: 4rem;
+}
+
+.village-section-title {
+  font-size: 1.875rem;
+  font-weight: bold;
+  text-align: center;
+  color: #1f2937;
+  margin-bottom: 2rem;
+}
+
+.village-places-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.village-place-card {
+  position: relative;
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 1.5rem;
+}
+
+.village-place-card:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  transform: translateY(-0.5rem);
+}
+
+.village-place-icon {
+  font-size: 3rem;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.village-place-name {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #1f2937;
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.village-place-description {
+  color: #4b5563;
+  text-align: center;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.village-place-hint {
+  text-align: center;
+  font-size: 0.875rem;
+  color: #6b7280;
+  transition: color 0.3s ease;
+}
+
+.village-place-card:hover .village-place-hint {
+  color: #374151;
+}
+
+@media (max-width: 768px) {
+  .village-places-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

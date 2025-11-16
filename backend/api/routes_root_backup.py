@@ -1,0 +1,62 @@
+from flask import Blueprint, jsonify, request
+from .common import CHARACTERS, ml_predict
+from .emotion_gpt import analyze_emotions_with_gpt
+from .conversation import generate_dialogue_with_gpt
+from .chat import chat_bp
+from .diary import diary_bp
+from .tree import tree_bp
+from .well import well_bp
+
+api_bp = Blueprint("api", __name__)
+
+@api_bp.route("/")
+def home():
+    return {"message": "EmotionTown Chatbot API running 🚀"}
+
+@api_bp.route("/analyze", methods=["POST"])
+def analyze():
+    data = request.get_json() or {}
+    diary_text = (data.get("content") or "").strip()
+    if not diary_text:
+        return jsonify({"error": "content 필드가 비어 있습니다."}), 400
+    emo_result = analyze_emotions_with_gpt(diary_text)
+    dialogue = generate_dialogue_with_gpt(diary_text, emo_result.get("top_emotions", []))
+    return jsonify({"emotion_result": emo_result, "openai_dialogue": dialogue})
+
+@api_bp.route("/analyze2", methods=["POST"])
+def analyze_v2():
+    data = request.get_json() or {}
+    text = (data.get("content") or "").strip()
+    mode = data.get("mode", "gpt")
+    if not text:
+        return jsonify({"error": "content 필드가 비어 있습니다."}), 400
+    if mode == "ml":
+        if ml_predict is None:
+            return jsonify({"error": "ML 분석 모듈이 로드되지 않았습니다."}), 500
+        ml_out = ml_predict(text)
+        return jsonify({
+            "mode": "ml",
+            "result": {"label": ml_out.get("label", "기쁨"), "scores": ml_out.get("scores", {})},
+            "meta": {"source": "demo-ml", "persisted": False}
+        })
+    elif mode == "gpt":
+        emo_result = analyze_emotions_with_gpt(text)
+        dialogue = generate_dialogue_with_gpt(text, emo_result.get("top_emotions", []))
+        return jsonify({
+            "mode": "gpt",
+            "emotion_result": emo_result,
+            "openai_dialogue": dialogue,
+            "meta": {"source": "gpt", "persisted": False}
+        })
+    else:
+        return jsonify({"error": "invalid mode"}), 400
+
+# 하위 블루프린트 묶음 (url_prefix 없음 → 기존 경로 유지)
+def register_all(app):
+    app.register_blueprint(api_bp, url_prefix="")
+    app.register_blueprint(chat_bp, url_prefix="")
+    app.register_blueprint(diary_bp, url_prefix="")
+    app.register_blueprint(tree_bp, url_prefix="")
+    app.register_blueprint(well_bp, url_prefix="")
+
+

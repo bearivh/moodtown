@@ -1,0 +1,400 @@
+.well-container {
+  min-height: 100vh;
+  background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 50%, #F5F5DC 100%);
+  padding: 2rem;
+}
+
+.well-header {
+  max-width: 1200px;
+  margin: 0 auto 2rem;
+}
+
+.well-back-button {
+  padding: 0.5rem 1rem;
+  background-color: rgba(255, 255, 255, 0.8);
+  border: 2px solid #4a5568;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 1rem;
+}
+
+.well-back-button:hover {
+  background-color: #fff;
+  transform: translateX(-2px);
+}
+
+.well-title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #2d3748;
+  margin-bottom: 0.5rem;
+}
+
+.well-subtitle {
+  font-size: 1.25rem;
+  color: #4a5568;
+}
+
+.well-date-notice {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid #fbbf24;
+  border-radius: 0.5rem;
+  display: inline-block;
+}
+
+.well-date-notice-text {
+  font-size: 0.875rem;
+  color: #92400e;
+  font-weight: 500;
+}
+
+.well-date-impact {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  border: 2px solid #f87171;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.well-date-impact-icon {
+  font-size: 2.5rem;
+  flex-shrink: 0;
+}
+
+.well-date-impact-content {
+  flex: 1;
+}
+
+.well-date-impact-title {
+  font-size: 0.875rem;
+  color: #991b1b;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.well-date-impact-message {
+  font-size: 1.125rem;
+  color: #b91c1c;
+  font-weight: 500;
+}
+
+.well-date-impact-message strong {
+  color: #991b1b;
+  font-size: 1.25rem;
+}
+
+.well-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.well-display-section {
+  background-color: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.well-visual {
+  position: relative;
+  margin-bottom: 2rem;
+}
+
+.well-structure {
+  position: relative;
+  width: 300px;
+  height: 400px;
+  margin: 0 auto;
+  background: linear-gradient(to bottom, #8b7355 0%, #6b5d4f 100%);
+  border-radius: 50% 50% 20% 20%;
+  border: 8px solid #5a4a3a;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.well-water {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, #3b82f6 0%, #2563eb 50%, #1e40af 100%);
+  transition: height 0.5s ease;
+  border-radius: 0 0 12% 12%;
+}
+
+.well-water-overflowing {
+  background: linear-gradient(to top, #ef4444 0%, #dc2626 50%, #b91c1c 100%);
+  animation: water-overflow 1s ease-in-out infinite;
+}
+
+@keyframes water-overflow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.well-water-wave {
+  position: absolute;
+  top: -10px;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255, 255, 255, 0.3) 50%, 
+    transparent 100%);
+  animation: wave 2s linear infinite;
+}
+
+@keyframes wave {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.well-rim {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  right: -8px;
+  height: 30px;
+  background: linear-gradient(to bottom, #9d8b6f 0%, #8b7355 100%);
+  border-radius: 50%;
+  border: 4px solid #5a4a3a;
+  z-index: 10;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.well-overflow-warning {
+  position: absolute;
+  top: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 3px solid #f59e0b;
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+  min-width: 280px;
+  animation: warning-pulse 1.5s ease-in-out infinite;
+  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4);
+}
+
+@keyframes warning-pulse {
+  0%, 100% {
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    transform: translateX(-50%) scale(1.05);
+  }
+}
+
+.well-overflow-icon {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+}
+
+.well-overflow-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #92400e;
+  margin-bottom: 0.5rem;
+}
+
+.well-overflow-message {
+  font-size: 1rem;
+  color: #78350f;
+  line-height: 1.5;
+}
+
+.well-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.well-stat-item {
+  background-color: #f3f4f6;
+  padding: 1rem;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.well-stat-label {
+  display: block;
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+}
+
+.well-stat-value {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #2d3748;
+}
+
+.well-progress-section {
+  margin-top: 2rem;
+}
+
+.well-progress-bar-container {
+  width: 100%;
+  height: 24px;
+  background-color: #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.well-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+  border-radius: 12px;
+  transition: width 0.5s ease;
+}
+
+.well-progress-bar-full {
+  background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+  animation: progress-pulse 1s ease-in-out infinite;
+}
+
+@keyframes progress-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.well-progress-label {
+  font-size: 0.9rem;
+  color: #4a5568;
+  text-align: center;
+}
+
+.well-info-section {
+  background-color: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.well-info-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #2d3748;
+  margin-bottom: 1rem;
+}
+
+.well-info-list {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 2rem;
+}
+
+.well-info-list li {
+  padding: 0.75rem 0;
+  padding-left: 1.5rem;
+  position: relative;
+  color: #4a5568;
+  line-height: 1.6;
+}
+
+.well-info-list li::before {
+  content: '💧';
+  position: absolute;
+  left: 0;
+}
+
+.well-comfort-message {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 2rem;
+}
+
+.well-comfort-title {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #1e40af;
+  margin-bottom: 0.75rem;
+}
+
+.well-comfort-text {
+  font-size: 1rem;
+  color: #1e3a8a;
+  line-height: 1.6;
+}
+
+.well-warning-message {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 2rem;
+}
+
+.well-warning-title {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #92400e;
+  margin-bottom: 0.75rem;
+}
+
+.well-warning-text {
+  font-size: 1rem;
+  color: #78350f;
+  line-height: 1.6;
+}
+
+.well-loading {
+  text-align: center;
+  padding: 4rem;
+  font-size: 1.25rem;
+  color: #4a5568;
+}
+
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+  .well-container {
+    padding: 1rem;
+  }
+
+  .well-content {
+    grid-template-columns: 1fr;
+  }
+
+  .well-structure {
+    width: 250px;
+    height: 320px;
+  }
+
+  .well-overflow-warning {
+    min-width: 240px;
+    padding: 1rem;
+  }
+
+  .well-stats {
+    grid-template-columns: 1fr;
+  }
+}
+
