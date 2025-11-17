@@ -88,6 +88,24 @@ export async function chatWithCharacters(message, characters = [], date = null) 
 }
 
 /**
+ * 마을사무소용 통계(Top 3 감정 비중, 나무/우물 기여도)를 가져옵니다.
+ * @returns {Promise<Object>}
+ */
+export async function getOfficeStats() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/stats/office`)
+    if (!response.ok) {
+      throw new Error(`API 오류: ${response.status}`)
+    }
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('마을사무소 통계 불러오기 오류:', error)
+    throw error
+  }
+}
+
+/**
  * OpenAI 응답에서 대화 JSON을 파싱합니다.
  * @param {string} text - OpenAI 응답 텍스트
  * @returns {Array<Object>} 파싱된 대화 배열

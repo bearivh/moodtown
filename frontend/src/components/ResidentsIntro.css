@@ -3,8 +3,9 @@
 }
 
 .residents-intro-title {
-  font-size: 1.875rem;
-  font-weight: bold;
+  font-family: 'Dongle', sans-serif;
+  font-size: 2.25rem;
+  font-weight: 700;
   text-align: center;
   color: #5a4a3a;
   margin-bottom: 2rem;
@@ -26,11 +27,11 @@
   text-align: center;
   transition: box-shadow 0.3s ease;
   position: relative;
-  min-height: 200px;
+  height: 280px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   border: 1px solid #e8e0d5;
 }
 
@@ -43,7 +44,7 @@
   width: 5rem;
   height: 5rem;
   border-radius: 50%;
-  margin: 0 auto 1rem;
+  margin: 2.5rem auto 1rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -52,6 +53,8 @@
   color: white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   overflow: hidden;
+  position: relative;
+  z-index: 1;
 }
 
 .resident-image {
@@ -60,38 +63,52 @@
   object-fit: cover;
 }
 
+.resident-image-purple {
+  width: 85%;
+  height: 85%;
+  object-fit: contain;
+}
+
 .resident-name {
-  font-weight: bold;
+  font-family: 'Dongle', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
   color: #5a4a3a;
   margin-bottom: 0.25rem;
 }
 
 .resident-emotion {
-  font-size: 0.875rem;
+  font-family: 'Dongle', sans-serif;
+  font-size: 1.125rem;
   color: #6b5d4f;
   margin-bottom: 0.25rem;
+  font-weight: 400;
 }
 
 .resident-description {
-  font-size: 0.75rem;
+  font-family: 'Dongle', sans-serif;
+  font-size: 1rem;
   color: #6b5d4f;
+  font-weight: 400;
 }
 
 .resident-speech-bubble {
   position: absolute;
-  top: -2.5rem;
+  top: 1.5rem;
   left: 50%;
   transform: translateX(-50%);
-  background: #faf8f3;
+  background: white;
   padding: 0.5rem 0.75rem;
   border-radius: 1rem;
   box-shadow: 0 2px 8px rgba(90, 74, 58, 0.15);
-  font-size: 0.75rem;
+  font-family: 'Dongle', sans-serif;
+  font-size: 1rem;
   color: #5a4a3a;
   white-space: nowrap;
   z-index: 10;
   animation: float 2s ease-in-out infinite;
   border: 1px solid #e8e0d5;
+  font-weight: 400;
 }
 
 .resident-speech-bubble::after {
@@ -104,16 +121,16 @@
   height: 0;
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
-  border-top: 6px solid #faf8f3;
+  border-top: 6px solid white;
 }
 
 @keyframes float {
-  0%, 100% {
-    transform: translateX(-50%) translateY(0);
-  }
-  50% {
-    transform: translateX(-50%) translateY(-5px);
-  }
+ 0%, 100% {
+   transform: translateX(-50%) translateY(0);
+ }
+ 50% {
+   transform: translateX(-50%) translateY(-3px);
+ }
 }
 
 .resident-intro-card {
@@ -142,17 +159,20 @@
 }
 
 .resident-intro-title {
-  font-size: 1.25rem;
-  font-weight: bold;
+  font-family: 'Dongle', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
   color: #5a4a3a;
   margin-bottom: 0.75rem;
 }
 
 .resident-intro-text {
-  font-size: 0.875rem;
+  font-family: 'Dongle', sans-serif;
+  font-size: 1.125rem;
   color: #6b5d4f;
   line-height: 1.6;
   margin: 0;
+  font-weight: 400;
 }
 
 @media (max-width: 968px) {

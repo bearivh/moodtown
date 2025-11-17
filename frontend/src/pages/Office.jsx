@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { getAllDiaries, getDiariesByDate, getDominantEmotionByDate, getWeeklyEmotionStats } from '../utils/storage'
 import { getEmotionColorByName } from '../utils/emotionColorMap'
 import { getTodayDateString } from '../utils/dateUtils'
+import { getOfficeStats } from '../utils/api'
 import './Office.css'
 
 function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
@@ -11,6 +12,7 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
   const [weeklyStats, setWeeklyStats] = useState(null)
   const [calendarData, setCalendarData] = useState({})
   const [selectedDateEmotionStats, setSelectedDateEmotionStats] = useState(null)
+  const [officeStats, setOfficeStats] = useState(null)
   const today = getTodayDateString()
   const isPastDate = selectedDateFromVillage && selectedDateFromVillage < today
 
@@ -26,6 +28,10 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
       setSelectedDateEmotionStats(null)
     }
   }, [selectedDateFromVillage])
+
+  useEffect(() => {
+    loadOfficeStats()
+  }, [])
 
   const loadSelectedDateEmotionStats = async () => {
     if (!selectedDateFromVillage) return
@@ -58,6 +64,15 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
       date: selectedDateFromVillage,
       stats: emotionStats
     })
+  }
+
+  const loadOfficeStats = async () => {
+    try {
+      const stats = await getOfficeStats()
+      setOfficeStats(stats)
+    } catch (error) {
+      console.error('마을사무소 통계 로드 실패:', error)
+    }
   }
 
   const loadCalendarData = async () => {
@@ -119,6 +134,28 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
       day: 'numeric',
       weekday: 'long'
     })
+  }
+
+  const buildDonutBackground = (topEmotions) => {
+    if (!topEmotions || topEmotions.length === 0) {
+      return 'conic-gradient(#e5e7eb 0deg 360deg)'
+    }
+
+    let current = 0
+    const segments = topEmotions.map((emotion) => {
+      const color = getEmotionColorByName(emotion.name)
+      const size = (emotion.ratio || 0) * 360
+      const start = current
+      const end = current + size
+      current = end
+      return `${color} ${start}deg ${end}deg`
+    })
+
+    if (current < 360) {
+      segments.push(`#e5e7eb ${current}deg 360deg`)
+    }
+
+    return `conic-gradient(${segments.join(', ')})`
   }
 
   const { daysInMonth, startingDayOfWeek, year, month } = getDaysInMonth(currentMonth)
@@ -194,6 +231,103 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
             </div>
           </div>
         )}
+
+        {/* 감정 요약 섹션 (Top 3 도넛 + 나무/우물 기여도) */}
+        {officeStats && (
+          <div className="office-overview-section">
+            <h2 className="office-section-title">마을 감정 요약</h2>
+            <div className="office-overview-grid">
+              <div className="office-donut-card">
+                <h3 className="stats-subtitle">Top 3 감정 비중</h3>
+                <div className="office-donut-wrapper">
+                  <div
+                    className="office-donut"
+                    style={{ backgroundImage: buildDonutBackground(officeStats.topEmotions) }}
+                  >
+                    <div className="office-donut-center">
+                      <span className="office-donut-center-label">총 점수</span>
+                      <span className="office-donut-center-value">
+                        {Math.round(officeStats.totalEmotionScore || 0)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="office-donut-legend">
+                    {(officeStats.topEmotions || []).map((emotion) => (
+                      <div key={emotion.name} className="office-donut-legend-item">
+                        <span
+                          className="office-donut-legend-color"
+                          style={{ backgroundColor: getEmotionColorByName(emotion.name) }}
+                        />
+                        <span className="office-donut-legend-name">{emotion.name}</span>
+                        <span className="office-donut-legend-value">
+                          {Math.round((emotion.ratio || 0) * 100)}%
+                        </span>
+                      </div>
+                    ))}
+                    {(!officeStats.topEmotions || officeStats.topEmotions.length === 0) && (
+                      <p className="office-donut-empty">아직 통계를 낼 수 있는 감정 데이터가 없어요.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="office-contribution-card">
+                <h3 className="stats-subtitle">행복 나무 / 스트레스 우물 기여도</h3>
+                <p className="office-contribution-description">
+                  최근 일주일 동안 쌓인 감정들이 마을의 나무와 우물에 얼마나 영향을 줬는지 한눈에 볼 수 있어요.
+                </p>
+                <div className="office-contribution-bars">
+                  {(() => {
+                    const tree = officeStats.treeWellContribution?.tree || { value: 0, ratio: 0 }
+                    const well = officeStats.treeWellContribution?.well || { value: 0, ratio: 0 }
+                    const total = officeStats.totalTreeWellValue || 0
+                    const safeTreeRatio = isNaN(tree.ratio) ? 0 : tree.ratio
+                    const safeWellRatio = isNaN(well.ratio) ? 0 : well.ratio
+
+                    return (
+                      <>
+                        <div className="office-contribution-item">
+                          <div className="office-contribution-label">
+                            <span className="office-contribution-name">행복 나무</span>
+                            <span className="office-contribution-value">
+                              {tree.value}점 ({Math.round(safeTreeRatio * 100)}%)
+                            </span>
+                          </div>
+                          <div className="office-contribution-bar-container">
+                            <div
+                              className="office-contribution-bar tree"
+                              style={{ width: `${safeTreeRatio * 100}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="office-contribution-item">
+                          <div className="office-contribution-label">
+                            <span className="office-contribution-name">스트레스 우물</span>
+                            <span className="office-contribution-value">
+                              {well.value}점 ({Math.round(safeWellRatio * 100)}%)
+                            </span>
+                          </div>
+                          <div className="office-contribution-bar-container">
+                            <div
+                              className="office-contribution-bar well"
+                              style={{ width: `${safeWellRatio * 100}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="office-contribution-total">
+                          지금까지의 총 감정 에너지: <strong>{total}</strong>점
+                        </div>
+                      </>
+                    )
+                  })()}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 감정 캘린더 섹션 */}
         <div className="office-calendar-section">
           <h2 className="office-section-title">감정 캘린더</h2>

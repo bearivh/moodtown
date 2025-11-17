@@ -6,12 +6,13 @@ import './Home.css'
 function Home({ onNavigate, selectedDate }) {
   const [date, setDate] = useState(selectedDate || getTodayDateString())
   const [availableDates, setAvailableDates] = useState([])
+  const [showDateList, setShowDateList] = useState(false)
 
   useEffect(() => {
-    // 일기가 있는 날짜 목록 가져오기
+    // 일기가 있는 날짜 목록 가져오기 - 오래된 순부터 정렬
     const loadDates = async () => {
       const diaries = await getAllDiaries()
-      const dates = [...new Set(diaries.map(diary => diary.date))].sort().reverse()
+      const dates = [...new Set(diaries.map(diary => diary.date))].sort()
       setAvailableDates(dates)
     }
     loadDates()
@@ -41,75 +42,130 @@ function Home({ onNavigate, selectedDate }) {
 
   return (
     <div className="home-container">
+      {/* 배경 구름 레이어 */}
+      <div className="home-sky-clouds" aria-hidden="true">
+        <div className="home-cloud cloud-1" />
+        <div className="home-cloud cloud-2" />
+        <div className="home-cloud cloud-3" />
+        <div className="home-cloud cloud-4" />
+      </div>
+
+      {/* 아기자기한 마을 장식 요소들 */}
+      <div className="home-village-decoration" aria-hidden="true">
+        <div className="home-house house-1">🏠</div>
+        <div className="home-house house-2">🏡</div>
+        <div className="home-house house-3">🏘️</div>
+        <div className="home-tree tree-1">🌳</div>
+        <div className="home-tree tree-2">🌲</div>
+        <div className="home-tree tree-3">☘️</div>
+      </div>
+
+      {/* 떠다니는 별 이모지들 */}
+      <div className="home-floating-stars" aria-hidden="true">
+        <div className="home-star star-1">⭐</div>
+        <div className="home-star star-2">✨</div>
+        <div className="home-star star-3">💫</div>
+        <div className="home-star star-4">⭐</div>
+        <div className="home-star star-5">✨</div>
+        <div className="home-star star-6">💫</div>
+        <div className="home-star star-7">⭐</div>
+        <div className="home-star star-8">✨</div>
+        <div className="home-star star-9">💫</div>
+        <div className="home-star star-10">⭐</div>
+      </div>
+
       <div className="home-content">
         {/* 마을 입구 제목 */}
         <div className="home-title-section">
           <h1 className="home-title">
-            감정 마을
+            <span className="home-title-mood">mood</span><span className="home-title-town">town!</span>
           </h1>
           <p className="home-subtitle">
-            당신의 감정이 살아있는 마을에 오신 것을 환영합니다
+            당신의 감정들이 살아숨쉬는 마을<br />
+            천천히 둘러보세요
           </p>
         </div>
 
-        {/* 마을 안내도 버튼 */}
-        <div className="home-guide-section">
-          <button
-            className="home-guide-button"
-            onClick={() => onNavigate && onNavigate('guide')}
-          >
-            🗺️ 마을 안내도
-          </button>
-          <p className="home-guide-hint">
-            마을 소개와 주민들을 만나보세요
-          </p>
-        </div>
+        {/* 날짜 선택 & 마을 입장 카드 */}
+        <div className="home-action-card">
+          {/* 마을 안내도 버튼 - 말풍선 */}
+          <div className="home-guide-speech-bubble">
+            <button
+              className="home-guide-button"
+              onClick={() => onNavigate && onNavigate('guide')}
+            >
+              🗺️ 마을 안내도
+            </button>
+          </div>
 
-        {/* 날짜 선택 섹션 */}
-        <div className="home-date-section">
-          <label htmlFor="date-select" className="home-date-label">
-            확인할 날짜를 선택하세요
-          </label>
-          <input
-            type="date"
-            id="date-select"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="home-date-input"
-            max={getTodayDateString()}
-          />
-          <p className="home-date-display">
-            {formatDateDisplay(date)}
-          </p>
-          {availableDates.length > 0 && (
-            <div className="home-date-hint">
-              <p>일기가 있는 날짜:</p>
-              <div className="home-date-list">
-                {availableDates.slice(0, 5).map(d => (
-                  <button
-                    key={d}
-                    className={`home-date-quick-select ${d === date ? 'active' : ''}`}
-                    onClick={() => setDate(d)}
-                  >
-                    {new Date(d + 'T00:00:00').toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
-                  </button>
-                ))}
+          {/* 귀여운 멘트 */}
+          <div className="home-action-intro">
+            <p className="home-action-intro-text">
+              오늘은 어떤 마음의 마을로 놀러갈까요?
+            </p>
+            <p className="home-action-intro-hint">
+              날짜를 선택하면, 그날의 감정들이 살고 있는 작은 마을이 열려요
+            </p>
+          </div>
+
+          {/* 날짜 선택 섹션 - 포탈 박스 */}
+          <div className="home-date-section">
+            <label htmlFor="date-select" className="home-date-label">
+              확인할 날짜를 선택하세요
+            </label>
+            <div className="home-portal-box">
+              <div className="home-portal-glow"></div>
+              <div className="home-portal-content">
+                <input
+                  type="date"
+                  id="date-select"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="home-date-input"
+                  max={getTodayDateString()}
+                />
+                {date && (
+                  <p className="home-date-display">
+                    {formatDateDisplay(date)}의 마을로 갈까요?
+                  </p>
+                )}
               </div>
             </div>
-          )}
-        </div>
+            {availableDates.length > 0 && (
+              <div className="home-date-hint">
+                <button 
+                  className="home-date-toggle"
+                  onClick={() => setShowDateList(!showDateList)}
+                >
+                  <span>일기가 있는 날짜 ({availableDates.length})</span>
+                  <span className={`home-date-toggle-icon ${showDateList ? 'open' : ''}`}>▼</span>
+                </button>
+                {showDateList && (
+                  <div className="home-date-list">
+                    {availableDates.map(d => (
+                      <button
+                        key={d}
+                        className={`home-date-quick-select ${d === date ? 'active' : ''}`}
+                        onClick={() => setDate(d)}
+                      >
+                        {new Date(d + 'T00:00:00').toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
-        {/* 마을 입장 버튼 */}
-        <div className="home-enter-section">
-          <button
-            className="enter-village-button"
-            onClick={handleEnterVillage}
-          >
-            🏘️ 마을 입장하기
-          </button>
-          <p className="enter-village-hint">
-            선택한 날짜의 마을 상태를 확인할 수 있습니다
-          </p>
+          {/* 마을 입장 버튼 */}
+          <div className="home-enter-section">
+            <button
+              className="enter-village-button"
+              onClick={handleEnterVillage}
+            >
+              🏘️ 마을 입장하기
+            </button>
+          </div>
         </div>
       </div>
     </div>
