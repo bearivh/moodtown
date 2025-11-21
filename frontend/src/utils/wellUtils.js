@@ -86,11 +86,10 @@ function isOnlyNegativeEmotions(emotionScores) {
   const anger = emotionScores['분노'] || 0
   const sadness = emotionScores['슬픔'] || 0
   const fear = emotionScores['두려움'] || 0
-  const shame = emotionScores['부끄러움'] || 0
   
-  // 부정적인 감정(분노, 슬픔, 두려움, 부끄러움)이 있고, 긍정적인 감정(기쁨, 사랑)의 합이 10 이하인 경우
+  // 부정적인 감정(분노, 슬픔, 두려움)이 있고, 긍정적인 감정(기쁨, 사랑)의 합이 10 이하인 경우
   const positiveEmotionsSum = joy + love
-  const negativeEmotionsSum = anger + sadness + fear + shame
+  const negativeEmotionsSum = anger + sadness + fear
   return negativeEmotionsSum > 0 && positiveEmotionsSum <= 10
 }
 
@@ -105,10 +104,9 @@ function hasNoNegativeEmotions(emotionScores) {
   const anger = emotionScores['분노'] || 0
   const sadness = emotionScores['슬픔'] || 0
   const fear = emotionScores['두려움'] || 0
-  const shame = emotionScores['부끄러움'] || 0
   
   // 부정적인 감정들의 합이 5 이하인 경우 (작은 오차 허용)
-  const negativeEmotionsSum = anger + sadness + fear + shame
+  const negativeEmotionsSum = anger + sadness + fear
   return negativeEmotionsSum <= 5
 }
 

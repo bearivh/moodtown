@@ -150,7 +150,7 @@ def get_office_stats():
     week_start = today - timedelta(days=6)
 
     weekly_tree_value = 0.0  # 긍정 기여 (기쁨 + 사랑)
-    weekly_well_value = 0.0  # 부정 기여 (분노 + 슬픔 + 두려움 + 부끄러움)
+    weekly_well_value = 0.0  # 부정 기여 (분노 + 슬픔 + 두려움)
 
     for diary in diaries:
         diary_date_str = diary.get("date")
