@@ -202,7 +202,7 @@ function Village({ onNavigate, selectedDate }) {
           {hasDiary ? (
             <div className="diary-status-has">
               <span className="diary-status-icon">✅</span>
-              <span className="diary-status-text">이 날짜의 일기가 {dateDiaries.length}개 있습니다</span>
+              <span className="diary-status-text">이 날짜의 일기가 있어요! 주민들을 만날 수 있어요.</span>
             </div>
           ) : (
             <div className="diary-status-none">

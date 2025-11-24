@@ -19,6 +19,9 @@ function Tree({ onNavigate, selectedDate }) {
   const [pointsToNext, setPointsToNext] = useState(0)
   const [selectedDateImpact, setSelectedDateImpact] = useState(null)
   const [showInfo, setShowInfo] = useState(false)
+  const [bonusInfo, setBonusInfo] = useState(null)
+  const [hideDateNotice, setHideDateNotice] = useState(false)
+  const [hideDateImpact, setHideDateImpact] = useState(false)
   const today = getTodayDateString()
   const isPastDate = selectedDate && selectedDate < today
 
@@ -30,6 +33,26 @@ function Tree({ onNavigate, selectedDate }) {
       loadSelectedDateImpact(dateToCheck)
     } else {
       setSelectedDateImpact(null)
+    }
+    
+    // localStorage에서 보너스 정보 확인
+    const treeBonusStr = localStorage.getItem('treeBonus')
+    if (treeBonusStr) {
+      try {
+        const bonusData = JSON.parse(treeBonusStr)
+        // 24시간 이내의 보너스만 표시
+        if (Date.now() - bonusData.timestamp < 24 * 60 * 60 * 1000) {
+          setBonusInfo(bonusData)
+        } else {
+          localStorage.removeItem('treeBonus')
+          setBonusInfo(null)
+        }
+      } catch (e) {
+        localStorage.removeItem('treeBonus')
+        setBonusInfo(null)
+      }
+    } else {
+      setBonusInfo(null)
     }
     
     // 주기적으로 상태 업데이트 (5초마다)
@@ -158,19 +181,48 @@ function Tree({ onNavigate, selectedDate }) {
 
       {/* 우측 상단에 작은 알림 배지들 */}
       <div className="tree-alerts">
-        {isPastDate && (
+        {isPastDate && !hideDateNotice && (
           <div className="tree-date-notice">
             <span className="tree-date-notice-text">
               📅 현재 상태는 {new Date(today).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })} 기준입니다
             </span>
+            <button
+              className="tree-alert-close"
+              onClick={() => setHideDateNotice(true)}
+            >
+              ✕
+            </button>
           </div>
         )}
-        {selectedDateImpact && (
+        {bonusInfo && (
+          <div className="tree-bonus-message">
+            <span className="tree-bonus-icon">🌱</span>
+            <span className="tree-bonus-text">
+              사랑과 기쁨만 있어서 나무가 <strong>{bonusInfo.bonusScore}점</strong> 더 성장했어요!
+            </span>
+            <button
+              className="tree-alert-close"
+              onClick={() => {
+                localStorage.removeItem('treeBonus')
+                setBonusInfo(null)
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
+        {selectedDateImpact && !hideDateImpact && (
           <div className="tree-date-impact">
             <span className="tree-date-impact-icon">📝</span>
             <span className="tree-date-impact-text">
               {selectedDateImpact.date === today ? '오늘의 일기로' : `${new Date(selectedDateImpact.date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}의 일기로`} 행복 나무가 <strong>{selectedDateImpact.positiveScore}점</strong> 성장했어요! 🌱
             </span>
+            <button
+              className="tree-alert-close"
+              onClick={() => setHideDateImpact(true)}
+            >
+              ✕
+            </button>
           </div>
         )}
       </div>
@@ -235,7 +287,7 @@ function Tree({ onNavigate, selectedDate }) {
             <div className="tree-basket-label">행복 열매</div>
           </div>
           <p className="tree-basket-description">
-            나무가 열매를 맺을 때마다 바구니에 모여요
+            나무가 열매를 맺을 때마다 바구니에 모여요.
           </p>
         </div>
       </div>

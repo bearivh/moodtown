@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { getDiariesByDate, getPlazaConversationByDate, savePlazaConversationByDate } from '../utils/storage'
 import { analyzeDiary, parseDialogue, chatWithCharacters } from '../utils/api'
+import { normalizeEmotionScores } from '../utils/emotionUtils'
 import redImage from '../assets/characters/red.png'
 import orangeImage from '../assets/characters/orange.png'
 import yellowImage from '../assets/characters/yellow.png'
@@ -12,13 +13,13 @@ import './Plaza.css'
 
 // 캐릭터 정보 (백엔드 characters.json과 동기화)
 const CHARACTER_INFO = {
-  '기쁨': { name: '노랑이', emoji: '🟡', color: '#eab308', image: yellowImage },
-  '사랑': { name: '초록이', emoji: '🟢', color: '#22c55e', image: greenImage },
-  '놀람': { name: '보라', emoji: '🟣', color: '#a855f7', image: purpleImage },
-  '두려움': { name: '남색이', emoji: '🔷', color: '#6366f1', image: navyImage },
-  '분노': { name: '빨강이', emoji: '🔴', color: '#ef4444', image: redImage },
-  '부끄러움': { name: '주황이', emoji: '🟠', color: '#f97316', image: orangeImage },
-  '슬픔': { name: '파랑이', emoji: '🔵', color: '#3b82f6', image: blueImage }
+  '기쁨': { name: '노랑이', emoji: '🟡', color: '#eab308', pastelColor: '#fff9cc', image: yellowImage },
+  '사랑': { name: '초록이', emoji: '🟢', color: '#22c55e', pastelColor: '#ccffcc', image: greenImage },
+  '놀람': { name: '보라', emoji: '🟣', color: '#a855f7', pastelColor: '#f0e6ff', image: purpleImage },
+  '두려움': { name: '남색이', emoji: '🔷', color: '#6366f1', pastelColor: '#d4d1ff', image: navyImage },
+  '분노': { name: '빨강이', emoji: '🔴', color: '#ef4444', pastelColor: '#ffcccc', image: redImage },
+  '부끄러움': { name: '주황이', emoji: '🟠', color: '#f97316', pastelColor: '#ffe4cc', image: orangeImage },
+  '슬픔': { name: '파랑이', emoji: '🔵', color: '#3b82f6', pastelColor: '#cce4ff', image: blueImage }
 }
 
 function Plaza({ onNavigate, selectedDate }) {
@@ -121,7 +122,7 @@ function Plaza({ onNavigate, selectedDate }) {
       
     } catch (err) {
       console.error('분석 오류:', err)
-      setError('일기 분석에 실패했습니다. 다시 시도해주세요.')
+      setError('일기 분석에 실패했어요. 다시 시도해 주세요.')
     } finally {
       setLoading(false)
     }
@@ -183,7 +184,7 @@ function Plaza({ onNavigate, selectedDate }) {
       console.error('채팅 오류:', err)
       setChatMessages(prev => [...prev, {
         type: 'system',
-        text: '주민들과 대화하는 중 오류가 발생했습니다.'
+        text: '주민들과 대화하는 중 오류가 발생했어요.'
       }])
     } finally {
       setChatLoading(false)
@@ -299,7 +300,7 @@ function Plaza({ onNavigate, selectedDate }) {
 
         {!loading && !error && dateDiaries.length === 0 && (
           <div className="plaza-empty">
-            <p>이 날짜에는 일기가 없습니다.</p>
+            <p>이 날짜에는 일기가 없어요.</p>
             <button 
               className="plaza-write-button"
               onClick={() => onNavigate && onNavigate('write')}
@@ -315,10 +316,11 @@ function Plaza({ onNavigate, selectedDate }) {
             <div className="plaza-emotions">
               <h3>감정 분석 결과</h3>
               <div className="plaza-emotion-scores">
-                {Object.entries(emotionScores)
+                {Object.entries(normalizeEmotionScores(emotionScores))
                   .sort(([, a], [, b]) => b - a)
                   .map(([emotion, score]) => {
                     const charInfo = CHARACTER_INFO[emotion]
+                    const normalizedScore = Math.round(score)
                     return (
                       <div key={emotion} className="plaza-emotion-item">
                         {charInfo?.image ? (
@@ -333,12 +335,12 @@ function Plaza({ onNavigate, selectedDate }) {
                           <div 
                             className="plaza-emotion-bar-fill"
                             style={{ 
-                              width: `${score}%`,
+                              width: `${normalizedScore}%`,
                               backgroundColor: charInfo?.color || '#9ca3af'
                             }}
                           ></div>
                         </div>
-                        <span className="plaza-emotion-score">{score}%</span>
+                        <span className="plaza-emotion-score">{normalizedScore}%</span>
                       </div>
                     )
                   })}
@@ -384,7 +386,7 @@ function Plaza({ onNavigate, selectedDate }) {
                       <div key={idx} className="plaza-message">
                         <div 
                           className="plaza-message-avatar"
-                          style={{ backgroundColor: charInfo.color }}
+                          style={{ backgroundColor: charInfo.pastelColor || charInfo.color }}
                         >
                           {charInfo.image ? (
                             <img src={charInfo.image} alt={charInfo.name} className="plaza-character-image" />
@@ -420,7 +422,7 @@ function Plaza({ onNavigate, selectedDate }) {
                 <div className="plaza-chat-messages">
                   {chatMessages.length === 0 && (
                     <div className="plaza-chat-empty">
-                      <p>주민들에게 말을 걸어보세요! 💬</p>
+                      <p>. . . 💬</p>
                     </div>
                   )}
                   {chatMessages.map((msg, idx) => {
@@ -462,7 +464,7 @@ function Plaza({ onNavigate, selectedDate }) {
                         <div key={idx} className="plaza-chat-message plaza-chat-message-character">
                           <div 
                             className="plaza-chat-message-avatar"
-                            style={{ backgroundColor: charInfo.color }}
+                            style={{ backgroundColor: charInfo.pastelColor || charInfo.color }}
                           >
                             {charInfo.image ? (
                               <img src={charInfo.image} alt={charInfo.name} className="plaza-character-image" />
@@ -497,7 +499,7 @@ function Plaza({ onNavigate, selectedDate }) {
                   <input
                     type="text"
                     className="plaza-chat-input"
-                    placeholder="주민들에게 말을 걸어보세요..."
+                    placeholder="주민들에게 말을 걸어 보세요..."
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
                     onKeyPress={handleChatKeyPress}
@@ -520,7 +522,7 @@ function Plaza({ onNavigate, selectedDate }) {
 
         {!loading && !error && dateDiaries.length > 0 && conversation.length === 0 && (
           <div className="plaza-empty-conversation">
-            <p>대화를 생성할 수 없습니다.</p>
+            <p>대화를 생성할 수 없어요.</p>
           </div>
         )}
       </div>

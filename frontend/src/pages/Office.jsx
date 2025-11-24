@@ -3,6 +3,7 @@ import { getAllDiaries, getDiariesByDate, getDominantEmotionByDate, getWeeklyEmo
 import { getEmotionColorByName } from '../utils/emotionColorMap'
 import { getTodayDateString } from '../utils/dateUtils'
 import { getOfficeStats } from '../utils/api'
+import { normalizeEmotionScores } from '../utils/emotionUtils'
 import './Office.css'
 
 function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
@@ -197,7 +198,7 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
         <div className="office-header-content">
           <h1 className="office-title">마을사무소</h1>
           <p className="office-subtitle">
-            감정 캘린더 및 통계를 확인하세요
+            감정 캘린더 및 통계를 확인하세요.
           </p>
         </div>
         <button 
@@ -268,7 +269,6 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
         {/* 감정 요약 섹션 (Top 3 도넛 + 나무/우물 기여도) */}
         {officeStats && (
           <div className="office-overview-section">
-            <h2 className="office-section-title">마을 감정 요약</h2>
             <div className="office-overview-grid">
               <div className="office-donut-card">
                 <h3 className="stats-subtitle">Top 3 감정 비중</h3>
@@ -425,7 +425,7 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
                 {formatDate(selectedDate)}의 일기
               </h4>
               {selectedDiaries.length === 0 ? (
-                <p className="diary-detail-empty">이 날짜에는 일기가 없습니다.</p>
+                <p className="diary-detail-empty">이 날짜에는 일기가 없어요요.</p>
               ) : (
                 <div className="diary-detail-list">
                   {selectedDiaries.map(diary => (
@@ -436,21 +436,24 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
                         </h5>
                         {diary.emotion_scores && (
                           <div className="diary-emotion-scores">
-                            {Object.entries(diary.emotion_scores)
+                            {Object.entries(normalizeEmotionScores(diary.emotion_scores))
                               .sort(([, a], [, b]) => b - a)
                               .slice(0, 3)
-                              .map(([emotion, score]) => (
-                                <div
-                                  key={emotion}
-                                  className="emotion-score-badge"
-                                  style={{ 
-                                    backgroundColor: getEmotionColorByName(emotion),
-                                    color: 'white'
-                                  }}
-                                >
-                                  {emotion} {score}%
-                                </div>
-                              ))}
+                              .map(([emotion, score]) => {
+                                const normalizedScore = Math.round(score)
+                                return (
+                                  <div
+                                    key={emotion}
+                                    className="emotion-score-badge"
+                                    style={{ 
+                                      backgroundColor: getEmotionColorByName(emotion),
+                                      color: 'white'
+                                    }}
+                                  >
+                                    {emotion} {normalizedScore}%
+                                  </div>
+                                )
+                              })}
                           </div>
                         )}
                       </div>

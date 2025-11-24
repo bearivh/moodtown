@@ -27,7 +27,18 @@
 }
 
 .well-header-content {
-  flex: 1;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: rgba(255, 255, 255, 0.98);
+  border-radius: 50px;
+  border: 2px solid rgba(224, 246, 255, 0.6);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(224, 246, 255, 0.3);
+  padding: 0.5rem 1.6rem;
+  margin: 0 auto;
+  width: fit-content;
 }
 
 .well-back-button {
@@ -51,16 +62,19 @@
   font-size: 2.5rem;
   font-weight: bold;
   color: #2d3748;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
   margin-top: 0;
   line-height: 1.2;
-  transform: translateY(1.5rem);
+  position: relative;
+  z-index: 1;
 }
 
 .well-subtitle {
-  font-size: 1.8rem;
+  font-size: 1rem;
   color: #4a5568;
-  transform: translateY(0.5rem);
+  margin-top: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .well-alerts {
@@ -76,6 +90,7 @@
 
 .well-date-notice {
   padding: 0.6rem 0.85rem;
+  padding-right: 2rem;
   background: linear-gradient(135deg, rgba(255, 249, 196, 0.98) 0%, rgba(254, 240, 138, 0.95) 100%);
   border: 1.5px solid rgba(245, 158, 11, 0.5);
   border-radius: 8px;
@@ -84,6 +99,7 @@
   min-height: 2.8rem;
   display: inline-flex;
   align-items: center;
+  position: relative;
 }
 
 .well-date-notice-text {
@@ -98,6 +114,7 @@
   border: 1.5px solid rgba(245, 158, 11, 0.5);
   border-radius: 8px;
   padding: 0.6rem 0.85rem;
+  padding-right: 2rem;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -105,6 +122,7 @@
   font-size: 1.1rem;
   max-width: 360px;
   line-height: 1.4;
+  position: relative;
   min-height: 2.8rem;
 }
 
@@ -124,6 +142,67 @@
   color: #92400e;
   font-size: 1.15rem;
   font-weight: 600;
+}
+
+.well-bonus-message {
+  background: linear-gradient(135deg, rgba(219, 234, 254, 0.98) 0%, rgba(191, 219, 254, 0.95) 100%);
+  border: 1.5px solid rgba(59, 130, 246, 0.5);
+  border-radius: 8px;
+  padding: 0.6rem 0.85rem;
+  padding-right: 2rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  font-size: 1.1rem;
+  max-width: 360px;
+  position: relative;
+}
+
+.well-bonus-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.well-bonus-text {
+  font-size: 1.1rem;
+  color: #1e40af;
+  font-weight: 500;
+  display: inline;
+}
+
+.well-bonus-text strong {
+  color: #1e3a8a;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.well-alert-close {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.3rem;
+  background: transparent;
+  border: none;
+  font-size: 0.7rem;
+  color: #78350f;
+  cursor: pointer;
+  padding: 0.2rem 0.3rem;
+  line-height: 1;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.well-alert-close:hover {
+  opacity: 1;
+}
+
+.well-bonus-message .well-alert-close {
+  color: #1e40af;
 }
 
 .well-content {

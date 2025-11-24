@@ -5,6 +5,7 @@ import { addPositiveEmotion, getHappyFruitCount } from '../utils/treeUtils'
 import { addNegativeEmotion, reduceWaterLevel, getWellState } from '../utils/wellUtils'
 import { addHappyFruitCelebrationLetter, addWellOverflowComfortLetter } from '../utils/mailboxUtils'
 import { getTodayDateString } from '../utils/dateUtils'
+import { normalizeEmotionScores } from '../utils/emotionUtils'
 import './WriteDiary.css'
 
 function WriteDiary({ onNavigate, selectedDate }) {
@@ -60,8 +61,7 @@ function WriteDiary({ onNavigate, selectedDate }) {
       } else {
         analysisResult = await analyzeDiary(content.trim())
         setAnalysisCache(prev => ({ contentKey: key, gpt: analysisResult, ml: prev.ml }))
-        setCurrentMode('gpt')
-        setDemoResult(analysisResult)
+        // 저장 시에는 미리보기 결과를 표시하지 않음 (setDemoResult 호출 안 함)
       }
       const emotionScores = analysisResult.emotion_result?.emotion_scores || {}
       
@@ -160,20 +160,22 @@ function WriteDiary({ onNavigate, selectedDate }) {
       }
 
       // 나무 성장 처리 (감정 점수도 전달하여 보너스 계산)
-      let bonusMessages = []
       if (positiveScore > 0) {
         const treeResult = await addPositiveEmotion(positiveScore, emotionScores)
         
-        // 보너스 점수가 있으면 사용자에게 알림
+        // 보너스 점수가 있으면 localStorage에 저장 (나무 페이지에서 표시)
         if (treeResult.bonusScore > 0) {
-          bonusMessages.push(`나무 보너스 ${treeResult.bonusScore}점 추가! (사랑과 기쁨만 있는 날)`)
+          localStorage.setItem('treeBonus', JSON.stringify({
+            bonusScore: treeResult.bonusScore,
+            date: date,
+            timestamp: Date.now()
+          }))
         }
         
         // 열매가 열리면 우체통에 편지 추가
         if (treeResult.fruitProduced) {
           const fruitCount = await getHappyFruitCount()
           await addHappyFruitCelebrationLetter(fruitCount)
-          bonusMessages.push(`행복 나무 열매가 열려 우물 물이 50점 줄었어요! 🍎`)
         }
       }
       
@@ -181,32 +183,33 @@ function WriteDiary({ onNavigate, selectedDate }) {
       if (negativeScore > 0) {
         const wellResult = await addNegativeEmotion(negativeScore, emotionScores)
         
-        // 보너스 점수가 있으면 사용자에게 알림
+        // 보너스 점수가 있으면 localStorage에 저장 (우물 페이지에서 표시)
         if (wellResult.bonusScore > 0) {
-          bonusMessages.push(`우물 보너스 ${wellResult.bonusScore}점 추가! (부정적인 감정만 있는 날)`)
+          localStorage.setItem('wellBonus', JSON.stringify({
+            bonusScore: wellResult.bonusScore,
+            date: date,
+            timestamp: Date.now()
+          }))
         }
         
         // 우물이 넘치면 우체통에 위로 편지 추가
         if (wellResult.overflowed) {
-          await addWellOverflowComfortLetter(emotionScores)
+          await addWellOverflowComfortLetter(emotionScores, diaryData.content)
         }
       } else if (negativeScore <= 5) {
         // 부정적인 감정이 하나도 없거나 매우 낮으면 우물 물이 조금 줄어듦
         const wellState = await getWellState()
-        const wellReduced = await reduceWaterLevel(30) // 30점 감소
-        if (wellReduced.waterLevel < wellState.waterLevel) {
-          bonusMessages.push(`부정적인 감정이 없어 우물 물이 30점 줄었어요! 💧`)
-        }
+        await reduceWaterLevel(30) // 30점 감소
       }
       
-      // 메시지 구성
+      // 메시지 구성 (보너스 메시지 제거)
       let saveMessageText = '일기가 저장되었습니다! ✨'
-      if (bonusMessages.length > 0) {
-        saveMessageText += `\n${bonusMessages.join('\n')}`
-      }
       // 저장 완료 팝업 표시
       setSaveSuccessMessage(saveMessageText)
       setShowSaveSuccessPopup(true)
+      // 미리보기 결과 초기화 (저장 완료 팝업이 뜰 때 미리보기 블록이 보이지 않도록)
+      setDemoResult(null)
+      setCurrentMode(null)
       // 폼 초기화
       setTitle('')
       setContent('')
@@ -276,33 +279,30 @@ function WriteDiary({ onNavigate, selectedDate }) {
 
   const renderScores = (scores, orderKeys = null, hideZeros = false) => {
     if (!scores) return null
+    
+    // 정규화된 점수 사용
+    const normalizedScores = normalizeEmotionScores(scores)
+    
     let entries
     if (Array.isArray(orderKeys) && orderKeys.length > 0) {
       // 지정된 순서로 표시(누락은 0)
-      entries = orderKeys.map(k => [k, typeof scores[k] === 'number' ? scores[k] : 0])
+      entries = orderKeys.map(k => [k, normalizedScores[k] || 0])
     } else {
       // 데이터셋 라벨 기반: 점수 내림차순
-      entries = Object.entries(scores).sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))
+      entries = Object.entries(normalizedScores).sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))
     }
     if (hideZeros) {
       entries = entries.filter(([, v]) => typeof v === 'number' ? v > 0 : true)
     }
     if (entries.length === 0) return null
-    const formatVal = (v) => {
-      if (typeof v !== 'number') return `${v}`
-      // 이미 퍼센트 값(0~100)인 경우 그대로 표시
-      if (v >= 0 && v <= 100) return `${v}%`
-      // 확률 값(0~1)인 경우 퍼센트로 변환
-      if (v > 0 && v <= 1) return `${Math.round(v * 100)}%`
-      return `${v}`
-    }
+    
     return (
       <div className="demo-scores">
         {entries.map(([k, v]) => (
           <div key={k} className="demo-score-row">
             <span className="demo-score-label">{k}</span>
             <span className="demo-score-value">
-              {formatVal(v)}
+              {Math.round(v)}%
             </span>
           </div>
         ))}
@@ -372,16 +372,18 @@ function WriteDiary({ onNavigate, selectedDate }) {
   return (
     <div className="write-diary-container">
       <div className="write-diary-header">
-              {onNavigate && (
-                <button
-                  className="back-button"
-                  onClick={() => onNavigate('village')}
-                >
-                  ← 마을로 돌아가기
-                </button>
-              )}
-        <h1 className="write-diary-title">일기 쓰기</h1>
-        <p className="write-diary-subtitle">오늘 하루를 자유롭게 기록해보세요. 감정은 자동으로 분석됩니다.</p>
+        {onNavigate && (
+          <button
+            className="back-button"
+            onClick={() => onNavigate('village')}
+          >
+            ← 마을로 돌아가기
+          </button>
+        )}
+        <div className="write-diary-header-content">
+          <h1 className="write-diary-title">일기 쓰기</h1>
+          <p className="write-diary-subtitle">  오늘 하루를 자유롭게 기록해 보세요!  </p>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="write-diary-form">
@@ -400,14 +402,14 @@ function WriteDiary({ onNavigate, selectedDate }) {
 
         {/* 제목 입력 */}
         <div className="form-group">
-          <label htmlFor="title" className="form-label">제목 (선택사항)</label>
+          <label htmlFor="title" className="form-label">제목</label>
           <input
             type="text"
             id="title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             className="form-input"
-            placeholder="오늘 하루는 어땠나요?"
+            placeholder="오늘 일기의 제목을 입력해 주세요."
             maxLength={50}
           />
         </div>
@@ -426,7 +428,7 @@ function WriteDiary({ onNavigate, selectedDate }) {
               setShowFullMlResult(false)
             }}
             className="form-textarea"
-            placeholder="오늘 하루 있었던 일들을 자유롭게 적어보세요..."
+            placeholder="오늘 하루 있었던 일들을 적어 보세요. 주민들이 기다리고 있어요."
             rows={12}
             required
           />
@@ -444,7 +446,7 @@ function WriteDiary({ onNavigate, selectedDate }) {
               onClick={handleAnalyzeDemoML}
               disabled={demoLoading || !content.trim()}
             >
-              {demoLoading ? '분석 중...' : '분석하기 (ML 데모)'}
+              {demoLoading ? '분석 중...' : 'ML 모델으로 감정 분석하기'}
             </button>
             <button
               type="button"
@@ -452,18 +454,18 @@ function WriteDiary({ onNavigate, selectedDate }) {
               onClick={handleAnalyzePreviewGPT}
               disabled={demoLoading || !content.trim()}
             >
-              {demoLoading ? '분석 중...' : '분석하기 (GPT 미리보기)'}
+              {demoLoading ? '분석 중...' : 'GPT-4o mini로 감정 분석하기'}
             </button>
           </div>
           <p style={{ marginTop: 8, fontSize: 12, color: '#666' }}>
-            ML 데모 결과는 마을 상태에 반영되지 않습니다. GPT 미리보기 또한 저장 전에는 반영되지 않습니다.
+            ML 모델으로 분석한 결과는 마을에 반영되지 않아요.
           </p>
 
           {/* 데모/미리보기 결과 표시 */}
           {demoResult && (
             <div className="demo-result" style={{ marginTop: 12, padding: 12, border: '1px solid #ddd', borderRadius: 8 }}>
               <div style={{ fontWeight: 600, marginBottom: 8 }}>
-                {demoResult.mode === 'ml' ? 'ML 데모 결과' : 'GPT 미리보기 결과'}
+                {demoResult.mode === 'ml' ? 'ML 모델 감정 분석 결과' : 'GPT-4o mini 감정 분석 결과'}
               </div>
               {demoResult.mode === 'ml' && (
                 <>
@@ -557,9 +559,9 @@ function WriteDiary({ onNavigate, selectedDate }) {
         {/* 기존 일기 안내 */}
         {existingDiary && !showReplaceConfirm && (
           <div className="existing-diary-warning">
-            <p>⚠️ 이 날짜에 이미 일기가 있습니다. 저장하면 기존 일기가 덮어씌워집니다.</p>
+            <p>⚠️ 이 날짜에 이미 일기가 있어요! 저장하면 기존 일기가 덮어씌워져요.</p>
             <p className="existing-diary-warning-detail">
-              기존 일기로 생성된 와글와글 광장 대화, 행복나무 성장도, 우물 수위 등이 되돌려지고 새로운 일기 값으로 업데이트됩니다.
+              기존 일기로 생성된 와글와글 광장 대화, 행복나무 성장도, 우물 수위 등이 되돌려지고 새로운 일기 값으로 업데이트 돼요.
             </p>
           </div>
         )}
@@ -569,15 +571,15 @@ function WriteDiary({ onNavigate, selectedDate }) {
           <div className="replace-confirm-dialog">
             <div className="replace-confirm-content">
               <h3>기존 일기 덮어쓰기</h3>
-              <p>이 날짜에 이미 일기가 있습니다. 저장하면:</p>
+              <p>이 날짜에 이미 일기가 있어요. 저장하면:</p>
               <ul>
-                <li>기존 일기가 삭제됩니다</li>
-                <li>기존 일기로 생성된 와글와글 광장 대화가 삭제됩니다</li>
-                <li>기존 일기로 성장한 행복나무 성장도가 되돌려집니다</li>
-                <li>기존 일기로 채워진 우물 수위가 되돌려집니다</li>
-                <li>새로운 일기 값으로 다시 계산됩니다</li>
+                <li>기존 일기가 삭제돼요.</li>
+                <li>기존 일기로 생성된 와글와글 광장 대화가 삭제돼요.</li>
+                <li>기존 일기로 성장한 행복나무 성장도가 되돌려져요.</li>
+                <li>기존 일기로 채워진 우물 수위가 되돌려져요.</li>
+                <li>새로운 일기 값으로 다시 계산돼요.</li>
               </ul>
-              <p className="replace-confirm-question">정말로 덮어쓰시겠습니까?</p>
+              <p className="replace-confirm-question">이대로 덮어쓸까요?</p>
               <div className="replace-confirm-buttons">
                 <button
                   type="button"

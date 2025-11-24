@@ -24,9 +24,8 @@ function Guide({ onNavigate }) {
           </div>
           <div className="guide-section-content">
             <p className="guide-intro-text">
-              이곳은 당신의 감정들이 작은 주민이 되어 살아가는 특별한 마을이에요.<br />
+              이곳은 당신의 감정들이 살아숨쉬는 특별한 마을이에요.<br />
               일기를 쓰면 감정 주민들이 모습을 드러내고, 서로의 이야기를 건네기 시작해요.<br />
-              행복한 날엔 나무가 자라고, 지친 날엔 우물에 물이 차오르며,
               마을은 당신의 하루를 닮아 변해가요.
             </p>
           </div>
@@ -36,14 +35,14 @@ function Guide({ onNavigate }) {
         <section className="guide-section">
           <div className="guide-section-header">
             <div className="guide-section-icon">📍</div>
-            <h2 className="guide-section-title">마을의 장소들</h2>
+            <h2 className="guide-section-title">마을 지도</h2>
           </div>
           <div className="guide-places-grid">
             <div className="guide-place-card">
               <div className="guide-place-icon">📝</div>
               <h3 className="guide-place-title">일기 쓰기</h3>
               <p className="guide-place-description">
-                매일의 하루를 기록하고 감정을 표현해보세요.<br />
+                매일의 하루를 기록하고 감정을 표현해 보세요.<br />
               </p>
             </div>
             
@@ -60,7 +59,7 @@ function Guide({ onNavigate }) {
               <div className="guide-place-icon">📮</div>
               <h3 className="guide-place-title">감정 우체통</h3>
               <p className="guide-place-description">
-                주민들이 보내는 편지를 받아보세요.<br /> 
+                주민들이 보내는 편지를 받아 보세요.<br /> 
                 축하, 위로, 응원의 메시지가 도착해요.
               </p>
             </div>

@@ -37,6 +37,9 @@ function Well({ onNavigate, selectedDate }) {
   const [waterPercent, setWaterPercent] = useState(0)
   const [selectedDateImpact, setSelectedDateImpact] = useState(null)
   const [showInfo, setShowInfo] = useState(false)
+  const [bonusInfo, setBonusInfo] = useState(null)
+  const [hideDateNotice, setHideDateNotice] = useState(false)
+  const [hideDateImpact, setHideDateImpact] = useState(false)
   const today = getTodayDateString()
   const isPastDate = selectedDate && selectedDate < today
 
@@ -46,6 +49,26 @@ function Well({ onNavigate, selectedDate }) {
       loadSelectedDateImpact()
     } else {
       setSelectedDateImpact(null)
+    }
+    
+    // localStorage에서 보너스 정보 확인
+    const wellBonusStr = localStorage.getItem('wellBonus')
+    if (wellBonusStr) {
+      try {
+        const bonusData = JSON.parse(wellBonusStr)
+        // 24시간 이내의 보너스만 표시
+        if (Date.now() - bonusData.timestamp < 24 * 60 * 60 * 1000) {
+          setBonusInfo(bonusData)
+        } else {
+          localStorage.removeItem('wellBonus')
+          setBonusInfo(null)
+        }
+      } catch (e) {
+        localStorage.removeItem('wellBonus')
+        setBonusInfo(null)
+      }
+    } else {
+      setBonusInfo(null)
     }
     
     // 주기적으로 상태 업데이트 (5초마다)
@@ -174,7 +197,7 @@ function Well({ onNavigate, selectedDate }) {
               <div className="well-comfort-message">
                 <h4 className="well-comfort-title">💙 주민들의 위로</h4>
                 <p className="well-comfort-text">
-                  우물이 넘쳤어도 걱정 마세요. 힘든 날도 지나가고, 긍정적인 감정들이 물을 줄여줄 거예요. 
+                  우물이 넘쳤어도 걱정 마세요. 힘든 날도 지나가고, 긍정적인 감정들이 물을 줄여 줄 거예요. 
                   주민들이 우체통에 위로의 편지를 보냈으니 확인해보세요.
                 </p>
               </div>
@@ -195,19 +218,48 @@ function Well({ onNavigate, selectedDate }) {
 
       {/* 우측 상단에 작은 알림 배지들 */}
       <div className="well-alerts">
-        {isPastDate && (
+        {isPastDate && !hideDateNotice && (
           <div className="well-date-notice">
             <span className="well-date-notice-text">
-              📅 현재 상태는 {new Date(today).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })} 기준입니다
+              📅 현재 상태는 {new Date(today).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })} 기준이에요.
             </span>
+            <button
+              className="well-alert-close"
+              onClick={() => setHideDateNotice(true)}
+            >
+              ✕
+            </button>
           </div>
         )}
-        {selectedDateImpact && isPastDate && (
+        {bonusInfo && (
+          <div className="well-bonus-message">
+            <span className="well-bonus-icon">💧</span>
+            <span className="well-bonus-text">
+              부정적인 감정만 있어서 우물에 물이 <strong>{bonusInfo.bonusScore}점</strong> 더 차올랐어요.
+            </span>
+            <button
+              className="well-alert-close"
+              onClick={() => {
+                localStorage.removeItem('wellBonus')
+                setBonusInfo(null)
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
+        {selectedDateImpact && isPastDate && !hideDateImpact && (
           <div className="well-date-impact">
             <span className="well-date-impact-icon">📝</span>
             <span className="well-date-impact-text">
-              {new Date(selectedDateImpact.date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}의 일기로 우물에 <strong>{selectedDateImpact.negativeScore}점</strong> 물이 차올랐어요 💧
+              {new Date(selectedDateImpact.date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}의 일기로 우물에 <strong>{selectedDateImpact.negativeScore}점</strong> 물이 차올랐어요. 💧
             </span>
+            <button
+              className="well-alert-close"
+              onClick={() => setHideDateImpact(true)}
+            >
+              ✕
+            </button>
           </div>
         )}
       </div>
@@ -236,7 +288,7 @@ function Well({ onNavigate, selectedDate }) {
                 <div className="well-overflow-icon">⚠️</div>
                 <div className="well-overflow-title">우물이 넘쳤어요!</div>
                 <div className="well-overflow-message">
-                  주민들이 우체통에 위로의 편지를 보냈어요. 확인해보세요.
+                  주민들이 우체통에 위로의 편지를 보냈어요. 확인해 보세요.
                 </div>
               </div>
             )}
