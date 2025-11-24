@@ -371,6 +371,87 @@
   }
 }
 
+/* 저장 완료 팝업 */
+.save-success-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+.save-success-popup-content {
+  background: white;
+  border-radius: 1.5rem;
+  padding: 2.5rem;
+  max-width: 500px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  animation: slideUp 0.3s ease;
+}
+
+.save-success-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  animation: bounce 0.6s ease;
+}
+
+.save-success-title {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #1f2937;
+  margin: 0 0 1rem 0;
+}
+
+.save-success-message {
+  margin: 1.5rem 0;
+  color: #374151;
+  line-height: 1.8;
+  font-size: 1.2rem;
+}
+
+.save-success-message p {
+  margin: 0.5rem 0;
+}
+
+.save-success-button {
+  width: 100%;
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, #D7B899 0%, #C8A882 100%);
+  color: white;
+  border: none;
+  border-radius: 0.75rem;
+  font-size: 1.4rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: inherit;
+  margin-top: 1rem;
+  box-shadow: 0 4px 12px rgba(215, 184, 153, 0.3);
+}
+
+.save-success-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(215, 184, 153, 0.45);
+  background: linear-gradient(135deg, #C8A882 0%, #B89A7A 100%);
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
 @media (max-width: 768px) {
   .write-diary-title {
     font-size: 3rem;
@@ -400,6 +481,23 @@
 
   .replace-confirm-buttons {
     flex-direction: column;
+  }
+
+  .save-success-popup-content {
+    padding: 2rem 1.5rem;
+  }
+
+  .save-success-title {
+    font-size: 1.6rem;
+  }
+
+  .save-success-message {
+    font-size: 1.1rem;
+  }
+
+  .save-success-button {
+    font-size: 1.2rem;
+    padding: 0.9rem 1.5rem;
   }
 }
 

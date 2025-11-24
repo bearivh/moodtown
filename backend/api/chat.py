@@ -22,21 +22,24 @@ def chat_with_characters():
 
     character_info = "\n".join([
         f"{CHARACTERS[e]['name']}({e}): {CHARACTERS[e]['style']}"
+        + (f"\n    말투 특징: {', '.join(CHARACTERS[e].get('speech_hints', []))}" if CHARACTERS[e].get('speech_hints') else "")
         for e in active_emotions if e in CHARACTERS
     ])
     all_character_details = "\n".join([
         f"   - {CHARACTERS[emo]['name']}({emo}): {CHARACTERS[emo].get('description', CHARACTERS[emo]['style'])}"
+        + (f"\n     말투 특징: {', '.join(CHARACTERS[emo].get('speech_hints', []))}" if CHARACTERS[emo].get('speech_hints') else "")
         for emo in CHARACTERS.keys()
     ])
 
     messages = [{
         "role": "system",
         "content": (
-            "너는 사용자의 내면에 사는 감정 주민들의 대화를 쓰는 작가야. "
-            "각 주민은 자신이 어떤 감정을 대표하는 주민인지 명확히 알고 있으며, "
-            "그 감정의 특성에 맞는 말투와 내용으로 대답한다. "
-            "주민들은 사용자의 내면의 목소리이며, 반말로 편하게 당사자(1인칭) 관점으로 말한다. "
-            "제3자처럼 말하지 말고 '나'의 입장에서 직접적으로 대답한다."
+        "너는 사용자의 내면에 사는 감정 주민들의 대화를 쓰는 작가야. "
+        "각 주민은 자신이 어떤 감정을 대표하는 주민인지 명확히 알고 있으며, "
+        "그 감정의 특성에 맞는 말투와 내용으로 대답한다. "
+        "주민들은 사용자의 내면의 목소리이며, 반말로 편하게 당사자(1인칭) 관점으로 말한다. "
+        "제3자처럼 말하지 말고 '나'의 입장에서 직접적으로 대답한다. "
+        "각 주민의 '말투 특징'을 정확히 반영하여 고유한 말투를 유지해야 한다."
         )
     }]
     for msg in chat_sessions[session_date][-10:]:
@@ -63,6 +66,7 @@ def chat_with_characters():
         f"   - ✅ 올바른 예 (빨강이): '정말 화가 나! 왜 이렇게 해야 하는 거야!' (반말, 당사자, 분노의 톤)\n"
         f"6. 사용자의 메시지와 관련이 있거나, 감정적으로 공감할 수 있는 주민들만 대답하세요.\n"
         f"7. 각 주민은 자신의 감정 역할을 명확히 알고, 그 감정의 특성에 맞는 말투와 내용으로 한 줄씩 대답하세요.\n"
+        f"   각 주민의 '말투 특징'을 참고하여 정확한 말투를 사용하세요.\n"
         f"8. ⚠️ 중요: 모든 대사는 반드시 내용이 있어야 합니다. 빈 대사나 공백만 있는 대사를 만들지 마세요.\n"
         f"9. 대사는 최소 5자 이상의 의미 있는 내용이어야 합니다.\n\n"
         f"대사는 JSON 형식으로:\n"

@@ -21,6 +21,8 @@ function WriteDiary({ onNavigate, selectedDate }) {
   const [analysisCache, setAnalysisCache] = useState({ contentKey: null, gpt: null, ml: null }) // per-mode cache
   const [currentMode, setCurrentMode] = useState(null) // 'gpt' | 'ml' | null
   const [showFullMlResult, setShowFullMlResult] = useState(false) // ML: 전체 결과 표시 여부
+  const [showSaveSuccessPopup, setShowSaveSuccessPopup] = useState(false) // 저장 완료 팝업 표시 여부
+  const [saveSuccessMessage, setSaveSuccessMessage] = useState('') // 저장 완료 메시지
 
   const getContentKey = (txt) => `${(txt || '').trim()}::${(txt || '').length}`
 
@@ -49,11 +51,12 @@ function WriteDiary({ onNavigate, selectedDate }) {
     setIsSaving(true)
     
     try {
-      // 1. 감정 분석: 현재 선택 모드의 캐시가 있으면 재사용, 없으면 기본 GPT 분석
+      // 1. 감정 분석: 저장 시에는 항상 GPT 분석 사용 (ML은 미리보기 전용)
       let analysisResult = null
       const key = getContentKey(content)
-      if (analysisCache.contentKey === key && currentMode && analysisCache[currentMode]) {
-        analysisResult = analysisCache[currentMode]
+      // GPT 분석 결과가 캐시에 있으면 재사용, 없으면 새로 분석
+      if (analysisCache.contentKey === key && analysisCache.gpt) {
+        analysisResult = analysisCache.gpt
       } else {
         analysisResult = await analyzeDiary(content.trim())
         setAnalysisCache(prev => ({ contentKey: key, gpt: analysisResult, ml: prev.ml }))
@@ -78,16 +81,30 @@ function WriteDiary({ onNavigate, selectedDate }) {
         analyzed_at: new Date().toISOString()
       }
 
-      // 4. 기존 일기가 있는지 확인
-      if (existingDiary) {
+      // 4. 저장하기 직전에 다시 한 번 기존 일기가 있는지 확인 (최신 상태 확인)
+      const currentDiaries = await getDiariesByDate(date)
+      console.log('[일기 저장] 저장 직전 확인 - 날짜:', date, '기존 일기 개수:', currentDiaries.length)
+      
+      // 현재 작성 중인 일기와 동일한 ID가 있는지 확인 (자기 자신 제외)
+      const currentExistingDiary = currentDiaries.find(d => {
+        // 같은 날짜의 다른 일기인지 확인 (ID가 다르거나 ID가 없는 경우)
+        return d.id !== newDiaryData.id
+      }) || (currentDiaries.length > 0 ? currentDiaries[0] : null)
+      
+      if (currentExistingDiary) {
+        console.log('[일기 저장] 기존 일기 발견:', currentExistingDiary)
         // 기존 일기가 있으면 확인 다이얼로그 표시
+        setExistingDiary(currentExistingDiary)
         setPendingDiaryData({ newDiaryData, emotionScores, positiveScore, negativeScore })
         setShowReplaceConfirm(true)
         setIsSaving(false)
         return
       }
+      
+      console.log('[일기 저장] 기존 일기 없음, 새로 저장 진행')
 
       // 5. 기존 일기가 없으면 바로 저장
+      setExistingDiary(null) // 상태도 업데이트
       await saveAndUpdateStates(newDiaryData, emotionScores, positiveScore, negativeScore)
     } catch (error) {
       console.error('일기 저장 중 오류:', error)
@@ -126,6 +143,13 @@ function WriteDiary({ onNavigate, selectedDate }) {
     setShowReplaceConfirm(false)
     setPendingDiaryData(null)
     setIsSaving(false)
+  }
+
+  const handleGoToVillage = () => {
+    setShowSaveSuccessPopup(false)
+    if (onNavigate) {
+      onNavigate('village')
+    }
   }
 
   const saveAndUpdateStates = async (diaryData, emotionScores, positiveScore, negativeScore, isReplace = false) => {
@@ -180,20 +204,14 @@ function WriteDiary({ onNavigate, selectedDate }) {
       if (bonusMessages.length > 0) {
         saveMessageText += `\n${bonusMessages.join('\n')}`
       }
-      setSaveMessage(saveMessageText)
+      // 저장 완료 팝업 표시
+      setSaveSuccessMessage(saveMessageText)
+      setShowSaveSuccessPopup(true)
       // 폼 초기화
       setTitle('')
       setContent('')
       setDate(getTodayDateString())
       setExistingDiary(null)
-      
-      setTimeout(() => {
-        setSaveMessage('')
-        // 마을로 이동
-        if (onNavigate) {
-          setTimeout(() => onNavigate('village'), 500)
-        }
-      }, 2000)
     } catch (error) {
       throw error
     } finally {
@@ -586,6 +604,28 @@ function WriteDiary({ onNavigate, selectedDate }) {
         {saveMessage && (
           <div className={`save-message ${saveMessage.includes('실패') || saveMessage.includes('오류') ? 'save-message-error' : 'save-message-success'}`}>
             {saveMessage}
+          </div>
+        )}
+
+        {/* 저장 완료 팝업 */}
+        {showSaveSuccessPopup && (
+          <div className="save-success-popup">
+            <div className="save-success-popup-content">
+              <div className="save-success-icon">✨</div>
+              <h3 className="save-success-title">저장 완료!</h3>
+              <div className="save-success-message">
+                {saveSuccessMessage.split('\n').map((line, idx) => (
+                  <p key={idx}>{line}</p>
+                ))}
+              </div>
+              <button
+                type="button"
+                className="save-success-button"
+                onClick={handleGoToVillage}
+              >
+                마을로 돌아가기
+              </button>
+            </div>
           </div>
         )}
 

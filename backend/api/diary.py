@@ -211,13 +211,27 @@ def get_office_stats():
 @diary_bp.route("/api/plaza/conversations/<date>", methods=["GET"])
 def get_plaza_conversation(date):
     """특정 날짜의 광장 대화 가져오기"""
-    conversation = get_plaza_conversation_by_date(date)
-    if conversation:
+    try:
+        conversation = get_plaza_conversation_by_date(date)
+        if conversation:
+            return jsonify({
+                "conversation": conversation.get("conversation", []),
+                "emotionScores": conversation.get("emotionScores", {})
+            })
+        # 대화가 없는 경우 빈 응답 반환 (404 대신 200으로 빈 데이터 반환)
         return jsonify({
-            "conversation": conversation.get("conversation", []),
-            "emotionScores": conversation.get("emotionScores", {})
+            "conversation": [],
+            "emotionScores": {}
         })
-    return jsonify({"error": "대화를 찾을 수 없습니다."}), 404
+    except Exception as e:
+        print(f"광장 대화 가져오기 오류: {e}")
+        import traceback
+        traceback.print_exc()
+        # 에러 발생 시에도 빈 응답 반환 (500 대신 200으로 빈 데이터 반환)
+        return jsonify({
+            "conversation": [],
+            "emotionScores": {}
+        })
 
 
 @diary_bp.route("/api/plaza/conversations", methods=["POST"])

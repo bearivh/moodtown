@@ -335,13 +335,22 @@ export async function getPlazaConversationByDate(date) {
   try {
     const response = await fetch(`${API_BASE_URL}/api/plaza/conversations/${date}`)
     if (!response.ok) {
-      if (response.status === 404) return null
+      // 404나 500 에러도 조용히 처리 (대화가 없는 것으로 간주)
+      if (response.status === 404 || response.status === 500) {
+        return null
+      }
       throw new Error(`API 오류: ${response.status}`)
     }
     const result = await response.json()
-    return result || null
+    // 빈 대화 배열이면 null 반환 (기존 동작 유지)
+    if (result && result.conversation && result.conversation.length > 0) {
+      return result
+    }
+    return null
   } catch (error) {
-    console.error('대화 불러오기 실패:', error)
+    // 네트워크 에러 등은 조용히 처리 (대화가 없는 것으로 간주)
+    // console.error는 개발 중에만 필요하면 주석 처리
+    // console.error('대화 불러오기 실패:', error)
     return null
   }
 }

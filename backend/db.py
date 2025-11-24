@@ -229,12 +229,23 @@ def get_plaza_conversation_by_date(date: str) -> Optional[Dict[str, Any]]:
         
         if row:
             result = dict(row)
-            result['conversation'] = json.loads(result['conversation'])
-            result['emotionScores'] = json.loads(result['emotion_scores'] or '{}')
+            # JSON 파싱 시 안전하게 처리
+            try:
+                result['conversation'] = json.loads(result.get('conversation') or '[]')
+            except (json.JSONDecodeError, TypeError):
+                result['conversation'] = []
+            
+            try:
+                result['emotionScores'] = json.loads(result.get('emotion_scores') or '{}')
+            except (json.JSONDecodeError, TypeError):
+                result['emotionScores'] = {}
+            
             return result
         return None
     except Exception as e:
         print(f"대화 불러오기 실패: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 def delete_plaza_conversation_by_date(date: str) -> bool:

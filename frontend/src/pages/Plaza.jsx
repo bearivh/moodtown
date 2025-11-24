@@ -32,7 +32,8 @@ function Plaza({ onNavigate, selectedDate }) {
   const [chatMessages, setChatMessages] = useState([])
   const [chatInput, setChatInput] = useState('')
   const [chatLoading, setChatLoading] = useState(false)
-  const [showChat, setShowChat] = useState(false)
+  const [showChat, setShowChat] = useState(false) // 채팅 기능 활성화 여부
+  const [chatCollapsed, setChatCollapsed] = useState(false) // 채팅창 접힘 여부
   const chatEndRef = useRef(null)
   
   // 설명서 관련 상태
@@ -410,11 +411,12 @@ function Plaza({ onNavigate, selectedDate }) {
                   <h3>주민들과 대화하기</h3>
                   <button 
                     className="plaza-chat-toggle"
-                    onClick={() => setShowChat(!showChat)}
+                    onClick={() => setChatCollapsed(!chatCollapsed)}
                   >
-                    {showChat ? '접기' : '펼치기'}
+                    {chatCollapsed ? '펼치기' : '접기'}
                   </button>
                 </div>
+                {!chatCollapsed && (
                 <div className="plaza-chat-messages">
                   {chatMessages.length === 0 && (
                     <div className="plaza-chat-empty">
@@ -489,6 +491,8 @@ function Plaza({ onNavigate, selectedDate }) {
                   )}
                   <div ref={chatEndRef} />
                 </div>
+                )}
+                {!chatCollapsed && (
                 <div className="plaza-chat-input-container">
                   <input
                     type="text"
@@ -507,6 +511,7 @@ function Plaza({ onNavigate, selectedDate }) {
                     전송
                   </button>
                 </div>
+                )}
               </div>
               )}
             </div>
