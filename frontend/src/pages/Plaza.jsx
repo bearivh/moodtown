@@ -7,13 +7,14 @@ import yellowImage from '../assets/characters/yellow.png'
 import greenImage from '../assets/characters/green.png'
 import blueImage from '../assets/characters/blue.png'
 import navyImage from '../assets/characters/navy.png'
+import purpleImage from '../assets/characters/purple.png'
 import './Plaza.css'
 
 // 캐릭터 정보 (백엔드 characters.json과 동기화)
 const CHARACTER_INFO = {
   '기쁨': { name: '노랑이', emoji: '🟡', color: '#eab308', image: yellowImage },
   '사랑': { name: '초록이', emoji: '🟢', color: '#22c55e', image: greenImage },
-  '놀람': { name: '보라', emoji: '🟣', color: '#a855f7' },
+  '놀람': { name: '보라', emoji: '🟣', color: '#a855f7', image: purpleImage },
   '두려움': { name: '남색이', emoji: '🔷', color: '#6366f1', image: navyImage },
   '분노': { name: '빨강이', emoji: '🔴', color: '#ef4444', image: redImage },
   '부끄러움': { name: '주황이', emoji: '🟠', color: '#f97316', image: orangeImage },
@@ -33,6 +34,9 @@ function Plaza({ onNavigate, selectedDate }) {
   const [chatLoading, setChatLoading] = useState(false)
   const [showChat, setShowChat] = useState(false)
   const chatEndRef = useRef(null)
+  
+  // 설명서 관련 상태
+  const [showInfo, setShowInfo] = useState(false)
 
   useEffect(() => {
     if (!selectedDate) return
@@ -228,11 +232,55 @@ function Plaza({ onNavigate, selectedDate }) {
             ← 마을로 돌아가기
           </button>
         )}
-        <h1 className="plaza-title">와글와글 광장</h1>
-        <p className="plaza-subtitle">
-          {selectedDate ? formatDate(selectedDate) : ''}의 주민들 대화
-        </p>
+        <div className="plaza-header-content">
+          <h1 className="plaza-title">와글와글 광장</h1>
+          <p className="plaza-subtitle">
+            {selectedDate ? formatDate(selectedDate) : ''}의 주민들 대화
+          </p>
+        </div>
+        <button 
+          className="plaza-info-toggle"
+          onClick={() => setShowInfo(!showInfo)}
+        >
+          <span className="plaza-info-toggle-icon">{showInfo ? '📖' : '📘'}</span>
+          <span className="plaza-info-toggle-text">광장 설명서</span>
+        </button>
       </div>
+
+      {/* 설명 섹션 - 버튼 바로 밑에 표시 */}
+      {showInfo && (
+        <div className="plaza-info-section">
+          <div className="plaza-info-content-wrapper">
+            <h3 className="plaza-info-title">광장이 작동하는 방법</h3>
+            <div className="plaza-info-cards">
+              <div className="plaza-info-card">
+                <span className="plaza-info-icon">📊</span>
+                <div className="plaza-info-content">
+                  <span className="plaza-info-text">일기를 작성하면</span>
+                  <span className="plaza-info-arrow">→</span>
+                  <span className="plaza-info-result">감정 분석 결과가 표시돼요</span>
+                </div>
+              </div>
+              <div className="plaza-info-card">
+                <span className="plaza-info-icon">💬</span>
+                <div className="plaza-info-content">
+                  <span className="plaza-info-text">감정 분석 결과를 바탕으로</span>
+                  <span className="plaza-info-arrow">→</span>
+                  <span className="plaza-info-result">주민들이 대화를 시작해요</span>
+                </div>
+              </div>
+              <div className="plaza-info-card">
+                <span className="plaza-info-icon">🤖</span>
+                <div className="plaza-info-content">
+                  <span className="plaza-info-text">주민들과 대화하기에서</span>
+                  <span className="plaza-info-arrow">→</span>
+                  <span className="plaza-info-result">주민들과 직접 채팅할 수 있어요</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="plaza-content">
         {loading && (
@@ -277,7 +325,9 @@ function Plaza({ onNavigate, selectedDate }) {
                         ) : (
                           <span className="plaza-emotion-emoji">{charInfo?.emoji || '😊'}</span>
                         )}
-                        <span className="plaza-emotion-name">{charInfo?.name || emotion}</span>
+                        <span className="plaza-emotion-name">
+                          {charInfo?.name || emotion} ({emotion})
+                        </span>
                         <div className="plaza-emotion-bar">
                           <div 
                             className="plaza-emotion-bar-fill"
@@ -294,63 +344,68 @@ function Plaza({ onNavigate, selectedDate }) {
               </div>
             </div>
 
-            {/* 대화 표시 */}
-            <div className="plaza-conversation">
-              {conversation.map((msg, idx) => {
-                const emotion = msg.감정 || msg.emotion || ''
-                const characterName = msg.캐릭터 || msg.character || ''
-                const text = msg.대사 || msg.text || msg.dialogue || ''
-                
-                // 감정명으로 찾기
-                let charInfo = CHARACTER_INFO[emotion]
-                
-                // 캐릭터 이름으로 찾기 (감정명으로 못 찾은 경우)
-                if (!charInfo && characterName) {
-                  charInfo = Object.values(CHARACTER_INFO).find(
-                    char => char.name === characterName
-                  )
-                  
-                  if (!charInfo) {
-                    const emotionByChar = Object.keys(CHARACTER_INFO).find(
-                      emo => CHARACTER_INFO[emo].name === characterName
-                    )
-                    if (emotionByChar) {
-                      charInfo = CHARACTER_INFO[emotionByChar]
+            {/* 대화와 채팅을 가로로 배치 */}
+            <div className="plaza-conversation-chat-wrapper">
+              {/* 대화 표시 */}
+              <div className="plaza-conversation">
+                <h3 className="plaza-conversation-title">주민들 대화</h3>
+                <div className="plaza-conversation-messages">
+                  {conversation.map((msg, idx) => {
+                    const emotion = msg.감정 || msg.emotion || ''
+                    const characterName = msg.캐릭터 || msg.character || ''
+                    const text = msg.대사 || msg.text || msg.dialogue || ''
+                    
+                    // 감정명으로 찾기
+                    let charInfo = CHARACTER_INFO[emotion]
+                    
+                    // 캐릭터 이름으로 찾기 (감정명으로 못 찾은 경우)
+                    if (!charInfo && characterName) {
+                      charInfo = Object.values(CHARACTER_INFO).find(
+                        char => char.name === characterName
+                      )
+                      
+                      if (!charInfo) {
+                        const emotionByChar = Object.keys(CHARACTER_INFO).find(
+                          emo => CHARACTER_INFO[emo].name === characterName
+                        )
+                        if (emotionByChar) {
+                          charInfo = CHARACTER_INFO[emotionByChar]
+                        }
+                      }
                     }
-                  }
-                }
-                
-                // 기본값 설정
-                if (!charInfo) {
-                  charInfo = { name: characterName || emotion, emoji: '😊', color: '#9ca3af' }
-                }
-                
-                return (
-                  <div key={idx} className="plaza-message">
-                    <div 
-                      className="plaza-message-avatar"
-                      style={{ backgroundColor: charInfo.color }}
-                    >
-                      {charInfo.image ? (
-                        <img src={charInfo.image} alt={charInfo.name} className="plaza-character-image" />
-                      ) : (
-                        charInfo.emoji
-                      )}
-                    </div>
-                    <div className="plaza-message-content">
-                      <div className="plaza-message-name">
-                        {charInfo.name}
+                    
+                    // 기본값 설정
+                    if (!charInfo) {
+                      charInfo = { name: characterName || emotion, emoji: '😊', color: '#9ca3af' }
+                    }
+                    
+                    return (
+                      <div key={idx} className="plaza-message">
+                        <div 
+                          className="plaza-message-avatar"
+                          style={{ backgroundColor: charInfo.color }}
+                        >
+                          {charInfo.image ? (
+                            <img src={charInfo.image} alt={charInfo.name} className="plaza-character-image" />
+                          ) : (
+                            charInfo.emoji
+                          )}
+                        </div>
+                        <div className="plaza-message-content">
+                          <div className="plaza-message-name">
+                            {charInfo.name}
+                          </div>
+                          <div className="plaza-message-text">{text}</div>
+                        </div>
                       </div>
-                      <div className="plaza-message-text">{text}</div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+                    )
+                  })}
+                </div>
+              </div>
 
-            {/* 챗봇 섹션 */}
-            {showChat && (
-              <div className="plaza-chat-section">
+              {/* 챗봇 섹션 */}
+              {showChat && (
+                <div className="plaza-chat-section">
                 <div className="plaza-chat-header">
                   <h3>주민들과 대화하기</h3>
                   <button 
@@ -453,7 +508,8 @@ function Plaza({ onNavigate, selectedDate }) {
                   </button>
                 </div>
               </div>
-            )}
+              )}
+            </div>
           </>
         )}
 

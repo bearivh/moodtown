@@ -44,7 +44,6 @@ function Guide({ onNavigate }) {
               <h3 className="guide-place-title">일기 쓰기</h3>
               <p className="guide-place-description">
                 매일의 하루를 기록하고 감정을 표현해보세요.<br />
-                일기를 쓰면 주민들이 나타나서 함께 대화하고, 당신의 감정을 이해하고 응원해줘요.
               </p>
             </div>
             
@@ -53,7 +52,7 @@ function Guide({ onNavigate }) {
               <h3 className="guide-place-title">와글와글 광장</h3>
               <p className="guide-place-description">
                 일기의 감정을 바탕으로 주민들이 모여 대화하는 곳이에요.<br />
-                당신의 감정을 이해하고 응원해 주는 주민들의 목소리를 들어보세요.
+                주민들에게 말을 걸 수 있어요.
               </p>
             </div>
             

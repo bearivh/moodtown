@@ -1,7 +1,19 @@
 .write-diary-container {
   min-height: 100vh;
-  background: linear-gradient(to bottom, #f0f9ff, #f0fdf4);
+  position: relative;
+  overflow: hidden;
+  /* 그라데이션과 도트 패턴을 함께 적용 */
+  background: 
+    /* 윗줄 도트 */
+    radial-gradient(circle, rgba(255, 255, 255, 0.5) 6px, transparent 6px),
+    /* 아랫줄 도트 (윗줄 사이에 배치) */
+    radial-gradient(circle, rgba(255, 255, 255, 0.5) 6px, transparent 6px),
+    /* 하늘색에서 하얀색 그라데이션 */
+    linear-gradient(to bottom, #E0F6FF 0%, #FFFFFF 100%);
+  background-size: 80px 80px, 80px 80px, 100% 100%;
+  background-position: 0 0, 40px 40px, 0 0;
   padding: 2rem 1rem;
+  font-family: 'Dongle', sans-serif;
 }
 
 .write-diary-header {
@@ -17,29 +29,29 @@
   top: 50%;
   transform: translateY(-50%);
   padding: 0.5rem 1rem;
-  background: #f3f4f6;
-  border: none;
-  border-radius: 0.5rem;
+  background-color: #D7B899;
+  border-radius: 30px;
+  font-size: 1.3rem;
+  color: #ffffff;
   cursor: pointer;
-  font-size: 0.875rem;
-  color: #374151;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  border: none;
 }
 
 .back-button:hover {
-  background: #e5e7eb;
-  color: #1f2937;
+  background-color: #C8A882;
+  transform: translateY(-50%) translateX(-2px);
 }
 
 .write-diary-title {
-  font-size: 2.5rem;
+  font-size: 3rem;
   font-weight: bold;
   color: #1f2937;
   margin-bottom: 0.5rem;
 }
 
 .write-diary-subtitle {
-  font-size: 1.125rem;
+  font-size: 1.4rem;
   color: #6b7280;
 }
 
@@ -58,7 +70,7 @@
 
 .form-label {
   display: block;
-  font-size: 0.875rem;
+  font-size: 1.1rem;
   font-weight: 600;
   color: #374151;
   margin-bottom: 0.5rem;
@@ -69,14 +81,14 @@
   padding: 0.75rem;
   border: 2px solid #e5e7eb;
   border-radius: 0.5rem;
-  font-size: 1rem;
+  font-size: 1.3rem;
   transition: border-color 0.2s ease;
   font-family: inherit;
 }
 
 .form-input:focus {
   outline: none;
-  border-color: #3b82f6;
+  border-color: #D7B899;
 }
 
 .form-textarea {
@@ -84,7 +96,7 @@
   padding: 0.75rem;
   border: 2px solid #e5e7eb;
   border-radius: 0.5rem;
-  font-size: 1rem;
+  font-size: 1.3rem;
   font-family: inherit;
   resize: vertical;
   transition: border-color 0.2s ease;
@@ -93,12 +105,12 @@
 
 .form-textarea:focus {
   outline: none;
-  border-color: #3b82f6;
+  border-color: #D7B899;
 }
 
 .character-count {
   text-align: right;
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   color: #9ca3af;
   margin-top: 0.25rem;
 }
@@ -134,36 +146,57 @@
 }
 
 .emotion-emoji {
-  font-size: 2rem;
+  font-size: 3rem;
 }
 
 .emotion-name {
-  font-size: 0.875rem;
+  font-size: 1.1rem;
 }
 
 .submit-button {
   width: 100%;
   padding: 1rem;
-  background: linear-gradient(to right, #3b82f6, #8b5cf6);
-  color: white;
+  background: linear-gradient(135deg, rgba(224, 246, 255, 0.4) 0%, rgba(255, 255, 255, 0.3) 100%);
+  color: #2d3748;
   border: none;
   border-radius: 0.75rem;
-  font-size: 1.125rem;
+  font-size: 1.4rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   font-family: inherit;
   margin-top: 1rem;
+  box-shadow: 0 4px 12px rgba(224, 246, 255, 0.3);
 }
 
 .submit-button:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 6px 20px rgba(224, 246, 255, 0.45);
 }
 
 .submit-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.analyze-button-ml {
+  background: linear-gradient(to right, #FFF9C4, #ffe989) !important;
+  color: #5D4037 !important;
+}
+
+.analyze-button-ml:hover:not(:disabled) {
+  background: linear-gradient(to right, #FFF59D, #FFF176) !important;
+  box-shadow: 0 4px 12px rgba(255, 245, 157, 0.4) !important;
+}
+
+.analyze-button-gpt {
+  background: linear-gradient(to right, #D7CCC8, #BCAAA4) !important;
+  color: #3E2723 !important;
+}
+
+.analyze-button-gpt:hover:not(:disabled) {
+  background: linear-gradient(to right, #BCAAA4, #A1887F) !important;
+  box-shadow: 0 4px 12px rgba(188, 170, 164, 0.4) !important;
 }
 
 .save-message {
@@ -211,7 +244,7 @@
 
 .existing-diary-warning p {
   margin: 0.5rem 0;
-  font-size: 0.875rem;
+  font-size: 1.1rem;
 }
 
 .existing-diary-warning-detail {
@@ -248,7 +281,7 @@
 
 .replace-confirm-content h3 {
   margin: 0 0 1rem 0;
-  font-size: 1.5rem;
+  font-size: 1.8rem;
   color: #1f2937;
 }
 
@@ -286,7 +319,7 @@
   padding: 0.75rem 1.5rem;
   border: none;
   border-radius: 0.5rem;
-  font-size: 1rem;
+  font-size: 1.3rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -340,7 +373,7 @@
 
 @media (max-width: 768px) {
   .write-diary-title {
-    font-size: 2rem;
+    font-size: 3rem;
   }
   
   .write-diary-form {

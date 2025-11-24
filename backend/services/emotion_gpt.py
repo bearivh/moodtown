@@ -146,6 +146,39 @@ JSON 형식만 출력하세요.
             norm_scores["슬픔"] += int(round(cut * 0.6))
             norm_scores["두려움"] += int(round(cut * 0.4))
 
+        # 5% 이하 감정 제거 및 재정규화
+        # 1단계: 5% 이하 감정을 0으로 처리
+        filtered_scores = {}
+        for emo in EMOTION_KEYS:
+            if norm_scores[emo] > 5:  # 5% 초과만 유지
+                filtered_scores[emo] = norm_scores[emo]
+            else:
+                filtered_scores[emo] = 0
+        
+        # 2단계: 남은 감정만 다시 정규화하여 합이 100이 되도록
+        remaining_total = sum(filtered_scores.values())
+        if remaining_total > 0:
+            # 남은 감정들의 비율을 유지하면서 합이 100이 되도록 정규화
+            norm_scores = {emo: int(round(filtered_scores[emo] / remaining_total * 100)) for emo in EMOTION_KEYS}
+            # 반올림으로 인한 차이 보정
+            diff = 100 - sum(norm_scores.values())
+            if diff != 0:
+                # 0이 아닌 감정 중 가장 큰 값에 차이 추가
+                non_zero_emotions = [(emo, val) for emo, val in norm_scores.items() if val > 0]
+                if non_zero_emotions:
+                    max_emo = max(non_zero_emotions, key=lambda x: x[1])[0]
+                    norm_scores[max_emo] += diff
+        else:
+            # 모든 감정이 5% 이하인 경우 기본값 사용
+            norm_scores = default_scores.copy()
+            # 기본값도 정규화
+            default_total = sum(norm_scores.values())
+            norm_scores = {emo: int(round(norm_scores[emo] / default_total * 100)) for emo in EMOTION_KEYS}
+            diff = 100 - sum(norm_scores.values())
+            if diff != 0:
+                max_emo = max(norm_scores.items(), key=lambda x: x[1])[0]
+                norm_scores[max_emo] += diff
+
         # 상위 4개
         sorted_emotions = sorted(norm_scores.items(), key=lambda x: x[1], reverse=True)
         top_emotions = [emo for emo, val in sorted_emotions[:4] if val > 0] or default_top

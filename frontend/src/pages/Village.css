@@ -2,7 +2,21 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 50%, #F5F5DC 100%);
+  position: relative;
+  overflow: hidden;
+  /* 그라데이션과 도트 패턴을 함께 적용 */
+  background: 
+    /* 윗줄 도트 */
+    radial-gradient(circle, rgba(255, 255, 255, 0.5) 6px, transparent 6px),
+    /* 아랫줄 도트 (윗줄 사이에 배치) */
+    radial-gradient(circle, rgba(255, 255, 255, 0.5) 6px, transparent 6px),
+    /* 하늘색에서 하얀색 그라데이션 */
+    linear-gradient(to bottom, #E0F6FF 0%, #FFFFFF 100%);
+  background-size: 80px 80px, 80px 80px, 100% 100%;
+  background-position: 0 0, 40px 40px, 0 0;
+  font-family: 'Dongle', sans-serif;
+  contain: layout style;
+  transform: translateZ(0);
 }
 
 .village-content {
@@ -17,48 +31,60 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+  margin-top: 3rem;
   margin-bottom: 2rem;
+  position: relative;
 }
 
 .village-back-button {
-  padding: 0.5rem 1rem;
-  background-color: rgba(255, 255, 255, 0.8);
-  border: 2px solid #4a5568;
-  border-radius: 8px;
-  font-size: 1rem;
+  padding: 0.3rem 1rem;
+  background-color: #D7B899;
+  border-radius: 30px;
+  font-size: 1.3rem;
+  color: #ffffff;
   cursor: pointer;
   transition: all 0.3s ease;
+  position: absolute;
+  left: 0;
+  z-index: 10;
+  margin-bottom: 1.0rem;
 }
 
 .village-back-button:hover {
-  background-color: #fff;
+  background-color: #C8A882;
   transform: translateX(-2px);
+  color: #ffffff;
 }
 
 .village-title {
-  font-size: 2.5rem;
+  font-size: 3rem;
   font-weight: bold;
   color: #2d3748;
   margin: 0;
 }
 
 .village-date-display {
-  margin-bottom: 1rem;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   text-align: center;
+  margin: 0;
+  width: 100%;
 }
 
 .village-date-title {
-  font-size: 1.5rem;
+  font-size: 1.8rem;
   font-weight: bold;
   color: #2d3748;
   margin: 0;
+  margin-bottom: 1.0rem;
 }
 
 .village-diary-status {
   margin-bottom: 2rem;
-  padding: 1rem;
-  background-color: rgba(255, 255, 255, 0.9);
-  border-radius: 12px;
+  padding: 0.3rem;
+  background-color: rgba(255, 230, 158,0.9);
+  border-radius: 30px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -70,12 +96,19 @@
 }
 
 .diary-status-icon {
-  font-size: 1.5rem;
+  font-size: 1.2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  line-height: 1;
+  margin-left: 0.7rem;
 }
 
 .diary-status-text {
-  font-size: 1.1rem;
+  font-size: 1.3rem;
   color: #2d3748;
+  vertical-align: middle;
 }
 
 .diary-status-has {
@@ -91,7 +124,7 @@
 }
 
 .village-places-title {
-  font-size: 2rem;
+  font-size: 2.5rem;
   font-weight: bold;
   color: #2d3748;
   margin-bottom: 1.5rem;
@@ -105,34 +138,92 @@
 
 .village-place-card {
   background-color: rgba(255, 255, 255, 0.95);
-  border-radius: 16px;
-  padding: 1.5rem;
+  border-radius: 30px;
+  padding: 1.0rem;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   border: 2px solid transparent;
+  will-change: transform;
+  transform: translateZ(0);
+  position: relative;
 }
 
 .village-place-card:hover:not(.village-place-disabled) {
-  transform: translateY(-4px);
+  transform: translate3d(0, -4px, 0);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
   border-color: #4a5568;
 }
 
 .village-place-disabled {
-  opacity: 0.6;
+  opacity: 0.4;
   cursor: not-allowed;
-  background-color: rgba(200, 200, 200, 0.5);
+  background-color: #f0f4f8;
+  border: 2px solid rgba(200, 200, 200, 0.3);
+}
+
+.village-place-lock-badge {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  background-color: rgba(100, 116, 139, 0.8);
+  color: white;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+}
+
+.village-place-locked-message {
+  position: absolute;
+  top: -3.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(45, 55, 72, 0.95);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.village-place-locked-message::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid rgba(45, 55, 72, 0.95);
+}
+
+.village-place-disabled:hover .village-place-locked-message {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-4px);
 }
 
 .village-place-icon {
   font-size: 3rem;
+  margin-top: 1.0rem;
   margin-bottom: 1rem;
   text-align: center;
 }
 
 .village-place-name {
-  font-size: 1.5rem;
+  font-size: 1.8rem;
   font-weight: bold;
   color: #2d3748;
   margin-bottom: 0.5rem;
@@ -146,7 +237,7 @@
   background-color: #ef4444;
   color: white;
   border-radius: 12px;
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   font-weight: bold;
   min-width: 20px;
   text-align: center;
@@ -163,21 +254,21 @@
 }
 
 .village-place-description {
-  font-size: 1rem;
+  font-size: 1.2rem;
   color: #4a5568;
   margin-bottom: 1rem;
   line-height: 1.5;
 }
 
 .village-place-hint {
-  font-size: 0.9rem;
-  color: #6366f1;
+  font-size: 1.1rem;
+  color: #9ca3af;
   font-weight: 500;
   text-align: right;
 }
 
 .village-place-disabled-hint {
-  font-size: 0.9rem;
+  font-size: 1.1rem;
   color: #ef4444;
   font-weight: 500;
   text-align: right;
@@ -190,7 +281,31 @@
   }
 
   .village-title {
+    font-size: 2.5rem;
+  }
+
+  .village-date-title {
+    font-size: 1.5rem;
+  }
+
+  .diary-status-text {
+    font-size: 1.15rem;
+  }
+
+  .village-places-title {
     font-size: 2rem;
+  }
+
+  .village-place-name {
+    font-size: 1.5rem;
+  }
+
+  .village-place-description {
+    font-size: 1.1rem;
+  }
+
+  .village-back-button {
+    font-size: 1.15rem;
   }
 
   .village-places-grid {

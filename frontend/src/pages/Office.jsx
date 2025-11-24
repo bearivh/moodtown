@@ -13,6 +13,7 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
   const [calendarData, setCalendarData] = useState({})
   const [selectedDateEmotionStats, setSelectedDateEmotionStats] = useState(null)
   const [officeStats, setOfficeStats] = useState(null)
+  const [showInfo, setShowInfo] = useState(false)
   const today = getTodayDateString()
   const isPastDate = selectedDateFromVillage && selectedDateFromVillage < today
 
@@ -193,8 +194,58 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
             ← 마을로 돌아가기
           </button>
         )}
-        <h1 className="office-title">마을사무소</h1>
-        <p className="office-subtitle">감정 캘린더 및 통계를 확인하세요</p>
+        <div className="office-header-content">
+          <h1 className="office-title">마을사무소</h1>
+          <p className="office-subtitle">
+            감정 캘린더 및 통계를 확인하세요
+          </p>
+        </div>
+        <button 
+          className="office-info-toggle"
+          onClick={() => setShowInfo(!showInfo)}
+        >
+          <span className="office-info-toggle-icon">{showInfo ? '📖' : '📘'}</span>
+          <span className="office-info-toggle-text">사무소 설명서</span>
+        </button>
+      </div>
+
+      {/* 설명 섹션 - 버튼 바로 밑에 표시 */}
+      {showInfo && (
+        <div className="office-info-section">
+          <div className="office-info-content-wrapper">
+            <h3 className="office-info-title">사무소가 하는 일</h3>
+            <div className="office-info-cards">
+              <div className="office-info-card">
+                <span className="office-info-icon">📅</span>
+                <div className="office-info-content">
+                  <span className="office-info-text">감정 캘린더로</span>
+                  <span className="office-info-arrow">→</span>
+                  <span className="office-info-result">날짜별 감정을 확인해요</span>
+                </div>
+              </div>
+              <div className="office-info-card">
+                <span className="office-info-icon">📊</span>
+                <div className="office-info-content">
+                  <span className="office-info-text">주간 통계로</span>
+                  <span className="office-info-arrow">→</span>
+                  <span className="office-info-result">감정 추이를 분석해요</span>
+                </div>
+              </div>
+              <div className="office-info-card">
+                <span className="office-info-icon">🌳💧</span>
+                <div className="office-info-content">
+                  <span className="office-info-text">나무와 우물 기여도를</span>
+                  <span className="office-info-arrow">→</span>
+                  <span className="office-info-result">한눈에 볼 수 있어요</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 우측 상단에 작은 알림 배지들 */}
+      <div className="office-alerts">
         {isPastDate && (
           <div className="office-date-notice">
             <span className="office-date-notice-text">
@@ -202,35 +253,17 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
             </span>
           </div>
         )}
+        {selectedDateEmotionStats && isPastDate && (
+          <div className="office-date-impact">
+            <span className="office-date-impact-icon">📝</span>
+            <span className="office-date-impact-text">
+              {new Date(selectedDateEmotionStats.date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}의 일기 감정 점수를 확인했어요
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="office-content">
-        {/* 선택한 날짜의 일기 감정 점수 표시 */}
-        {selectedDateEmotionStats && isPastDate && (
-          <div className="office-selected-date-stats">
-            <h3 className="office-selected-date-title">
-              {new Date(selectedDateEmotionStats.date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}의 일기 감정 점수
-            </h3>
-            <div className="office-selected-date-emotions">
-              {Object.entries(selectedDateEmotionStats.stats)
-                .filter(([, score]) => score > 0)
-                .sort(([, a], [, b]) => b - a)
-                .map(([emotion, score]) => (
-                  <div
-                    key={emotion}
-                    className="office-selected-date-emotion-item"
-                    style={{ 
-                      backgroundColor: getEmotionColorByName(emotion),
-                      color: 'white'
-                    }}
-                  >
-                    <span className="office-selected-date-emotion-name">{emotion}</span>
-                    <span className="office-selected-date-emotion-score">{score}점</span>
-                  </div>
-                ))}
-            </div>
-          </div>
-        )}
 
         {/* 감정 요약 섹션 (Top 3 도넛 + 나무/우물 기여도) */}
         {officeStats && (

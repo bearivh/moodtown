@@ -26,11 +26,12 @@
   border-radius: 0.5rem;
   padding: 0.5rem 1rem;
   font-family: 'Dongle', sans-serif;
-  font-size: 1.25rem;
+  font-size: 1.4rem;
   color: #6b5d4f;
   cursor: pointer;
   transition: all 0.3s ease;
   font-weight: 400;
+  letter-spacing: 0.05em;
 }
 
 .guide-back-button:hover {
@@ -41,16 +42,17 @@
 
 .guide-title {
   font-family: 'Dongle', sans-serif;
-  font-size: 3rem;
+  font-size: 2.5rem;
   font-weight: 700;
   color: #5a4a3a;
   margin: 0;
   display: inline-block;
   background: #faf8f3;
-  padding: 1rem 2rem;
-  border-radius: 1rem;
+  padding: 0.4rem 3rem;
+  border-radius: 35px;
   box-shadow: 0 4px 12px rgba(90, 74, 58, 0.12), 0 2px 4px rgba(90, 74, 58, 0.08);
   border: 1px solid #e8e0d5;
+  letter-spacing: 0.08em;
 }
 
 .guide-section {
@@ -77,10 +79,11 @@
 
 .guide-section-title {
   font-family: 'Dongle', sans-serif;
-  font-size: 2rem;
+  font-size: 2.3rem;
   font-weight: 700;
   color: #6b5d4f;
   margin: 0;
+  letter-spacing: 0.06em;
 }
 
 .guide-section-content {
@@ -89,10 +92,11 @@
 
 .guide-intro-text {
   font-family: 'Dongle', sans-serif;
-  font-size: 1.25rem;
+  font-size: 1.4rem;
   color: #6b5d4f;
   margin-bottom: 1rem;
   font-weight: 400;
+  letter-spacing: 0.04em;
 }
 
 .guide-intro-text:last-child {
@@ -128,24 +132,26 @@
 
 .guide-place-title {
   font-family: 'Dongle', sans-serif;
-  font-size: 1.5rem;
+  font-size: 1.7rem;
   font-weight: 700;
   color: #5a4a3a;
   margin-bottom: 0.75rem;
+  letter-spacing: 0.05em;
 }
 
 .guide-place-description {
   font-family: 'Dongle', sans-serif;
-  font-size: 1.125rem;
+  font-size: 1.3rem;
   color: #6b5d4f;
   line-height: 1.6;
   margin: 0;
   font-weight: 400;
+  letter-spacing: 0.03em;
 }
 
 @media (max-width: 768px) {
   .guide-title {
-    font-size: 2rem;
+    font-size: 2.2rem;
   }
   
   .guide-section {
@@ -153,14 +159,23 @@
   }
   
   .guide-section-title {
+    font-size: 1.8rem;
+  }
+  
+  .guide-intro-text {
+    font-size: 1.25rem;
+  }
+  
+  .guide-place-title {
     font-size: 1.5rem;
   }
   
-  .guide-places-grid {
-    grid-template-columns: 1fr;
+  .guide-place-description {
+    font-size: 1.15rem;
   }
   
   .guide-back-button {
+    font-size: 1.25rem;
     position: static;
     transform: none;
     margin-bottom: 1rem;

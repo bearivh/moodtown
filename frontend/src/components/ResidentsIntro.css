@@ -4,11 +4,12 @@
 
 .residents-intro-title {
   font-family: 'Dongle', sans-serif;
-  font-size: 2.25rem;
+  font-size: 2.5rem;
   font-weight: 700;
   text-align: center;
   color: #5a4a3a;
   margin-bottom: 2rem;
+  letter-spacing: 0.06em;
 }
 
 .residents-grid {
@@ -43,6 +44,10 @@
 .resident-avatar {
   width: 5rem;
   height: 5rem;
+  min-width: 5rem;
+  min-height: 5rem;
+  max-width: 5rem;
+  max-height: 5rem;
   border-radius: 50%;
   margin: 2.5rem auto 1rem;
   display: flex;
@@ -55,60 +60,75 @@
   overflow: hidden;
   position: relative;
   z-index: 1;
+  aspect-ratio: 1 / 1;
 }
 
 .resident-image {
   width: 100%;
   height: 100%;
+  min-width: 100%;
+  min-height: 100%;
   object-fit: cover;
+  border-radius: 50%;
+  aspect-ratio: 1 / 1;
+  display: block;
 }
 
 .resident-image-purple {
-  width: 85%;
-  height: 85%;
-  object-fit: contain;
+  width: 100%;
+  height: 100%;
+  min-width: 100%;
+  min-height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  aspect-ratio: 1 / 1;
+  display: block;
 }
 
 .resident-name {
   font-family: 'Dongle', sans-serif;
-  font-size: 1.5rem;
+  font-size: 1.7rem;
   font-weight: 700;
   color: #5a4a3a;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.1rem;
+  letter-spacing: 0.05em;
 }
 
 .resident-emotion {
   font-family: 'Dongle', sans-serif;
-  font-size: 1.125rem;
+  font-size: 1.3rem;
   color: #6b5d4f;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.1rem;
   font-weight: 400;
+  letter-spacing: 0.03em;
 }
 
 .resident-description {
   font-family: 'Dongle', sans-serif;
-  font-size: 1rem;
+  font-size: 1.15rem;
   color: #6b5d4f;
   font-weight: 400;
+  letter-spacing: 0.03em;
 }
 
 .resident-speech-bubble {
   position: absolute;
-  top: 1.5rem;
+  top: 0.8rem;
   left: 50%;
   transform: translateX(-50%);
   background: white;
-  padding: 0.5rem 0.75rem;
-  border-radius: 1rem;
+  padding: 0.3rem 0.8rem;
+  border-radius: 2rem;
   box-shadow: 0 2px 8px rgba(90, 74, 58, 0.15);
   font-family: 'Dongle', sans-serif;
-  font-size: 1rem;
+  font-size: 1.15rem;
   color: #5a4a3a;
   white-space: nowrap;
   z-index: 10;
   animation: float 2s ease-in-out infinite;
   border: 1px solid #e8e0d5;
   font-weight: 400;
+  letter-spacing: 0.03em;
 }
 
 .resident-speech-bubble::after {
@@ -160,19 +180,21 @@
 
 .resident-intro-title {
   font-family: 'Dongle', sans-serif;
-  font-size: 1.5rem;
+  font-size: 1.7rem;
   font-weight: 700;
   color: #5a4a3a;
   margin-bottom: 0.75rem;
+  letter-spacing: 0.05em;
 }
 
 .resident-intro-text {
   font-family: 'Dongle', sans-serif;
-  font-size: 1.125rem;
+  font-size: 1.3rem;
   color: #6b5d4f;
   line-height: 1.6;
   margin: 0;
   font-weight: 400;
+  letter-spacing: 0.03em;
 }
 
 @media (max-width: 968px) {

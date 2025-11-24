@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import EmotionSky from '../components/EmotionSky'
 import { getDiariesByDate, getDominantEmotionByDate } from '../utils/storage'
 import { getUnreadLetterCount } from '../utils/mailboxUtils'
@@ -21,21 +21,26 @@ function Village({ onNavigate, selectedDate }) {
       setHasDiary(diaries.length > 0)
       
       // 가장 강한 감정 찾기
-      const dominant = await getDominantEmotionByDate(selectedDate)
-      if (dominant) {
-        // 한글 감정명을 영어로 변환 (간단한 매핑)
-        const emotionMap = {
-          '기쁨': 'joy',
-          '사랑': 'love',
-          '놀람': 'surprise',
-          '두려움': 'fear',
-          '분노': 'anger',
-          '부끄러움': 'shame',
-          '슬픔': 'sadness'
+      if (diaries.length > 0) {
+        const dominant = await getDominantEmotionByDate(selectedDate)
+        if (dominant) {
+          // 한글 감정명을 영어로 변환 (간단한 매핑)
+          const emotionMap = {
+            '기쁨': 'joy',
+            '사랑': 'love',
+            '놀람': 'surprise',
+            '두려움': 'fear',
+            '분노': 'anger',
+            '부끄러움': 'shame',
+            '슬픔': 'sadness'
+          }
+          setDominantEmotion(emotionMap[dominant.emotion] || 'joy')
+        } else {
+          setDominantEmotion('joy')
         }
-        setDominantEmotion(emotionMap[dominant.emotion] || 'joy')
       } else {
-        setDominantEmotion('joy')
+        // 일기가 없으면 구름이 낀 하늘 (하얀색)
+        setDominantEmotion(null)
       }
       
       // 읽지 않은 편지 개수 확인
@@ -89,7 +94,7 @@ function Village({ onNavigate, selectedDate }) {
     }
   }, [])
   
-  const formatDate = (dateStr) => {
+  const formatDate = useCallback((dateStr) => {
     if (!dateStr) return ''
     const date = new Date(dateStr + 'T00:00:00')
     return date.toLocaleDateString('ko-KR', { 
@@ -98,9 +103,9 @@ function Village({ onNavigate, selectedDate }) {
       day: 'numeric',
       weekday: 'long'
     })
-  }
+  }, [])
 
-  const places = [
+  const places = useMemo(() => [
     {
       id: 'write',
       name: '일기 쓰기',
@@ -159,21 +164,21 @@ function Village({ onNavigate, selectedDate }) {
       alwaysAvailable: false,
       disabled: false
     }
-  ]
+  ], [hasDiary, unreadCount])
 
-  const handlePlaceClick = (place) => {
+  const handlePlaceClick = useCallback((place) => {
     if (place.disabled) {
       return
     }
     if (onNavigate && place.link) {
       onNavigate(place.link)
     }
-  }
+  }, [onNavigate])
 
   return (
     <div className="village-container">
       {/* 하늘 영역 */}
-      <EmotionSky emotion={dominantEmotion} />
+      <EmotionSky emotion={dominantEmotion} hasDiary={hasDiary} />
 
       {/* 마을 화면 */}
       <div className="village-content">
@@ -186,12 +191,10 @@ function Village({ onNavigate, selectedDate }) {
               ← 마을 입구로
             </button>
           )}
-          <h1 className="village-title">감정 마을</h1>
-        </div>
-
-        {/* 선택한 날짜 표시 */}
-        <div className="village-date-display">
-          <h2 className="village-date-title">{selectedDate ? formatDate(selectedDate) : ''}</h2>
+          {/* 선택한 날짜 표시 */}
+          <div className="village-date-display">
+            <h2 className="village-date-title">{selectedDate ? formatDate(selectedDate) : ''}</h2>
+          </div>
         </div>
 
         {/* 일기 상태 표시 */}
@@ -203,8 +206,7 @@ function Village({ onNavigate, selectedDate }) {
             </div>
           ) : (
             <div className="diary-status-none">
-              <span className="diary-status-icon">📝</span>
-              <span className="diary-status-text">이 날짜에는 일기가 없습니다</span>
+              <span className="diary-status-text">오늘의 일기가 없어요! 마음을 기록하면 주민들을 만날 수 있어요.</span>
             </div>
           )}
         </div>
@@ -219,6 +221,9 @@ function Village({ onNavigate, selectedDate }) {
                 className={`village-place-card ${place.disabled ? 'village-place-disabled' : ''}`}
                 onClick={() => handlePlaceClick(place)}
               >
+                {place.disabled && (
+                  <div className="village-place-lock-badge">🔒</div>
+                )}
                 <div className="village-place-icon">{place.icon}</div>
                 <h3 className="village-place-name">
                   {place.name}
@@ -229,12 +234,17 @@ function Village({ onNavigate, selectedDate }) {
                 <p className="village-place-description">{place.description}</p>
                 {place.disabled && (
                   <div className="village-place-disabled-hint">
-                    🔒 이용 불가
+                    이용 불가
                   </div>
                 )}
                 {!place.disabled && (
                   <div className="village-place-hint">
-                    클릭하여 방문하기 →
+                    click!
+                  </div>
+                )}
+                {place.disabled && (
+                  <div className="village-place-locked-message">
+                    오늘 일기를 쓰면 활성화돼요!
                   </div>
                 )}
               </div>

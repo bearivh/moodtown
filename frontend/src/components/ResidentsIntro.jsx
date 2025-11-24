@@ -17,7 +17,7 @@ function ResidentsIntro() {
       pastelColor: '#ffcccc',
       description: '화가 날 때 나타나는 주민',
       image: redImage,
-      speech: '너무 화가 나! 다들 왜 이렇게 날 짜증나게 하는 거야?'
+      speech: '다들 왜 이렇게 날 짜증나게 하는 거야?'
     },
     {
       name: '주황이',
@@ -47,7 +47,7 @@ function ResidentsIntro() {
       pastelColor: '#ccffcc',
       description: '사랑할 때 나타나는 주민',
       image: greenImage,
-      speech: '우리 마을은 정말 사랑스러운 것 같아. 너무 좋아. ㅎㅎ'
+      speech: '우리 마을은 정말 사랑스러운 것 같아. ㅎㅎ'
     },
     {
       name: '파랑이',
@@ -77,7 +77,7 @@ function ResidentsIntro() {
       pastelColor: '#f0e6ff',
       description: '놀랄 때 나타나는 주민',
       image: purpleImage,
-      speech: '정말 놀라워! 너무 신기해! 어떻게 이럴 수가 있지?'
+      speech: '정말 놀라워! 신기해! 어떻게 이럴 수가 있지?'
     }
   ]
 

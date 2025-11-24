@@ -18,13 +18,16 @@ function Tree({ onNavigate, selectedDate }) {
   const [progress, setProgress] = useState(0)
   const [pointsToNext, setPointsToNext] = useState(0)
   const [selectedDateImpact, setSelectedDateImpact] = useState(null)
+  const [showInfo, setShowInfo] = useState(false)
   const today = getTodayDateString()
   const isPastDate = selectedDate && selectedDate < today
 
   useEffect(() => {
     loadTreeData()
-    if (selectedDate && isPastDate) {
-      loadSelectedDateImpact()
+    // 선택한 날짜가 있으면 해당 날짜, 없으면 오늘 날짜의 일기 확인
+    const dateToCheck = selectedDate || today
+    if (dateToCheck) {
+      loadSelectedDateImpact(dateToCheck)
     } else {
       setSelectedDateImpact(null)
     }
@@ -32,15 +35,19 @@ function Tree({ onNavigate, selectedDate }) {
     // 주기적으로 상태 업데이트 (5초마다)
     const interval = setInterval(() => {
       loadTreeData()
+      const dateToCheck = selectedDate || today
+      if (dateToCheck) {
+        loadSelectedDateImpact(dateToCheck)
+      }
     }, 5000)
     
     return () => clearInterval(interval)
-  }, [selectedDate])
+  }, [selectedDate, today])
 
-  const loadSelectedDateImpact = async () => {
-    if (!selectedDate) return
+  const loadSelectedDateImpact = async (date) => {
+    if (!date) return
     
-    const diaries = await getDiariesByDate(selectedDate)
+    const diaries = await getDiariesByDate(date)
     if (diaries.length === 0) {
       setSelectedDateImpact(null)
       return
@@ -56,7 +63,7 @@ function Tree({ onNavigate, selectedDate }) {
     
     if (totalPositiveScore > 0) {
       setSelectedDateImpact({
-        date: selectedDate,
+        date: date,
         positiveScore: totalPositiveScore
       })
     } else {
@@ -99,10 +106,58 @@ function Tree({ onNavigate, selectedDate }) {
             ← 마을로 돌아가기
           </button>
         )}
-        <h1 className="tree-title">행복 나무</h1>
-        <p className="tree-subtitle">
-          긍정적인 감정이 쌓일수록 나무가 자라요
-        </p>
+        <div className="tree-header-content">
+          <h1 className="tree-title">행복 나무</h1>
+          <p className="tree-subtitle">
+            긍정적인 감정이 쌓일수록 나무가 자라요
+          </p>
+        </div>
+        <button 
+          className="tree-info-toggle"
+          onClick={() => setShowInfo(!showInfo)}
+        >
+          <span className="tree-info-toggle-icon">{showInfo ? '📖' : '📘'}</span>
+          <span className="tree-info-toggle-text">나무 설명서</span>
+        </button>
+      </div>
+
+      {/* 설명 섹션 - 버튼 바로 밑에 표시 */}
+      {showInfo && (
+        <div className="tree-info-section">
+          <div className="tree-info-content-wrapper">
+            <h3 className="tree-info-title">나무가 자라는 방법</h3>
+            <div className="tree-info-cards">
+              <div className="tree-info-card">
+                <span className="tree-info-icon">🌱</span>
+                <div className="tree-info-content">
+                  <span className="tree-info-text">긍정 감정이 들어오면</span>
+                  <span className="tree-info-arrow">→</span>
+                  <span className="tree-info-result">나무가 성장해요</span>
+                </div>
+              </div>
+              <div className="tree-info-card">
+                <span className="tree-info-icon">🌳</span>
+                <div className="tree-info-content">
+                  <span className="tree-info-text">나무가 완전히 자라면</span>
+                  <span className="tree-info-arrow">→</span>
+                  <span className="tree-info-result">열매가 열려요</span>
+                </div>
+              </div>
+              <div className="tree-info-card">
+                <span className="tree-info-icon">🎉</span>
+                <div className="tree-info-content">
+                  <span className="tree-info-text">열매가 열리면</span>
+                  <span className="tree-info-arrow">→</span>
+                  <span className="tree-info-result">주민들이 축하 편지를 보내요</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 우측 상단에 작은 알림 배지들 */}
+      <div className="tree-alerts">
         {isPastDate && (
           <div className="tree-date-notice">
             <span className="tree-date-notice-text">
@@ -110,23 +165,17 @@ function Tree({ onNavigate, selectedDate }) {
             </span>
           </div>
         )}
+        {selectedDateImpact && (
+          <div className="tree-date-impact">
+            <span className="tree-date-impact-icon">📝</span>
+            <span className="tree-date-impact-text">
+              {selectedDateImpact.date === today ? '오늘의 일기로' : `${new Date(selectedDateImpact.date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}의 일기로`} 행복 나무가 <strong>{selectedDateImpact.positiveScore}점</strong> 성장했어요! 🌱
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="tree-content">
-        {/* 선택한 날짜의 일기로 인한 변화 표시 */}
-        {selectedDateImpact && isPastDate && (
-          <div className="tree-date-impact">
-            <div className="tree-date-impact-icon">📝</div>
-            <div className="tree-date-impact-content">
-              <div className="tree-date-impact-title">
-                {new Date(selectedDateImpact.date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}의 일기로
-              </div>
-              <div className="tree-date-impact-message">
-                행복 나무가 <strong>{selectedDateImpact.positiveScore}점</strong> 성장했어요! 🌱
-              </div>
-            </div>
-          </div>
-        )}
         {/* 나무 표시 영역 */}
         <div className="tree-display-section">
           <div className="tree-visual">
@@ -188,18 +237,6 @@ function Tree({ onNavigate, selectedDate }) {
           <p className="tree-basket-description">
             나무가 열매를 맺을 때마다 바구니에 모여요
           </p>
-        </div>
-
-        {/* 설명 */}
-        <div className="tree-info-section">
-          <h3 className="tree-info-title">나무가 자라는 방법</h3>
-          <ul className="tree-info-list">
-            <li>일기를 작성하면 감정이 분석됩니다</li>
-            <li>긍정적인 감정(기쁨, 사랑)이 나무를 성장시킵니다</li>
-            <li>나무가 완전히 자라면 열매가 열립니다</li>
-            <li>열매가 열리면 우체통에 축하 편지가 도착합니다</li>
-            <li>나무는 다시 씨앗부터 자라기 시작합니다</li>
-          </ul>
         </div>
       </div>
     </div>

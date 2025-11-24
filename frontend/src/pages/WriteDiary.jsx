@@ -20,7 +20,7 @@ function WriteDiary({ onNavigate, selectedDate }) {
   const [demoResult, setDemoResult] = useState(null) // {mode, emotion_result?{emotion_scores}, result?{scores}, ...}
   const [analysisCache, setAnalysisCache] = useState({ contentKey: null, gpt: null, ml: null }) // per-mode cache
   const [currentMode, setCurrentMode] = useState(null) // 'gpt' | 'ml' | null
-  const [showLowMl, setShowLowMl] = useState(false) // ML: 5% 이하 표시 토글
+  const [showFullMlResult, setShowFullMlResult] = useState(false) // ML: 전체 결과 표시 여부
 
   const getContentKey = (txt) => `${(txt || '').trim()}::${(txt || '').length}`
 
@@ -65,11 +65,10 @@ function WriteDiary({ onNavigate, selectedDate }) {
       // 2. 긍정 감정 점수 계산 (기쁨 + 사랑)
       const positiveScore = (emotionScores['기쁨'] || 0) + (emotionScores['사랑'] || 0)
       
-      // 3. 부정 감정 점수 계산 (분노 + 슬픔 + 두려움 + 부끄러움)
+      // 3. 부정 감정 점수 계산 (분노 + 슬픔 + 두려움)
       const negativeScore = (emotionScores['분노'] || 0) + 
                            (emotionScores['슬픔'] || 0) + 
-                           (emotionScores['두려움'] || 0) + 
-                           (emotionScores['부끄러움'] || 0)
+                           (emotionScores['두려움'] || 0)
       
       const newDiaryData = {
         title: title.trim() || '제목 없음',
@@ -273,8 +272,10 @@ function WriteDiary({ onNavigate, selectedDate }) {
     if (entries.length === 0) return null
     const formatVal = (v) => {
       if (typeof v !== 'number') return `${v}`
-      if (v <= 1) return `${Math.round(v * 100)}%`     // 확률(0~1) → 퍼센트
-      if (v <= 100) return `${v}%`                      // 0~100 점수 → 퍼센트 표시
+      // 이미 퍼센트 값(0~100)인 경우 그대로 표시
+      if (v >= 0 && v <= 100) return `${v}%`
+      // 확률 값(0~1)인 경우 퍼센트로 변환
+      if (v > 0 && v <= 1) return `${Math.round(v * 100)}%`
       return `${v}`
     }
     return (
@@ -291,19 +292,64 @@ function WriteDiary({ onNavigate, selectedDate }) {
     )
   }
 
-  // ML 데모 전용: 3% 미만은 0으로 보이게 정규화(표시 전용)
+  // ML 데모 전용: 퍼센트로 변환하고 합이 100이 되도록 정규화
   const normalizeScoresForDisplay = (scores, thresholdPercent = 0) => {
-    if (!scores) return {}
-    const out = {}
+    if (!scores || typeof scores !== 'object') return {}
+  
+    // 1단계: 0~1 확률을 퍼센트로 변환
+    const entries = []
+    let total = 0
+  
+    // 점수 계산: 각 감정별 퍼센트 변환
     for (const [k, vRaw] of Object.entries(scores)) {
       let v = typeof vRaw === 'number' ? vRaw : 0
       // 0~1 확률 → 0~100 변환
-      let percent = v <= 1 ? Math.round(v * 100) : Math.round(v)
+      let percent = v <= 1 ? v * 100 : v
+      // 임계값 이하는 0으로 처리
       if (percent <= thresholdPercent) percent = 0
-      out[k] = percent
+      entries.push({ key: k, percent: percent, original: v })
+      total += percent
     }
-    return out
-  }
+  
+    // 2단계: 퍼센트 합이 100을 넘는 경우, 재정규화
+    if (total !== 100) {
+      const diff = 100 - total
+      // 총합이 100이 아닐 경우, 차이만큼 감정 점수 조정
+      entries.sort((a, b) => b.original - a.original)  // 내림차순 정렬 (원본값 기준)
+  
+      // 오차가 가장 큰 항목에 차이를 더해줌
+      if (Math.abs(diff) > 1) {
+        const target = entries[0]
+        target.percent += diff  // 차이를 가장 큰 항목에 추가
+      }
+    }
+  
+    // 3단계: 반올림
+    const rounded = {}
+    let roundedTotal = 0
+    
+    // 반올림 처리
+    entries.forEach(entry => {
+      const val = Math.round(entry.percent)
+      rounded[entry.key] = val
+      roundedTotal += val
+    })
+  
+    // 4단계: 차이 보정 (합이 정확히 100이 되도록)
+    const finalDiff = 100 - roundedTotal
+    if (finalDiff !== 0) {
+      const nonZeroEntries = entries.filter(e => rounded[e.key] > 0)
+      if (nonZeroEntries.length > 0) {
+        const target = nonZeroEntries[0]
+        rounded[target.key] = rounded[target.key] + finalDiff
+      }
+    }
+  
+    const finalTotal = Object.values(rounded).reduce((sum, val) => sum + val, 0)
+    console.log('🔍 Final normalized scores:', rounded, 'Total:', finalTotal)
+    
+    return rounded
+  }  
 
   return (
     <div className="write-diary-container">
@@ -359,6 +405,7 @@ function WriteDiary({ onNavigate, selectedDate }) {
               setAnalysisCache({ contentKey: null, gpt: null, ml: null })
               setDemoResult(null)
               setCurrentMode(null)
+              setShowFullMlResult(false)
             }}
             className="form-textarea"
             placeholder="오늘 하루 있었던 일들을 자유롭게 적어보세요..."
@@ -375,7 +422,7 @@ function WriteDiary({ onNavigate, selectedDate }) {
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button
               type="button"
-              className="submit-button"
+              className="submit-button analyze-button-ml"
               onClick={handleAnalyzeDemoML}
               disabled={demoLoading || !content.trim()}
             >
@@ -383,7 +430,7 @@ function WriteDiary({ onNavigate, selectedDate }) {
             </button>
             <button
               type="button"
-              className="submit-button"
+              className="submit-button analyze-button-gpt"
               onClick={handleAnalyzePreviewGPT}
               disabled={demoLoading || !content.trim()}
             >
@@ -402,36 +449,78 @@ function WriteDiary({ onNavigate, selectedDate }) {
               </div>
               {demoResult.mode === 'ml' && (
                 <>
-                  <div style={{ marginBottom: 8 }}>
-                    예측 감정: <strong>{demoResult?.result?.label || '-'}</strong>
-                  </div>
-                  {renderScores(
-                    normalizeScoresForDisplay(demoResult?.result?.scores, showLowMl ? 0 : 9),
-                    null,
-                    !showLowMl // 기본 숨김, 토글 시 표시
-                  )}
-                  <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <button
-                      type="button"
-                      onClick={() => setShowLowMl(v => !v)}
-                      style={{
-                        padding: '4px 8px',
-                        fontSize: 12,
-                        lineHeight: 1.2,
-                        border: '1px solid #ccc',
-                        borderRadius: 6,
-                        background: '#fafafa',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {showLowMl ? '10% 미만 감정 숨기기' : '10% 미만 감정 보기'}
-                    </button>
-                    {!showLowMl && (
-                      <span style={{ fontSize: 12, color: '#777' }}>
-                        기본으로 10% 미만(한자릿수)은 숨겨집니다.
-                      </span>
-                    )}
-                  </div>
+                  {(() => {
+                    const rawScores = demoResult?.result?.scores || {}
+                    console.log('🔍 ML raw scores from backend:', JSON.stringify(rawScores, null, 2))
+                    const normalized = normalizeScoresForDisplay(rawScores, 0)
+                    const total = Object.values(normalized).reduce((sum, val) => sum + val, 0)
+                    console.log('🔍 ML normalized scores:', JSON.stringify(normalized, null, 2))
+                    console.log('🔍 Total:', total)
+                    if (Math.abs(total - 100) > 1) {
+                      console.error('❌ ERROR: Total is not 100!', total, normalized)
+                    }
+                    
+                    // 가장 높은 감정 찾기
+                    const sortedEntries = Object.entries(normalized)
+                      .filter(([k, v]) => v > 0)
+                      .sort((a, b) => b[1] - a[1])
+                    const topEmotion = sortedEntries[0] ? sortedEntries[0][0] : null
+                    const topEmotionPercent = sortedEntries[0] ? sortedEntries[0][1] : 0
+                    
+                    if (!showFullMlResult) {
+                      // 간단한 결과만 표시
+                      return (
+                        <>
+                          <div style={{ marginBottom: 8, fontSize: 16 }}>
+                            분석 결과: <strong>{topEmotion || '-'}</strong>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setShowFullMlResult(true)}
+                            style={{
+                              padding: '6px 12px',
+                              fontSize: 13,
+                              lineHeight: 1.2,
+                              border: '1px solid #ccc',
+                              borderRadius: 6,
+                              background: '#f0f0f0',
+                              cursor: 'pointer',
+                              marginTop: 8
+                            }}
+                          >
+                            분석결과 전체 보기
+                          </button>
+                        </>
+                      )
+                    } else {
+                      // 전체 결과 표시
+                      return (
+                        <>
+                          <div style={{ marginBottom: 8 }}>
+                            예측 감정: <strong>{demoResult?.result?.label || '-'}</strong>
+                          </div>
+                          {renderScores(normalized, null, false)}
+                          <div style={{ marginTop: 6 }}>
+                            <button
+                              type="button"
+                              onClick={() => setShowFullMlResult(false)}
+                              style={{
+                                padding: '4px 8px',
+                                fontSize: 12,
+                                lineHeight: 1.2,
+                                border: '1px solid #ccc',
+                                borderRadius: 6,
+                                background: '#fafafa',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              간단히 보기
+                            </button>
+                          </div>
+                        </>
+                      )
+                    }
+                  })()}
                 </>
               )}
               {demoResult.mode === 'gpt' && (

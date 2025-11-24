@@ -12,6 +12,7 @@ from .chat import chat_bp
 from .diary import diary_bp
 from .tree import tree_bp
 from .well import well_bp
+from .letters import letters_bp
 
 api_bp = Blueprint("api", __name__)
 
@@ -63,5 +64,6 @@ def register_all(app):
     app.register_blueprint(diary_bp, url_prefix="")
     app.register_blueprint(tree_bp, url_prefix="")
     app.register_blueprint(well_bp, url_prefix="")
+    app.register_blueprint(letters_bp, url_prefix="")
 
 

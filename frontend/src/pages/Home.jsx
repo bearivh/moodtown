@@ -80,10 +80,6 @@ function Home({ onNavigate, selectedDate }) {
           <h1 className="home-title">
             <span className="home-title-mood">mood</span><span className="home-title-town">town!</span>
           </h1>
-          <p className="home-subtitle">
-            당신의 감정들이 살아숨쉬는 마을<br />
-            천천히 둘러보세요
-          </p>
         </div>
 
         {/* 날짜 선택 & 마을 입장 카드 */}

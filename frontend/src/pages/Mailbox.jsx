@@ -6,6 +6,7 @@ function Mailbox({ onNavigate, selectedDate }) {
   const [letters, setLetters] = useState([])
   const [selectedLetter, setSelectedLetter] = useState(null)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [showInfo, setShowInfo] = useState(false)
 
   useEffect(() => {
     loadLetters()
@@ -95,14 +96,67 @@ function Mailbox({ onNavigate, selectedDate }) {
             ← 마을로 돌아가기
           </button>
         )}
-        <h1 className="mailbox-title">감정 우체통</h1>
-        <p className="mailbox-subtitle">
-          주민들이 보낸 편지를 확인하세요
-          {unreadCount > 0 && (
-            <span className="mailbox-unread-badge">읽지 않은 편지 {unreadCount}개</span>
-          )}
-        </p>
+        <div className="mailbox-header-content">
+          <h1 className="mailbox-title">감정 우체통</h1>
+          <p className="mailbox-subtitle">
+            주민들이 보낸 편지를 확인하세요
+          </p>
+        </div>
+        <button 
+          className="mailbox-info-toggle"
+          onClick={() => setShowInfo(!showInfo)}
+        >
+          <span className="mailbox-info-toggle-icon">{showInfo ? '📖' : '📘'}</span>
+          <span className="mailbox-info-toggle-text">우체통 설명서</span>
+        </button>
       </div>
+
+      {/* 설명 섹션 - 버튼 바로 밑에 표시 */}
+      {showInfo && (
+        <div className="mailbox-info-section">
+          <div className="mailbox-info-content-wrapper">
+            <h3 className="mailbox-info-title">우체통이 하는 일</h3>
+            <div className="mailbox-info-cards">
+              <div className="mailbox-info-card">
+                <span className="mailbox-info-icon">🎉</span>
+                <div className="mailbox-info-content">
+                  <span className="mailbox-info-text">행복 나무에서 열매가 열리면</span>
+                  <span className="mailbox-info-arrow">→</span>
+                  <span className="mailbox-info-result">축하 편지가 도착해요</span>
+                </div>
+              </div>
+              <div className="mailbox-info-card">
+                <span className="mailbox-info-icon">💙</span>
+                <div className="mailbox-info-content">
+                  <span className="mailbox-info-text">스트레스 우물이 넘치면</span>
+                  <span className="mailbox-info-arrow">→</span>
+                  <span className="mailbox-info-result">위로 편지가 도착해요</span>
+                </div>
+              </div>
+              <div className="mailbox-info-card">
+                <span className="mailbox-info-icon">✉️</span>
+                <div className="mailbox-info-content">
+                  <span className="mailbox-info-text">편지를 읽으면</span>
+                  <span className="mailbox-info-arrow">→</span>
+                  <span className="mailbox-info-result">자동으로 읽음 처리돼요</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 우측 상단에 작은 알림 배지들 */}
+      {unreadCount > 0 && (
+        <div className="mailbox-alerts">
+          <div className="mailbox-unread-notice">
+            <span className="mailbox-unread-notice-icon">📬</span>
+            <span className="mailbox-unread-notice-text">
+              읽지 않은 편지 <strong>{unreadCount}개</strong>가 도착했어요!
+            </span>
+          </div>
+        </div>
+      )}
 
       <div className="mailbox-content">
         {/* 편지 목록 */}

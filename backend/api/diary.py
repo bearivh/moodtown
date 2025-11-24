@@ -12,6 +12,8 @@ from db import (
     save_tree_state,
     get_well_state,
     save_well_state,
+    save_plaza_conversation,
+    get_plaza_conversation_by_date,
 )
 
 diary_bp = Blueprint("diary", __name__)
@@ -204,4 +206,32 @@ def get_office_stats():
             "totalTreeWellValue": total_tree_well,
         }
     )
+
+
+@diary_bp.route("/api/plaza/conversations/<date>", methods=["GET"])
+def get_plaza_conversation(date):
+    """특정 날짜의 광장 대화 가져오기"""
+    conversation = get_plaza_conversation_by_date(date)
+    if conversation:
+        return jsonify({
+            "conversation": conversation.get("conversation", []),
+            "emotionScores": conversation.get("emotionScores", {})
+        })
+    return jsonify({"error": "대화를 찾을 수 없습니다."}), 404
+
+
+@diary_bp.route("/api/plaza/conversations", methods=["POST"])
+def save_plaza_conversation_endpoint():
+    """광장 대화 저장"""
+    data = request.get_json() or {}
+    date = data.get("date")
+    conversation = data.get("conversation", [])
+    emotion_scores = data.get("emotionScores", {})
+    
+    if not date:
+        return jsonify({"error": "날짜가 필요합니다."}), 400
+    
+    if save_plaza_conversation(date, conversation, emotion_scores):
+        return jsonify({"success": True, "message": "대화가 저장되었습니다."})
+    return jsonify({"error": "대화 저장에 실패했습니다."}), 500
 
