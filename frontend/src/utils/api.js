@@ -1,6 +1,6 @@
 // API 유틸리티 함수들
-// Vite 프록시를 통해 같은 origin에서 실행되므로 상대 경로 사용
-const API_BASE_URL = ''
+// 환경 변수에서 API URL을 가져오고, 없으면 빈 문자열(프록시 사용)
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
 // fetch 옵션에 credentials 추가 (세션 쿠키 전송)
 const fetchOptions = {
