@@ -6,10 +6,64 @@
 
 ### 1.1 Railway 프로젝트 생성
 
-1. [Railway](https://railway.app/)에 로그인
-2. "New Project" 클릭
-3. "Deploy from GitHub repo" 선택
-4. 저장소 선택 후 `backend` 폴더를 루트로 설정
+#### 방법 1: GitHub 저장소 연결 (웹 UI)
+
+**"Failed to fetch" 오류가 발생하는 경우:**
+
+1. **브라우저 새로고침 및 재시도**
+   - Railway 대시보드를 완전히 새로고침 (Ctrl+F5)
+   - 몇 분 후 다시 시도
+
+2. **GitHub 계정 재연결**
+   - Railway Settings → Connected Accounts
+   - GitHub 연결 해제 후 다시 연결
+   - GitHub에서 Railway 앱 권한 확인
+
+3. **다른 브라우저나 시크릿 모드 시도**
+   - 캐시 문제일 수 있음
+
+4. **저장소 직접 URL로 접근**
+   - Railway에서 "Deploy from GitHub repo" 선택
+   - 저장소 URL 직접 입력: `https://github.com/bearivh/moodPage`
+
+#### 방법 2: Railway CLI 사용 (추천)
+
+웹 UI에서 계속 실패한다면 CLI를 사용하세요:
+
+1. **Railway CLI 설치**
+   ```bash
+   npm install -g @railway/cli
+   # 또는
+   pip install railway
+   ```
+
+2. **로그인**
+   ```bash
+   railway login
+   ```
+
+3. **프로젝트 생성 및 배포**
+   ```bash
+   cd backend
+   railway init
+   railway up
+   ```
+
+4. **환경 변수 설정** (CLI 또는 웹 대시보드에서)
+   ```bash
+   railway variables set OPENAI_API_KEY=your_key
+   railway variables set SECRET_KEY=your_secret
+   railway variables set ENVIRONMENT=production
+   ```
+
+#### 방법 3: 수동 업로드 (임시)
+
+1. Railway에서 "Empty Project" 생성
+2. GitHub Actions 또는 다른 방법으로 배포
+
+**저장소 선택 후 설정:**
+- **Root Directory**: `backend` (중요!)
+- **Service Name**: 원하는 이름
 
 ### 1.2 환경 변수 설정
 
