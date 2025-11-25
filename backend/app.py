@@ -15,7 +15,7 @@ from datetime import timedelta
 app.permanent_session_lifetime = timedelta(days=31)
 
 # 프로덕션 환경 감지
-is_production = os.environ.get('ENVIRONMENT') == 'production' or os.environ.get('RAILWAY_ENVIRONMENT')
+is_production = os.environ.get('ENVIRONMENT') == 'production' or os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('RENDER')
 
 # 세션 쿠키 설정
 # 프로덕션에서는 HTTPS가 필요하므로 Secure=True, SameSite='None'

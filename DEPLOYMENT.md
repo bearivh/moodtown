@@ -1,6 +1,33 @@
-# 배포 가이드 (Vercel + Railway)
+# 배포 가이드 (Vercel + Render)
 
-이 프로젝트는 프론트엔드를 Vercel에, 백엔드를 Railway에 배포합니다.
+이 프로젝트는 프론트엔드를 Vercel에, 백엔드를 **Render**에 배포합니다.
+
+> ⚠️ **Railway는 제한 사항이 있어 Render로 변경했습니다.**  
+> 자세한 Render 배포 가이드는 [`DEPLOYMENT_RENDER.md`](./DEPLOYMENT_RENDER.md)를 참고하세요.
+
+## 빠른 시작 (Render)
+
+1. **Render 백엔드 배포**:
+   - [Render.com](https://render.com) 접속 → GitHub로 로그인
+   - "New +" → "Web Service" → 저장소 선택
+   - Root Directory: `backend` 설정
+   - Start Command: `gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120`
+   - 환경 변수: `OPENAI_API_KEY`, `SECRET_KEY`, `ENVIRONMENT=production`
+
+2. **Vercel 프론트엔드 배포**:
+   - [Vercel.com](https://vercel.com) 접속 → GitHub로 로그인
+   - "Add New..." → "Project" → 저장소 선택
+   - Root Directory: `frontend` 설정
+   - 환경 변수: `VITE_API_BASE_URL` (Render URL)
+
+자세한 내용은 [`DEPLOYMENT_RENDER.md`](./DEPLOYMENT_RENDER.md)를 참고하세요.
+
+---
+
+## Railway 배포 (구버전, 문제 있음)
+
+> ⚠️ Railway는 "Limited Access" 및 "Paused deploys" 문제로 인해 비추천됩니다.
+
 
 ## 1. Railway 백엔드 배포
 
