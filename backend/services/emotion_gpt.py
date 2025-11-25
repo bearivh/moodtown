@@ -58,6 +58,17 @@ def analyze_emotions_with_gpt(diary_text: str) -> Dict[str, Any]:
    - 분노/부끄러움은 높은 점수 지양
 11. 모든 감정이 0점이면 안 됨.
 
+⚠️ 중요한 추가 분석:
+12. 놀람과 부끄러움의 경우, 일기 내용의 맥락을 정확히 분석하여 긍정/부정 여부를 판단하세요:
+    - 놀람: 
+      * 긍정적 맥락: 좋은 소식, 예상치 못한 행복, 기쁜 일, 만족스러운 결과, 선물 받음, 합격/합격 소식 등
+      * 부정적 맥락: 나쁜 소식, 충격적인 일, 실망스러운 결과, 불행한 사건, 사고, 갑작스러운 문제 등
+    - 부끄러움:
+      * 긍정적 맥락: 좋아하는 사람과의 부끄러움, 설레는 상황, 로맨틱한 부끄러움, 칭찬받아 부끄러움 등
+      * 부정적 맥락: 창피함, 자괴감, 실수로 인한 부끄러움, 당황스러운 상황, 수치심 등
+    
+    일기 전체의 맥락과 톤을 종합적으로 고려하여 판단하세요.
+
 ⚠️ 출력 형식(절대 어기지 말 것)
 <BEGIN_JSON>
 {{
@@ -69,9 +80,13 @@ def analyze_emotions_with_gpt(diary_text: str) -> Dict[str, Any]:
     "분노": 0~100 정수,
     "부끄러움": 0~100 정수,
     "슬픔": 0~100 정수
+  }},
+  "emotion_polarity": {{
+    "놀람": "positive" 또는 "negative" (놀람 점수가 0이면 null),
+    "부끄러움": "positive" 또는 "negative" (부끄러움 점수가 0이면 null)
   }}
 }}
-<END_JSON>
+</END_JSON>
 
 아래 일기를 분석하세요:
 
@@ -98,7 +113,7 @@ JSON 형식만 출력하세요.
                 {"role": "user", "content": emotion_prompt}
             ],
             temperature=0.1,
-            max_tokens=350
+            max_tokens=400
         )
         emotion_reply = emotion_response.choices[0].message.content or ""
         parsed = extract_json(emotion_reply)
@@ -183,13 +198,37 @@ JSON 형식만 출력하세요.
         sorted_emotions = sorted(norm_scores.items(), key=lambda x: x[1], reverse=True)
         top_emotions = [emo for emo, val in sorted_emotions[:4] if val > 0] or default_top
 
+        # emotion_polarity 파싱 및 처리
+        emotion_polarity = parsed.get("emotion_polarity", {}) if parsed else {}
+        if not isinstance(emotion_polarity, dict):
+            emotion_polarity = {}
+        
+        # 놀람/부끄러움이 없으면 null 처리
+        if norm_scores.get("놀람", 0) == 0:
+            emotion_polarity["놀람"] = None
+        if norm_scores.get("부끄러움", 0) == 0:
+            emotion_polarity["부끄러움"] = None
+        
+        # 값 검증 (positive, negative, null만 허용)
+        for emotion in ["놀람", "부끄러움"]:
+            if emotion in emotion_polarity:
+                value = emotion_polarity[emotion]
+                if value not in ["positive", "negative", None]:
+                    # 잘못된 값이면 null로 설정
+                    emotion_polarity[emotion] = None
+            else:
+                # 키가 없으면 null로 설정
+                emotion_polarity[emotion] = None
+
         return {
             "emotion_scores": norm_scores,
-            "top_emotions": top_emotions
+            "top_emotions": top_emotions,
+            "emotion_polarity": emotion_polarity
         }
     except Exception:
         traceback.print_exc()
         return {
             "emotion_scores": default_scores.copy(),
-            "top_emotions": default_top[:]
+            "top_emotions": default_top[:],
+            "emotion_polarity": {"놀람": None, "부끄러움": None}
         }

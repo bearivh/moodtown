@@ -1,4 +1,6 @@
-from flask import Blueprint, request, jsonify
+import os
+import sys
+from flask import Blueprint, request, jsonify, session
 from datetime import datetime, timedelta
 from db import (
     get_all_diaries,
@@ -15,17 +17,41 @@ from db import (
     save_plaza_conversation,
     get_plaza_conversation_by_date,
 )
+from .middleware import get_current_user_id
+
+# 유사 일기 검색 서비스 import
+_HAS_SIMILARITY = False
+try:
+    # 절대 경로로 services 모듈 import
+    from services.diary_similarity import find_similar_diaries, find_similar_diaries_by_text, load_model
+    _HAS_SIMILARITY = True
+    print("[diary.py] 유사 일기 검색 모듈 로드 성공")
+    # 서버 시작 시 모델 미리 로드 시도
+    try:
+        model_loaded = load_model()
+        if model_loaded:
+            print("[diary.py] 모델 미리 로드 성공")
+        else:
+            print("[diary.py] 모델 미리 로드 실패 - API 호출 시 다시 시도됩니다")
+    except Exception as model_e:
+        print(f"[diary.py] 모델 미리 로드 중 오류: {model_e}")
+except Exception as e:
+    import traceback
+    print(f"[diary.py] 유사 일기 검색 모듈 로드 실패: {e}")
+    traceback.print_exc()
+    _HAS_SIMILARITY = False
 
 diary_bp = Blueprint("diary", __name__)
 
 
 @diary_bp.route("/api/diaries", methods=["GET"])
 def list_diaries():
+    user_id = get_current_user_id()
     date = request.args.get("date")
     if date:
-        diaries = get_diaries_by_date(date)
+        diaries = get_diaries_by_date(date, user_id)
     else:
-        diaries = get_all_diaries()
+        diaries = get_all_diaries(user_id)
     return jsonify(diaries)
 
 @diary_bp.route("/api/diaries/<diary_id>", methods=["GET"])
@@ -38,10 +64,14 @@ def get_diary(diary_id):
 
 @diary_bp.route("/api/diaries", methods=["POST"])
 def create_diary_endpoint():
+    user_id = get_current_user_id()
+    if not user_id:
+        return jsonify({"error": "로그인이 필요합니다."}), 401
+    
     data = request.get_json()
     if not data:
         return jsonify({"error": "요청 데이터가 없습니다."}), 400
-    if save_diary(data):
+    if save_diary(data, user_id):
         return jsonify({"success": True, "message": "일기가 저장되었습니다."})
     return jsonify({"error": "일기 저장에 실패했습니다."}), 500
 
@@ -55,6 +85,10 @@ def delete_diary_endpoint(diary_id):
 
 @diary_bp.route("/api/diaries/replace", methods=["POST"])
 def replace_diary():
+    user_id = get_current_user_id()
+    if not user_id:
+        return jsonify({"error": "로그인이 필요합니다."}), 401
+    
     data = request.get_json() or {}
     date = data.get("date")
     old_emotion_scores = data.get("old_emotion_scores", {})
@@ -72,7 +106,7 @@ def replace_diary():
         + (old_emotion_scores.get("두려움", 0) or 0)
     )
     if old_positive_score > 0:
-        state = get_tree_state()
+        state = get_tree_state(user_id)
         new_growth = max(0, state.get("growth", 0) - old_positive_score)
         stage_thresholds = [0, 40, 100, 220, 380, 600]
         new_stage = state.get("stage", 0)
@@ -85,10 +119,11 @@ def replace_diary():
                 "growth": new_growth,
                 "stage": new_stage,
                 "lastFruitDate": state.get("lastFruitDate"),
-            }
+            },
+            user_id
         )
     if old_negative_score > 0:
-        state = get_well_state()
+        state = get_well_state(user_id)
         new_water_level = max(0, state.get("waterLevel", 0) - old_negative_score)
         is_overflowing = new_water_level >= 500
         save_well_state(
@@ -96,11 +131,12 @@ def replace_diary():
                 "waterLevel": new_water_level,
                 "isOverflowing": is_overflowing,
                 "lastOverflowDate": state.get("lastOverflowDate"),
-            }
+            },
+            user_id
         )
     delete_plaza_conversation_by_date(date)
     delete_diary_by_date(date)
-    if save_diary(new_diary_data):
+    if save_diary(new_diary_data, user_id):
         return jsonify({"success": True, "message": "일기가 덮어씌워졌습니다."})
     return jsonify({"error": "일기 저장에 실패했습니다."}), 500
 
@@ -248,4 +284,86 @@ def save_plaza_conversation_endpoint():
     if save_plaza_conversation(date, conversation, emotion_scores):
         return jsonify({"success": True, "message": "대화가 저장되었습니다."})
     return jsonify({"error": "대화 저장에 실패했습니다."}), 500
+
+
+@diary_bp.route("/api/diaries/<diary_id>/similar", methods=["GET"])
+def get_similar_diaries(diary_id):
+    """특정 일기와 유사한 일기 찾기"""
+    print(f"[유사일기검색] 요청 받음 - diary_id: {diary_id}, _HAS_SIMILARITY: {_HAS_SIMILARITY}")
+    
+    if not _HAS_SIMILARITY:
+        print("[유사일기검색] _HAS_SIMILARITY가 False입니다. 모듈이 로드되지 않았습니다.")
+        return jsonify({
+            "success": False,
+            "error": "유사 일기 검색 모듈을 로드할 수 없습니다. Flask 서버를 재시작해주세요.",
+            "hint": "서버 시작 시 '[diary.py] 유사 일기 검색 모듈 로드 성공' 메시지가 나타나야 합니다. 없다면 서버를 재시작하거나 gensim을 설치해주세요: pip install gensim"
+        }), 503
+    
+    limit = request.args.get("limit", 5, type=int)
+    min_similarity = request.args.get("min_similarity", 0.3, type=float)
+    
+    try:
+        print(f"[유사일기검색] 일기 ID: {diary_id}, limit: {limit}, min_similarity: {min_similarity}")
+        similar_diaries = find_similar_diaries(
+            target_diary_id=diary_id,
+            limit=limit,
+            min_similarity=min_similarity
+        )
+        print(f"[유사일기검색] 결과: {type(similar_diaries)}, 개수: {len(similar_diaries) if similar_diaries is not None else 'None'}")
+        
+        # 모델이 로드되지 않았을 경우
+        if similar_diaries is None:
+            print("⚠️ [유사일기검색] 모델 로드 실패로 None 반환")
+            return jsonify({
+                "success": False,
+                "error": "유사 일기 검색 모델이 로드되지 않았습니다.",
+                "hint": "모델 파일이 없거나 손상되었을 수 있습니다. train_diary_similarity.py 스크립트로 모델을 학습시켜주세요."
+            }), 503
+        
+        return jsonify({
+            "success": True,
+            "similar_diaries": similar_diaries,
+            "count": len(similar_diaries)
+        })
+    except Exception as e:
+        print(f"❌ [유사일기검색] 오류: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "error": f"유사 일기 검색 중 오류가 발생했습니다: {str(e)}"
+        }), 500
+
+
+@diary_bp.route("/api/diaries/similar", methods=["POST"])
+def find_similar_diaries_by_text_endpoint():
+    """텍스트를 기준으로 유사한 일기 찾기"""
+    if not _HAS_SIMILARITY:
+        return jsonify({"error": "유사 일기 검색 기능을 사용할 수 없습니다. 모델이 학습되지 않았을 수 있습니다."}), 503
+    
+    data = request.get_json() or {}
+    text = data.get("text") or data.get("content")
+    
+    if not text:
+        return jsonify({"error": "텍스트가 필요합니다."}), 400
+    
+    limit = data.get("limit", 5)
+    min_similarity = data.get("min_similarity", 0.3)
+    
+    try:
+        similar_diaries = find_similar_diaries_by_text(
+            text=text,
+            limit=limit,
+            min_similarity=min_similarity
+        )
+        return jsonify({
+            "success": True,
+            "similar_diaries": similar_diaries,
+            "count": len(similar_diaries)
+        })
+    except Exception as e:
+        print(f"유사 일기 검색 오류: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": "유사 일기 검색 중 오류가 발생했습니다."}), 500
 

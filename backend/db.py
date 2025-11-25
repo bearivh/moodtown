@@ -20,47 +20,90 @@ def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
     
+    # 사용자 테이블
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            name TEXT,
+            created_at TEXT NOT NULL
+        )
+    ''')
+    
+    # 마이그레이션: 기존 email 컬럼을 username으로 변경 (있으면)
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN username TEXT")
+        # 기존 email 값을 username으로 복사
+        cursor.execute("UPDATE users SET username = email WHERE username IS NULL AND email IS NOT NULL")
+        # email 컬럼 제거는 SQLite에서 직접 지원하지 않으므로 유지하되, username을 우선 사용
+        # 기존 데이터가 있으면 username이 설정되고, 없으면 NULL이 됨
+    except sqlite3.OperationalError:
+        pass  # 이미 username 컬럼이 있거나 마이그레이션이 완료된 경우
+    
     # 일기 테이블
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS diaries (
             id TEXT PRIMARY KEY,
+            user_id INTEGER NOT NULL,
             date TEXT NOT NULL,
             title TEXT NOT NULL,
             content TEXT NOT NULL,
             emotion_scores TEXT,  -- JSON 문자열
             created_at TEXT NOT NULL,
-            updated_at TEXT
+            updated_at TEXT,
+            FOREIGN KEY (user_id) REFERENCES users(id)
         )
     ''')
+    
+    # 기존 테이블에 user_id 컬럼 추가 (마이그레이션)
+    try:
+        cursor.execute("ALTER TABLE diaries ADD COLUMN user_id INTEGER")
+        # 기존 데이터는 NULL이 될 수 있으므로 임시로 0으로 설정
+        cursor.execute("UPDATE diaries SET user_id = 0 WHERE user_id IS NULL")
+    except sqlite3.OperationalError:
+        pass  # 컬럼이 이미 존재하는 경우
     
     # 광장 대화 테이블
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS plaza_conversations (
-            date TEXT PRIMARY KEY,
+            date TEXT NOT NULL,
+            user_id INTEGER NOT NULL,
             conversation TEXT NOT NULL,  -- JSON 문자열
             emotion_scores TEXT,  -- JSON 문자열
-            saved_at TEXT NOT NULL
+            saved_at TEXT NOT NULL,
+            PRIMARY KEY (date, user_id),
+            FOREIGN KEY (user_id) REFERENCES users(id)
         )
     ''')
+    
+    # 마이그레이션: 기존 plaza_conversations에 user_id 추가 (간단하게 처리)
+    try:
+        cursor.execute("ALTER TABLE plaza_conversations ADD COLUMN user_id INTEGER")
+        cursor.execute("UPDATE plaza_conversations SET user_id = 0 WHERE user_id IS NULL")
+    except sqlite3.OperationalError:
+        pass  # 컬럼이 이미 존재하거나 테이블이 없는 경우
     
     # 행복 나무 상태 테이블
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS tree_state (
-            id INTEGER PRIMARY KEY CHECK (id = 1),
+            user_id INTEGER PRIMARY KEY,
             growth INTEGER NOT NULL DEFAULT 0,
             stage TEXT NOT NULL DEFAULT 'seed',
-            last_updated TEXT NOT NULL
+            last_updated TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id)
         )
     ''')
     
     # 스트레스 우물 상태 테이블
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS well_state (
-            id INTEGER PRIMARY KEY CHECK (id = 1),
+            user_id INTEGER PRIMARY KEY,
             water_level INTEGER NOT NULL DEFAULT 0,
             is_overflowing INTEGER NOT NULL DEFAULT 0,  -- 0 or 1 (boolean)
             last_overflow_date TEXT,
-            last_updated TEXT NOT NULL
+            last_updated TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id)
         )
     ''')
     
@@ -68,22 +111,32 @@ def init_db():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS letters (
             id TEXT PRIMARY KEY,
+            user_id INTEGER NOT NULL,
             title TEXT NOT NULL,
             content TEXT NOT NULL,
             from_character TEXT NOT NULL,
             type TEXT NOT NULL,
             date TEXT NOT NULL,
             is_read INTEGER NOT NULL DEFAULT 0,  -- 0 or 1 (boolean)
-            created_at TEXT NOT NULL
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id)
         )
     ''')
+    
+    # 마이그레이션: letters에 user_id 추가
+    try:
+        cursor.execute("ALTER TABLE letters ADD COLUMN user_id INTEGER")
+        cursor.execute("UPDATE letters SET user_id = 0 WHERE user_id IS NULL")
+    except sqlite3.OperationalError:
+        pass
     
     # 행복 열매 개수 테이블
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS happy_fruits (
-            id INTEGER PRIMARY KEY CHECK (id = 1),
+            user_id INTEGER PRIMARY KEY,
             count INTEGER NOT NULL DEFAULT 0,
-            last_updated TEXT NOT NULL
+            last_updated TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id)
         )
     ''')
     
@@ -92,12 +145,106 @@ def init_db():
     print(f"✅ 데이터베이스 초기화 완료: {DB_PATH}")
 
 # ===============================
+# 사용자 관련 함수
+# ===============================
+
+def create_user(username: str, password: str, name: str = None) -> Optional[int]:
+    """새 사용자 생성"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 비밀번호 해싱 (간단한 SHA-256 사용)
+        import hashlib
+        hashed_password = hashlib.sha256(password.encode()).hexdigest()
+        
+        created_at = datetime.now().isoformat()
+        cursor.execute('''
+            INSERT INTO users (username, password, name, created_at)
+            VALUES (?, ?, ?, ?)
+        ''', (username, hashed_password, name, created_at))
+        
+        user_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        return user_id
+    except sqlite3.IntegrityError:
+        # 아이디 중복
+        return None
+    except Exception as e:
+        print(f"사용자 생성 실패: {e}")
+        return None
+
+def get_user_by_username(username: str) -> Optional[Dict[str, Any]]:
+    """아이디로 사용자 찾기"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        # username 컬럼이 있으면 우선 사용, 없으면 email 컬럼 확인 (마이그레이션 호환성)
+        try:
+            cursor.execute('SELECT * FROM users WHERE username = ?', (username,))
+        except sqlite3.OperationalError:
+            # username 컬럼이 없으면 email로 시도 (구버전 호환)
+            cursor.execute('SELECT * FROM users WHERE email = ?', (username,))
+        row = cursor.fetchone()
+        conn.close()
+        
+        if row:
+            user = dict(row)
+            user['id'] = user['id']  # 정수로 유지
+            return user
+        return None
+    except Exception as e:
+        print(f"사용자 조회 실패: {e}")
+        return None
+
+def verify_user_password(username: str, password: str) -> Optional[Dict[str, Any]]:
+    """사용자 비밀번호 확인"""
+    import hashlib
+    user = get_user_by_username(username)
+    if not user:
+        return None
+    
+    hashed_password = hashlib.sha256(password.encode()).hexdigest()
+    if user['password'] == hashed_password:
+        # 비밀번호는 반환하지 않음
+        user.pop('password', None)
+        return user
+    return None
+
+def get_user_by_id(user_id: int) -> Optional[Dict[str, Any]]:
+    """ID로 사용자 찾기"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        # 모든 컬럼 조회 (username, email 모두 확인 가능하도록)
+        cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))
+        row = cursor.fetchone()
+        conn.close()
+        
+        if row:
+            user = dict(row)
+            # username이 없으면 email을 username으로 사용 (마이그레이션 호환성)
+            if 'username' not in user or not user.get('username'):
+                if 'email' in user:
+                    user['username'] = user['email']
+            return user
+        return None
+    except Exception as e:
+        print(f"사용자 조회 실패: {e}")
+        return None
+
+# ===============================
 # 일기 관련 함수
 # ===============================
 
-def save_diary(diary: Dict[str, Any]) -> bool:
+def save_diary(diary: Dict[str, Any], user_id: int = None) -> bool:
     """일기 저장"""
     try:
+        if user_id is None:
+            # 호환성을 위해 기본값 0 사용 (로그인하지 않은 경우)
+            user_id = 0
+        
         conn = get_db_connection()
         cursor = conn.cursor()
         
@@ -105,15 +252,20 @@ def save_diary(diary: Dict[str, Any]) -> bool:
         date = diary.get('date') or datetime.now().strftime('%Y-%m-%d')
         title = diary.get('title', '')
         content = diary.get('content', '')
-        emotion_scores = json.dumps(diary.get('emotion_scores', {}), ensure_ascii=False)
+        # emotion_scores와 emotion_polarity를 함께 저장 (호환성을 위해)
+        emotion_data = {
+            'emotion_scores': diary.get('emotion_scores', {}),
+            'emotion_polarity': diary.get('emotion_polarity', {})
+        }
+        emotion_scores = json.dumps(emotion_data, ensure_ascii=False)
         created_at = diary.get('createdAt') or datetime.now().isoformat()
         updated_at = datetime.now().isoformat()
         
         cursor.execute('''
             INSERT OR REPLACE INTO diaries 
-            (id, date, title, content, emotion_scores, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (diary_id, date, title, content, emotion_scores, created_at, updated_at))
+            (id, user_id, date, title, content, emotion_scores, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (diary_id, user_id, date, title, content, emotion_scores, created_at, updated_at))
         
         conn.commit()
         conn.close()
@@ -122,38 +274,64 @@ def save_diary(diary: Dict[str, Any]) -> bool:
         print(f"일기 저장 실패: {e}")
         return False
 
-def get_all_diaries() -> List[Dict[str, Any]]:
-    """모든 일기 가져오기"""
+def get_all_diaries(user_id: int = None) -> List[Dict[str, Any]]:
+    """모든 일기 가져오기 (user_id가 있으면 필터링)"""
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM diaries ORDER BY created_at DESC')
+        
+        if user_id is not None:
+            cursor.execute('SELECT * FROM diaries WHERE user_id = ? ORDER BY created_at DESC', (user_id,))
+        else:
+            cursor.execute('SELECT * FROM diaries ORDER BY created_at DESC')
+        
         rows = cursor.fetchall()
         conn.close()
         
         diaries = []
         for row in rows:
             diary = dict(row)
-            diary['emotion_scores'] = json.loads(diary['emotion_scores'] or '{}')
+            emotion_data = json.loads(diary['emotion_scores'] or '{}')
+            # 호환성: emotion_scores가 직접 객체인 경우와 emotion_data 안에 있는 경우 모두 처리
+            if isinstance(emotion_data, dict) and 'emotion_scores' in emotion_data:
+                diary['emotion_scores'] = emotion_data.get('emotion_scores', {})
+                diary['emotion_polarity'] = emotion_data.get('emotion_polarity', {})
+            else:
+                # 기존 형식 (emotion_scores만 있는 경우)
+                diary['emotion_scores'] = emotion_data
+                diary['emotion_polarity'] = {}
             diaries.append(diary)
         return diaries
     except Exception as e:
         print(f"일기 불러오기 실패: {e}")
         return []
 
-def get_diaries_by_date(date: str) -> List[Dict[str, Any]]:
-    """특정 날짜의 일기 가져오기"""
+def get_diaries_by_date(date: str, user_id: int = None) -> List[Dict[str, Any]]:
+    """특정 날짜의 일기 가져오기 (user_id가 있으면 필터링)"""
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM diaries WHERE date = ? ORDER BY created_at DESC', (date,))
+        
+        if user_id is not None:
+            cursor.execute('SELECT * FROM diaries WHERE date = ? AND user_id = ? ORDER BY created_at DESC', (date, user_id))
+        else:
+            cursor.execute('SELECT * FROM diaries WHERE date = ? ORDER BY created_at DESC', (date,))
+        
         rows = cursor.fetchall()
         conn.close()
         
         diaries = []
         for row in rows:
             diary = dict(row)
-            diary['emotion_scores'] = json.loads(diary['emotion_scores'] or '{}')
+            emotion_data = json.loads(diary['emotion_scores'] or '{}')
+            # 호환성: emotion_scores가 직접 객체인 경우와 emotion_data 안에 있는 경우 모두 처리
+            if isinstance(emotion_data, dict) and 'emotion_scores' in emotion_data:
+                diary['emotion_scores'] = emotion_data.get('emotion_scores', {})
+                diary['emotion_polarity'] = emotion_data.get('emotion_polarity', {})
+            else:
+                # 기존 형식 (emotion_scores만 있는 경우)
+                diary['emotion_scores'] = emotion_data
+                diary['emotion_polarity'] = {}
             diaries.append(diary)
         return diaries
     except Exception as e:
@@ -171,7 +349,15 @@ def get_diary_by_id(diary_id: str) -> Optional[Dict[str, Any]]:
         
         if row:
             diary = dict(row)
-            diary['emotion_scores'] = json.loads(diary['emotion_scores'] or '{}')
+            emotion_data = json.loads(diary['emotion_scores'] or '{}')
+            # 호환성: emotion_scores가 직접 객체인 경우와 emotion_data 안에 있는 경우 모두 처리
+            if isinstance(emotion_data, dict) and 'emotion_scores' in emotion_data:
+                diary['emotion_scores'] = emotion_data.get('emotion_scores', {})
+                diary['emotion_polarity'] = emotion_data.get('emotion_polarity', {})
+            else:
+                # 기존 형식 (emotion_scores만 있는 경우)
+                diary['emotion_scores'] = emotion_data
+                diary['emotion_polarity'] = {}
             return diary
         return None
     except Exception as e:
@@ -278,12 +464,15 @@ def delete_diary_by_date(date: str) -> bool:
 # 행복 나무 관련 함수
 # ===============================
 
-def get_tree_state() -> Dict[str, Any]:
+def get_tree_state(user_id: int = None) -> Dict[str, Any]:
     """행복 나무 상태 가져오기 (성장도에 맞는 단계 자동 계산)"""
     try:
+        if user_id is None:
+            user_id = 0
+        
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM tree_state WHERE id = 1')
+        cursor.execute('SELECT * FROM tree_state WHERE user_id = ?', (user_id,))
         row = cursor.fetchone()
         conn.close()
         
@@ -316,7 +505,7 @@ def get_tree_state() -> Dict[str, Any]:
                 # 단계 불일치 수정 및 저장
                 state['stage'] = calculated_stage
                 state['growth'] = growth
-                save_tree_state(state)
+                save_tree_state(state, user_id)
                 print(f"나무 단계 자동 수정: {stored_stage} -> {calculated_stage} (성장도: {growth})")
             
             state['stage'] = calculated_stage
@@ -326,22 +515,24 @@ def get_tree_state() -> Dict[str, Any]:
             # 초기 상태 생성
             now = datetime.now().isoformat()
             default_state = {
-                'id': 1,
                 'growth': 0,
                 'stage': 0,  # 숫자로 저장
                 'last_updated': now
             }
-            save_tree_state(default_state)
+            save_tree_state(default_state, user_id)
             return default_state
     except Exception as e:
         print(f"나무 상태 불러오기 실패: {e}")
         import traceback
         traceback.print_exc()
-        return {'id': 1, 'growth': 0, 'stage': 0, 'last_updated': datetime.now().isoformat()}
+        return {'growth': 0, 'stage': 0, 'last_updated': datetime.now().isoformat()}
 
-def save_tree_state(state: Dict[str, Any]) -> bool:
+def save_tree_state(state: Dict[str, Any], user_id: int = None) -> bool:
     """행복 나무 상태 저장"""
     try:
+        if user_id is None:
+            user_id = 0
+        
         conn = get_db_connection()
         cursor = conn.cursor()
         
@@ -362,9 +553,9 @@ def save_tree_state(state: Dict[str, Any]) -> bool:
         
         cursor.execute('''
             INSERT OR REPLACE INTO tree_state 
-            (id, growth, stage, last_updated)
+            (user_id, growth, stage, last_updated)
             VALUES (?, ?, ?, ?)
-        ''', (state.get('id', 1), growth, stage, state['last_updated']))
+        ''', (user_id, growth, stage, state['last_updated']))
         
         conn.commit()
         conn.close()
@@ -373,12 +564,15 @@ def save_tree_state(state: Dict[str, Any]) -> bool:
         print(f"나무 상태 저장 실패: {e}")
         return False
 
-def get_happy_fruit_count() -> int:
+def get_happy_fruit_count(user_id: int = None) -> int:
     """행복 열매 개수 가져오기"""
     try:
+        if user_id is None:
+            user_id = 0
+        
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT count FROM happy_fruits WHERE id = 1')
+        cursor.execute('SELECT count FROM happy_fruits WHERE user_id = ?', (user_id,))
         row = cursor.fetchone()
         conn.close()
         
@@ -386,24 +580,27 @@ def get_happy_fruit_count() -> int:
             return dict(row)['count']
         else:
             # 초기화
-            save_happy_fruit_count(0)
+            save_happy_fruit_count(0, user_id)
             return 0
     except Exception as e:
         print(f"열매 개수 불러오기 실패: {e}")
         return 0
 
-def save_happy_fruit_count(count: int) -> bool:
+def save_happy_fruit_count(count: int, user_id: int = None) -> bool:
     """행복 열매 개수 저장"""
     try:
+        if user_id is None:
+            user_id = 0
+        
         conn = get_db_connection()
         cursor = conn.cursor()
         now = datetime.now().isoformat()
         
         cursor.execute('''
             INSERT OR REPLACE INTO happy_fruits 
-            (id, count, last_updated)
+            (user_id, count, last_updated)
             VALUES (?, ?, ?)
-        ''', (1, count, now))
+        ''', (user_id, count, now))
         
         conn.commit()
         conn.close()
@@ -416,12 +613,15 @@ def save_happy_fruit_count(count: int) -> bool:
 # 스트레스 우물 관련 함수
 # ===============================
 
-def get_well_state() -> Dict[str, Any]:
+def get_well_state(user_id: int = None) -> Dict[str, Any]:
     """스트레스 우물 상태 가져오기"""
     try:
+        if user_id is None:
+            user_id = 0
+        
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM well_state WHERE id = 1')
+        cursor.execute('SELECT * FROM well_state WHERE user_id = ?', (user_id,))
         row = cursor.fetchone()
         conn.close()
         
@@ -433,7 +633,6 @@ def get_well_state() -> Dict[str, Any]:
             # 초기 상태 생성
             now = datetime.now().isoformat()
             default_state = {
-                'id': 1,
                 'waterLevel': 0,
                 'isOverflowing': False,
                 'is_overflowing': 0,
@@ -441,21 +640,23 @@ def get_well_state() -> Dict[str, Any]:
                 'last_overflow_date': None,
                 'last_updated': now
             }
-            save_well_state(default_state)
+            save_well_state(default_state, user_id)
             return default_state
     except Exception as e:
         print(f"우물 상태 불러오기 실패: {e}")
         return {
-            'id': 1, 
             'waterLevel': 0, 
             'isOverflowing': False, 
             'lastOverflowDate': None,
             'last_updated': datetime.now().isoformat()
         }
 
-def save_well_state(state: Dict[str, Any]) -> bool:
+def save_well_state(state: Dict[str, Any], user_id: int = None) -> bool:
     """스트레스 우물 상태 저장"""
     try:
+        if user_id is None:
+            user_id = 0
+        
         conn = get_db_connection()
         cursor = conn.cursor()
         
@@ -464,10 +665,10 @@ def save_well_state(state: Dict[str, Any]) -> bool:
         
         cursor.execute('''
             INSERT OR REPLACE INTO well_state 
-            (id, water_level, is_overflowing, last_overflow_date, last_updated)
+            (user_id, water_level, is_overflowing, last_overflow_date, last_updated)
             VALUES (?, ?, ?, ?, ?)
         ''', (
-            state.get('id', 1),
+            user_id,
             state.get('waterLevel', 0),
             is_overflowing,
             state.get('lastOverflowDate'),

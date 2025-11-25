@@ -13,6 +13,7 @@ from .diary import diary_bp
 from .tree import tree_bp
 from .well import well_bp
 from .letters import letters_bp
+from .auth import auth_bp
 
 api_bp = Blueprint("api", __name__)
 
@@ -65,5 +66,6 @@ def register_all(app):
     app.register_blueprint(tree_bp, url_prefix="")
     app.register_blueprint(well_bp, url_prefix="")
     app.register_blueprint(letters_bp, url_prefix="")
+    app.register_blueprint(auth_bp, url_prefix="")
 
 

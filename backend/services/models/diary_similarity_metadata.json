@@ -1,0 +1,10 @@
+{
+  "vector_size": 128,
+  "window": 5,
+  "min_count": 2,
+  "epochs": 20,
+  "vocab_size": 69221,
+  "total_documents": 51644,
+  "corpus_texts": 51628,
+  "user_diaries": 16
+}
