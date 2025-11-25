@@ -2,6 +2,7 @@
   min-height: 100vh;
   position: relative;
   overflow: hidden;
+  z-index: 1;
   /* 그라데이션과 도트 패턴을 함께 적용 */
   background: 
     /* 윗줄 도트 */
@@ -36,7 +37,7 @@
   border-radius: 50px;
   border: 2px solid rgba(224, 246, 255, 0.6);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(224, 246, 255, 0.3);
-  padding: 0.5rem 1.6rem;
+  padding: 0.5rem 2.2rem;
   margin: 0 auto;
   width: fit-content;
 }
@@ -158,7 +159,7 @@
 }
 
 .office-info-toggle {
-  padding: 0.5rem 0.75rem;
+  padding: 0.5rem 1rem;
   background: linear-gradient(135deg, rgba(219, 234, 254, 0.6) 0%, rgba(191, 219, 254, 0.4) 100%);
   border: 1.5px solid rgba(191, 219, 254, 0.5);
   border-radius: 12px;
@@ -291,9 +292,7 @@
 
 .office-overview-section {
   grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
+  display: block;
 }
 
 .office-overview-section .office-section-title {
@@ -314,7 +313,7 @@
 }
 
 .office-donut-card {
-  grid-column: 1;
+  width: 100%;
 }
 
 .office-contribution-card {
@@ -328,20 +327,24 @@
 }
 
 .office-donut {
-  width: 180px;
-  height: 180px;
+  width: 220px;
+  height: 220px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #e5e7eb;
+  background-color: transparent;
   position: relative;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+  box-shadow: none;
+}
+
+.office-donut-svg {
+  border-radius: 50%;
 }
 
 .office-donut-center {
-  width: 100px;
-  height: 100px;
+  width: 120px;
+  height: 120px;
   border-radius: 50%;
   background-color: #f9fafb;
   display: flex;
@@ -386,12 +389,11 @@
 }
 
 .office-donut-legend-name {
-  min-width: 3rem;
   font-weight: 500;
 }
 
 .office-donut-legend-value {
-  margin-left: auto;
+  margin-left: 0.5rem;
   font-weight: 600;
   color: #111827;
   font-size: 1.6rem;
@@ -400,6 +402,31 @@
 .office-donut-empty {
   font-size: 1.3rem;
   color: #6b7280;
+}
+
+.office-donut-tooltip {
+  position: absolute;
+  background-color: rgba(0, 0, 0, 0.85);
+  color: white;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  pointer-events: none;
+  z-index: 1000;
+  transform: translate(-50%, -100%);
+  margin-top: -0.5rem;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.office-donut-tooltip-name {
+  font-weight: 600;
+  margin-bottom: 0.2rem;
+}
+
+.office-donut-tooltip-score {
+  font-weight: 500;
+  opacity: 0.9;
 }
 
 .office-contribution-description {
@@ -722,6 +749,11 @@
 
 .stats-trend-graph {
   margin-top: 2rem;
+  background-color: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  padding: 1.75rem;
+  box-shadow: 0 4px 12px rgba(224, 246, 255, 0.2);
+  border: 1px solid rgba(224, 246, 255, 0.3);
 }
 
 .trend-graph-container {
@@ -760,10 +792,9 @@
   height: 200px;
   gap: 0.5rem;
   padding: 1rem;
-  background-color: #f9fafb;
+  background-color: transparent;
   border-radius: 12px;
   position: relative;
-  border-top: 1px solid #d1d5db;
 }
 
 .trend-day {
@@ -803,11 +834,11 @@
 }
 
 .trend-bar.positive {
-  background-color: #22c55e;
+  background-color: #86efac;
 }
 
 .trend-bar.negative {
-  background-color: #ef4444;
+  background-color: #fca5a5;
 }
 
 .trend-day-label {
@@ -862,6 +893,424 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
+  }
+}
+
+/* 유사 일기 검색 스타일 */
+.diary-similar-button {
+  margin-top: 1rem;
+  padding: 0.6rem 1.2rem;
+  background: linear-gradient(135deg, rgba(219, 234, 254, 0.8) 0%, rgba(191, 219, 254, 0.6) 100%);
+  border: 1.5px solid rgba(191, 219, 254, 0.7);
+  border-radius: 12px;
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: #1e40af;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Dongle', sans-serif;
+}
+
+.diary-similar-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(191, 219, 254, 0.9) 0%, rgba(147, 197, 253, 0.7) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(191, 219, 254, 0.4);
+}
+
+.diary-similar-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.similar-diaries-section {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 16px;
+  border: 1px solid rgba(224, 246, 255, 0.4);
+  box-shadow: 0 2px 8px rgba(224, 246, 255, 0.2);
+}
+
+.similar-diaries-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #2d3748;
+  margin-bottom: 1rem;
+}
+
+.similar-diaries-loading,
+.similar-diaries-error,
+.similar-diaries-empty {
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
+  font-size: 1.2rem;
+}
+
+.similar-diaries-error {
+  color: #991b1b;
+  background-color: rgba(254, 226, 226, 0.8);
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  padding: 1rem;
+}
+
+.similar-diaries-error-title {
+  font-weight: bold;
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+  color: #dc2626;
+}
+
+.similar-diaries-error-message {
+  white-space: pre-line;
+  line-height: 1.6;
+}
+
+.similar-diaries-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.similar-diary-item {
+  padding: 1rem;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 12px;
+  border: 1px solid rgba(224, 246, 255, 0.4);
+  box-shadow: 0 2px 8px rgba(224, 246, 255, 0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.similar-diary-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(224, 246, 255, 0.25);
+}
+
+.similar-diary-header {
+  margin-bottom: 0.75rem;
+}
+
+.similar-diary-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  color: #6b7280;
+}
+
+.similar-diary-date {
+  font-weight: 500;
+}
+
+.similar-diary-similarity {
+  font-weight: 600;
+  color: #1e40af;
+  background-color: rgba(219, 234, 254, 0.5);
+  padding: 0.2rem 0.6rem;
+  border-radius: 8px;
+}
+
+.similar-diary-title {
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: #2d3748;
+  margin: 0;
+}
+
+.similar-diary-content {
+  color: #4a5568;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  margin-top: 0.5rem;
+}
+
+/* 꺾은선 그래프 스타일 */
+.stats-line-graph {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(224, 246, 255, 0.4);
+  margin-top: 2rem;
+}
+
+.line-graph-container {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.line-graph-svg {
+  width: 100%;
+  height: 300px;
+  max-width: 100%;
+  display: block;
+}
+
+.line-graph-legend {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 1rem;
+  font-family: 'Dongle', sans-serif;
+}
+
+.line-graph-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.2rem;
+  color: #4a5568;
+}
+
+.line-graph-legend-line {
+  width: 30px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.line-graph-legend-line.positive {
+  background-color: #22c55e;
+}
+
+.line-graph-legend-line.negative {
+  background-color: #ef4444;
+}
+
+/* 추가 통계 섹션 스타일 */
+.office-additional-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+@media (max-width: 1024px) {
+  .office-additional-stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+.stats-card {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(224, 246, 255, 0.4);
+}
+
+/* 연속 일기 작성 (스트릭) */
+.streak-card {
+  text-align: center;
+}
+
+.streak-content {
+  margin-top: 1rem;
+}
+
+.streak-number {
+  font-size: 4rem;
+  font-weight: bold;
+  color: #f59e0b;
+  line-height: 1;
+  font-family: 'Dongle', sans-serif;
+}
+
+.streak-label {
+  font-size: 1.5rem;
+  color: #6b7280;
+  margin-top: 0.5rem;
+  font-family: 'Dongle', sans-serif;
+}
+
+.streak-message {
+  font-size: 1.2rem;
+  color: #f59e0b;
+  margin-top: 1rem;
+  font-family: 'Dongle', sans-serif;
+}
+
+/* 일기 작성 활동도 */
+.activity-content {
+  margin-top: 1rem;
+}
+
+.activity-item {
+  margin-bottom: 1.5rem;
+}
+
+.activity-item:last-child {
+  margin-bottom: 0;
+}
+
+.activity-label {
+  font-size: 1.2rem;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+  font-family: 'Dongle', sans-serif;
+}
+
+.activity-value {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.activity-number {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #2d3748;
+  font-family: 'Dongle', sans-serif;
+}
+
+.activity-unit {
+  font-size: 1.2rem;
+  color: #6b7280;
+  font-family: 'Dongle', sans-serif;
+}
+
+.activity-bar {
+  width: 100%;
+  height: 8px;
+  background-color: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.activity-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e 0%, #86efac 100%);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+/* 감정별 평균 점수 */
+.averages-content {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.average-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.average-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.2rem;
+  color: #2d3748;
+  min-width: 80px;
+  font-family: 'Dongle', sans-serif;
+}
+
+.average-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.average-bar-container {
+  flex: 1;
+  height: 24px;
+  background-color: #f3f4f6;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+.average-bar {
+  height: 100%;
+  border-radius: 12px;
+  transition: width 0.3s ease;
+}
+
+.average-value {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #2d3748;
+  min-width: 50px;
+  text-align: right;
+  font-family: 'Dongle', sans-serif;
+}
+
+/* 요일별 작성 패턴 */
+.weekday-content {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 0.5rem;
+  height: 200px;
+}
+
+.weekday-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+}
+
+.weekday-bar-container {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+}
+
+.weekday-bar {
+  width: 100%;
+  max-width: 40px;
+  background: linear-gradient(to top, #93c5fd 0%, #60a5fa 100%);
+  border-radius: 4px 4px 0 0;
+  transition: height 0.3s ease;
+  min-height: 4px;
+}
+
+.weekday-label {
+  font-size: 1.2rem;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+  font-family: 'Dongle', sans-serif;
+}
+
+.weekday-count {
+  font-size: 1rem;
+  color: #9ca3af;
+  font-family: 'Dongle', sans-serif;
+}
+
+.stats-empty {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 1.2rem;
+  padding: 2rem 0;
+  font-family: 'Dongle', sans-serif;
+}
+
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+  .streak-number {
+    font-size: 3rem;
+  }
+  
+  .weekday-content {
+    height: 150px;
+    gap: 0.25rem;
+  }
+  
+  .weekday-bar {
+    max-width: 30px;
   }
 }
 

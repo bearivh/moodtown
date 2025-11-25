@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { getAllDiaries, getDiariesByDate, getDominantEmotionByDate, getWeeklyEmotionStats } from '../utils/storage'
+import { getAllDiaries, getDiariesByDate, getDominantEmotionByDate, getWeeklyEmotionStats, getMonthlyEmotionStats, getDiaryStreak, getEmotionAverages, getWeekdayPattern, getWritingActivity } from '../utils/storage'
 import { getEmotionColorByName } from '../utils/emotionColorMap'
 import { getTodayDateString } from '../utils/dateUtils'
-import { getOfficeStats } from '../utils/api'
+import { getOfficeStats, getSimilarDiaries } from '../utils/api'
 import { normalizeEmotionScores } from '../utils/emotionUtils'
+import FloatingResidents from '../components/FloatingResidents'
 import './Office.css'
 
 function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
@@ -11,17 +12,44 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
   const [selectedDate, setSelectedDate] = useState(null)
   const [selectedDiaries, setSelectedDiaries] = useState([])
   const [weeklyStats, setWeeklyStats] = useState(null)
+  const [monthlyStats, setMonthlyStats] = useState(null)
   const [calendarData, setCalendarData] = useState({})
+  const [diaryStreak, setDiaryStreak] = useState(null)
+  const [emotionAverages, setEmotionAverages] = useState(null)
+  const [weekdayPattern, setWeekdayPattern] = useState(null)
+  const [writingActivity, setWritingActivity] = useState(null)
   const [selectedDateEmotionStats, setSelectedDateEmotionStats] = useState(null)
   const [officeStats, setOfficeStats] = useState(null)
   const [showInfo, setShowInfo] = useState(false)
+  const [selectedDiaryForSimilarity, setSelectedDiaryForSimilarity] = useState(null)
+  const [similarDiaries, setSimilarDiaries] = useState([])
+  const [loadingSimilar, setLoadingSimilar] = useState(false)
+  const [similarError, setSimilarError] = useState(null)
+  const [donutTooltip, setDonutTooltip] = useState(null)
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
   const today = getTodayDateString()
   const isPastDate = selectedDateFromVillage && selectedDateFromVillage < today
 
   useEffect(() => {
     loadCalendarData()
     loadWeeklyStats()
+    loadMonthlyStats()
+    loadAdditionalStats()
   }, [currentMonth])
+
+  const loadAdditionalStats = async () => {
+    const streak = await getDiaryStreak()
+    setDiaryStreak(streak)
+    
+    const averages = await getEmotionAverages()
+    setEmotionAverages(averages)
+    
+    const pattern = await getWeekdayPattern()
+    setWeekdayPattern(pattern)
+    
+    const activity = await getWritingActivity()
+    setWritingActivity(activity)
+  }
 
   useEffect(() => {
     if (selectedDateFromVillage && isPastDate) {
@@ -98,10 +126,45 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
     setWeeklyStats(stats)
   }
 
+  const loadMonthlyStats = async () => {
+    const stats = await getMonthlyEmotionStats()
+    setMonthlyStats(stats)
+  }
+
   const handleDateClick = async (dateStr) => {
     setSelectedDate(dateStr)
     const diaries = await getDiariesByDate(dateStr)
     setSelectedDiaries(diaries)
+    // 유사 일기 검색 상태 초기화
+    setSelectedDiaryForSimilarity(null)
+    setSimilarDiaries([])
+    setSimilarError(null)
+  }
+
+  const handleFindSimilar = async (diary) => {
+    setSelectedDiaryForSimilarity(diary)
+    setLoadingSimilar(true)
+    setSimilarError(null)
+    setSimilarDiaries([])
+
+    try {
+      const result = await getSimilarDiaries(diary.id, 5, 0.3)
+      
+      if (result.success === false) {
+        const errorMsg = result.error || '유사 일기 검색에 실패했어요'
+        const hintMsg = result.hint ? `\n\n💡 ${result.hint}` : ''
+        setSimilarError(errorMsg + hintMsg)
+        setSimilarDiaries([])
+      } else {
+        setSimilarDiaries(result.similar_diaries || [])
+      }
+    } catch (error) {
+      console.error('유사 일기 검색 오류:', error)
+      setSimilarError('유사 일기 검색 중 오류가 발생했어요')
+      setSimilarDiaries([])
+    } finally {
+      setLoadingSimilar(false)
+    }
   }
 
   const handlePrevMonth = () => {
@@ -138,26 +201,90 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
     })
   }
 
-  const buildDonutBackground = (topEmotions) => {
-    if (!topEmotions || topEmotions.length === 0) {
-      return 'conic-gradient(#e5e7eb 0deg 360deg)'
+  // SVG 도넛 그래프를 위한 path 데이터 생성
+  const createDonutPaths = (emotions) => {
+    if (!emotions || emotions.length === 0) {
+      return []
     }
 
-    let current = 0
-    const segments = topEmotions.map((emotion) => {
-      const color = getEmotionColorByName(emotion.name)
-      const size = (emotion.ratio || 0) * 360
-      const start = current
-      const end = current + size
-      current = end
-      return `${color} ${start}deg ${end}deg`
+    const size = 220
+    const radius = size / 2
+    const innerRadius = radius - 40
+    const center = radius
+
+    let currentAngle = -90 // 12시 방향부터 시작
+    const paths = []
+
+    emotions.forEach((emotion) => {
+      const ratio = emotion.ratio || 0
+      const angle = ratio * 360
+
+      if (angle > 0) {
+        const startAngle = (currentAngle * Math.PI) / 180
+        const endAngle = ((currentAngle + angle) * Math.PI) / 180
+
+        const x1 = center + radius * Math.cos(startAngle)
+        const y1 = center + radius * Math.sin(startAngle)
+        const x2 = center + radius * Math.cos(endAngle)
+        const y2 = center + radius * Math.sin(endAngle)
+
+        const x3 = center + innerRadius * Math.cos(endAngle)
+        const y3 = center + innerRadius * Math.sin(endAngle)
+        const x4 = center + innerRadius * Math.cos(startAngle)
+        const y4 = center + innerRadius * Math.sin(startAngle)
+
+        const largeArcFlag = angle > 180 ? 1 : 0
+
+        const pathData = [
+          `M ${x1} ${y1}`,
+          `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
+          `L ${x3} ${y3}`,
+          `A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${x4} ${y4}`,
+          'Z'
+        ].join(' ')
+
+        paths.push({
+          path: pathData,
+          color: getEmotionColorByName(emotion.name),
+          name: emotion.name,
+          score: Math.round(emotion.score)
+        })
+
+        currentAngle += angle
+      }
     })
 
-    if (current < 360) {
-      segments.push(`#e5e7eb ${current}deg 360deg`)
-    }
+    return paths
+  }
 
-    return `conic-gradient(${segments.join(', ')})`
+  const handleDonutMouseEnter = (emotion, event) => {
+    const donutElement = event.currentTarget.closest('.office-donut')
+    if (!donutElement) return
+    
+    const rect = donutElement.getBoundingClientRect()
+    const svg = event.currentTarget.ownerSVGElement
+    const svgRect = svg.getBoundingClientRect()
+    
+    setTooltipPosition({
+      x: event.clientX - svgRect.left,
+      y: event.clientY - svgRect.top
+    })
+    setDonutTooltip({ name: emotion.name, score: emotion.score })
+  }
+
+  const handleDonutMouseLeave = () => {
+    setDonutTooltip(null)
+  }
+
+  const handleDonutMouseMove = (event) => {
+    if (donutTooltip) {
+      const svg = event.currentTarget
+      const svgRect = svg.getBoundingClientRect()
+      setTooltipPosition({
+        x: event.clientX - svgRect.left,
+        y: event.clientY - svgRect.top
+      })
+    }
   }
 
   const { daysInMonth, startingDayOfWeek, year, month } = getDaysInMonth(currentMonth)
@@ -177,15 +304,37 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
     calendarDays.push(dateStr)
   }
 
-  // 그래프 최대값 계산
-  const maxGraphValue = weeklyStats ? Math.max(
-    ...weeklyStats.positiveTrend,
-    ...weeklyStats.negativeTrend,
-    1
-  ) : 100
+  // 긍정/부정 추이는 이미 정규화되어 합이 100이므로 최대값은 100
+  const maxGraphValue = 100
+
+  // 월간 감정 통계를 도넛 차트 형식으로 변환
+  const monthlyEmotionDonut = monthlyStats ? (() => {
+    const emotionStats = monthlyStats.emotionStats || {}
+    const total = Object.values(emotionStats).reduce((sum, val) => sum + (val || 0), 0)
+    
+    if (total === 0) {
+      return []
+    }
+
+    // 각 감정의 비율 계산 및 정렬
+    const emotions = Object.entries(emotionStats)
+      .map(([name, score]) => ({
+        name,
+        ratio: (score || 0) / total,
+        score: score || 0
+      }))
+      .sort((a, b) => b.score - a.score) // 점수 높은 순으로 정렬
+      .filter(item => item.score > 0) // 점수가 0보다 큰 것만
+
+    return emotions
+  })() : []
+
+  // 도넛 그래프 path 데이터 생성 (한 번만 계산)
+  const donutPaths = monthlyEmotionDonut.length > 0 ? createDonutPaths(monthlyEmotionDonut) : []
 
   return (
     <div className="office-container">
+      <FloatingResidents count={2} />
       <div className="office-header">
         {onNavigate && (
           <button
@@ -227,17 +376,25 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
               <div className="office-info-card">
                 <span className="office-info-icon">📊</span>
                 <div className="office-info-content">
-                  <span className="office-info-text">주간 통계로</span>
+                  <span className="office-info-text">월간 통계로</span>
                   <span className="office-info-arrow">→</span>
-                  <span className="office-info-result">감정 추이를 분석해요</span>
+                  <span className="office-info-result">이번 달 감정을 확인해요</span>
                 </div>
               </div>
               <div className="office-info-card">
-                <span className="office-info-icon">🌳💧</span>
+                <span className="office-info-icon">📈</span>
                 <div className="office-info-content">
-                  <span className="office-info-text">나무와 우물 기여도를</span>
+                  <span className="office-info-text">일주일 추이로</span>
                   <span className="office-info-arrow">→</span>
-                  <span className="office-info-result">한눈에 볼 수 있어요</span>
+                  <span className="office-info-result">최근 감정 변화를 확인해요</span>
+                </div>
+              </div>
+              <div className="office-info-card">
+                <span className="office-info-icon">🔍</span>
+                <div className="office-info-content">
+                  <span className="office-info-text">비슷한 일기 찾기로</span>
+                  <span className="office-info-arrow">→</span>
+                  <span className="office-info-result">유사한 감정 패턴을 발견해요</span>
                 </div>
               </div>
             </div>
@@ -250,7 +407,7 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
         {isPastDate && (
           <div className="office-date-notice">
             <span className="office-date-notice-text">
-              📅 누적 통계는 {new Date(today).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })} 기준입니다
+              📅 누적 통계는 {new Date(today).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })} 기준이에요
             </span>
           </div>
         )}
@@ -266,100 +423,6 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
 
       <div className="office-content">
 
-        {/* 감정 요약 섹션 (Top 3 도넛 + 나무/우물 기여도) */}
-        {officeStats && (
-          <div className="office-overview-section">
-            <div className="office-overview-grid">
-              <div className="office-donut-card">
-                <h3 className="stats-subtitle">Top 3 감정 비중</h3>
-                <div className="office-donut-wrapper">
-                  <div
-                    className="office-donut"
-                    style={{ backgroundImage: buildDonutBackground(officeStats.topEmotions) }}
-                  >
-                    <div className="office-donut-center">
-                      <span className="office-donut-center-label">총 점수</span>
-                      <span className="office-donut-center-value">
-                        {Math.round(officeStats.totalEmotionScore || 0)}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="office-donut-legend">
-                    {(officeStats.topEmotions || []).map((emotion) => (
-                      <div key={emotion.name} className="office-donut-legend-item">
-                        <span
-                          className="office-donut-legend-color"
-                          style={{ backgroundColor: getEmotionColorByName(emotion.name) }}
-                        />
-                        <span className="office-donut-legend-name">{emotion.name}</span>
-                        <span className="office-donut-legend-value">
-                          {Math.round((emotion.ratio || 0) * 100)}%
-                        </span>
-                      </div>
-                    ))}
-                    {(!officeStats.topEmotions || officeStats.topEmotions.length === 0) && (
-                      <p className="office-donut-empty">아직 통계를 낼 수 있는 감정 데이터가 없어요.</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="office-contribution-card">
-                <h3 className="stats-subtitle">행복 나무 / 스트레스 우물 기여도</h3>
-                <p className="office-contribution-description">
-                  최근 일주일 동안 쌓인 감정들이 마을의 나무와 우물에 얼마나 영향을 줬는지 한눈에 볼 수 있어요.
-                </p>
-                <div className="office-contribution-bars">
-                  {(() => {
-                    const tree = officeStats.treeWellContribution?.tree || { value: 0, ratio: 0 }
-                    const well = officeStats.treeWellContribution?.well || { value: 0, ratio: 0 }
-                    const total = officeStats.totalTreeWellValue || 0
-                    const safeTreeRatio = isNaN(tree.ratio) ? 0 : tree.ratio
-                    const safeWellRatio = isNaN(well.ratio) ? 0 : well.ratio
-
-                    return (
-                      <>
-                        <div className="office-contribution-item">
-                          <div className="office-contribution-label">
-                            <span className="office-contribution-name">행복 나무</span>
-                            <span className="office-contribution-value">
-                              {tree.value}점 ({Math.round(safeTreeRatio * 100)}%)
-                            </span>
-                          </div>
-                          <div className="office-contribution-bar-container">
-                            <div
-                              className="office-contribution-bar tree"
-                              style={{ width: `${safeTreeRatio * 100}%` }}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="office-contribution-item">
-                          <div className="office-contribution-label">
-                            <span className="office-contribution-name">스트레스 우물</span>
-                            <span className="office-contribution-value">
-                              {well.value}점 ({Math.round(safeWellRatio * 100)}%)
-                            </span>
-                          </div>
-                          <div className="office-contribution-bar-container">
-                            <div
-                              className="office-contribution-bar well"
-                              style={{ width: `${safeWellRatio * 100}%` }}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="office-contribution-total">
-                          지금까지의 총 감정 에너지: <strong>{total}</strong>점
-                        </div>
-                      </>
-                    )
-                  })()}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* 감정 캘린더 섹션 */}
         <div className="office-calendar-section">
@@ -425,7 +488,7 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
                 {formatDate(selectedDate)}의 일기
               </h4>
               {selectedDiaries.length === 0 ? (
-                <p className="diary-detail-empty">이 날짜에는 일기가 없어요요.</p>
+                <p className="diary-detail-empty">이 날짜에는 일기가 없어요</p>
               ) : (
                 <div className="diary-detail-list">
                   {selectedDiaries.map(diary => (
@@ -458,6 +521,82 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
                         )}
                       </div>
                       <p className="diary-detail-content">{diary.content}</p>
+                      <button
+                        className="diary-similar-button"
+                        onClick={() => handleFindSimilar(diary)}
+                        disabled={loadingSimilar}
+                      >
+                        🔍 비슷한 일기 찾기
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 유사 일기 검색 결과 */}
+          {selectedDiaryForSimilarity && (
+            <div className="similar-diaries-section">
+              <h4 className="similar-diaries-title">
+                "{selectedDiaryForSimilarity.title || '제목 없음'}"와 비슷한 일기
+              </h4>
+              
+              {loadingSimilar && (
+                <div className="similar-diaries-loading">
+                  유사한 일기를 찾는 중...
+                </div>
+              )}
+
+              {similarError && (
+                <div className="similar-diaries-error">
+                  <div className="similar-diaries-error-title">⚠️ 검색 실패</div>
+                  <div className="similar-diaries-error-message">{similarError}</div>
+                </div>
+              )}
+
+              {!loadingSimilar && !similarError && similarDiaries.length === 0 && selectedDiaryForSimilarity && (
+                <div className="similar-diaries-empty">
+                  유사한 일기를 찾지 못했어요. 일기를 더 작성하면 비슷한 패턴을 찾을 수 있어요!
+                </div>
+              )}
+
+              {!loadingSimilar && !similarError && similarDiaries.length > 0 && (
+                <div className="similar-diaries-list">
+                  {similarDiaries.map((similarDiary, index) => (
+                    <div key={similarDiary.id} className="similar-diary-item">
+                      <div className="similar-diary-header">
+                        <div className="similar-diary-meta">
+                          <span className="similar-diary-date">{formatDate(similarDiary.date)}</span>
+                          <span className="similar-diary-similarity">
+                            유사도: {Math.round(similarDiary.similarity * 100)}%
+                          </span>
+                        </div>
+                        <h6 className="similar-diary-title">{similarDiary.title || '제목 없음'}</h6>
+                      </div>
+                      {similarDiary.emotion_scores && Object.keys(similarDiary.emotion_scores).length > 0 && (
+                        <div className="diary-emotion-scores">
+                          {Object.entries(normalizeEmotionScores(similarDiary.emotion_scores))
+                            .sort(([, a], [, b]) => b - a)
+                            .slice(0, 3)
+                            .map(([emotion, score]) => {
+                              const normalizedScore = Math.round(score)
+                              return (
+                                <div
+                                  key={emotion}
+                                  className="emotion-score-badge"
+                                  style={{ 
+                                    backgroundColor: getEmotionColorByName(emotion),
+                                    color: 'white'
+                                  }}
+                                >
+                                  {emotion} {normalizedScore}%
+                                </div>
+                              )
+                            })}
+                        </div>
+                      )}
+                      <p className="similar-diary-content">{similarDiary.content}</p>
                     </div>
                   ))}
                 </div>
@@ -466,81 +605,357 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
           )}
         </div>
 
-        {/* 일주일 간 감정 통계 섹션 */}
+        {/* 감정 통계 섹션 */}
         <div className="office-stats-section">
-          <h2 className="office-section-title">일주일 간 감정 통계</h2>
+          {/* 이번 달 감정 통계 도넛 차트 */}
+          <div className="office-overview-section">
+            <h2 className="office-section-title">이번 달 감정 통계</h2>
+            <div className="office-overview-grid">
+              <div className="office-donut-card">
+                <h3 className="stats-subtitle">이번 달 감정 비율이에요</h3>
+                <div className="office-donut-wrapper">
+                  <div className="office-donut">
+                    <svg
+                      width="220"
+                      height="220"
+                      viewBox="0 0 220 220"
+                      className="office-donut-svg"
+                      style={{ position: 'absolute', top: 0, left: 0 }}
+                      onMouseMove={handleDonutMouseMove}
+                      onMouseLeave={handleDonutMouseLeave}
+                    >
+                      {donutPaths.length > 0 ? (
+                        donutPaths.map((item, index) => (
+                          <path
+                            key={`${item.name}-${index}`}
+                            d={item.path}
+                            fill={item.color}
+                            onMouseEnter={(e) => handleDonutMouseEnter(item, e)}
+                            style={{ cursor: 'pointer' }}
+                          />
+                        ))
+                      ) : (
+                        <circle
+                          cx="110"
+                          cy="110"
+                          r="110"
+                          fill="#e5e7eb"
+                        />
+                      )}
+                    </svg>
+                    {donutTooltip && (
+                      <div
+                        className="office-donut-tooltip"
+                        style={{
+                          left: `${tooltipPosition.x}px`,
+                          top: `${tooltipPosition.y}px`
+                        }}
+                      >
+                        <div className="office-donut-tooltip-name">{donutTooltip.name}</div>
+                        <div className="office-donut-tooltip-score">{donutTooltip.score}점</div>
+                      </div>
+                    )}
+                    <div className="office-donut-center">
+                      <span className="office-donut-center-label">총 점수</span>
+                      <span className="office-donut-center-value">
+                        {monthlyStats ? Math.round(
+                          Object.values(monthlyStats.emotionStats || {}).reduce((sum, val) => sum + (val || 0), 0)
+                        ) : 0}
+                      </span>
+                    </div>
+                    {donutTooltip && (
+                      <div
+                        className="office-donut-tooltip"
+                        style={{
+                          left: `${tooltipPosition.x}px`,
+                          top: `${tooltipPosition.y}px`
+                        }}
+                      >
+                        <div className="office-donut-tooltip-name">{donutTooltip.name}</div>
+                        <div className="office-donut-tooltip-score">{donutTooltip.score}점</div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="office-donut-legend">
+                    {monthlyEmotionDonut.length > 0 ? (
+                      monthlyEmotionDonut.map((emotion) => (
+                        <div key={emotion.name} className="office-donut-legend-item">
+                          <span
+                            className="office-donut-legend-color"
+                            style={{ backgroundColor: getEmotionColorByName(emotion.name) }}
+                          />
+                          <span className="office-donut-legend-name">{emotion.name}</span>
+                          <span className="office-donut-legend-value">
+                            {Math.round(emotion.ratio * 100)}%
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="office-donut-empty">통계를 낼 수 있는 감정 데이터가 없어요</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-          {weeklyStats && (
-            <>
-              {/* 감정별 누적 지수 */}
-              <div className="stats-emotion-bars">
-                <h3 className="stats-subtitle">감정별 누적 지수</h3>
-                <div className="emotion-bars-container">
-                  {Object.entries(weeklyStats.emotionStats)
-                    .sort(([, a], [, b]) => b - a)
-                    .map(([emotion, score]) => {
-                      const maxScore = Math.max(...Object.values(weeklyStats.emotionStats), 1)
-                      const percentage = (score / maxScore) * 100
+          {/* 일주일간 긍정/부정 점수 추이 그래프 (꺾은선) */}
+          {weeklyStats && weeklyStats.dates && weeklyStats.positiveScores && weeklyStats.negativeScores && (
+            <div className="stats-line-graph">
+              <h2 className="office-section-title">일주일간 긍정/부정 추이</h2>
+              <h3 className="stats-subtitle">최근 7일간 감정 점수 변화예요</h3>
+              <div className="line-graph-container">
+                <svg className="line-graph-svg" viewBox="0 0 600 250" preserveAspectRatio="xMidYMid meet">
+                  {/* 배경 그리드 */}
+                  <defs>
+                    <pattern id="grid" width="85.7" height="50" patternUnits="userSpaceOnUse">
+                      <line x1="0" y1="0" x2="0" y2="50" stroke="#e5e7eb" strokeWidth="1" />
+                      <line x1="0" y1="50" x2="85.7" y2="50" stroke="#e5e7eb" strokeWidth="1" />
+                    </pattern>
+                  </defs>
+                  <rect width="100%" height="100%" fill="url(#grid)" />
+                  
+                  {/* Y축 레이블 */}
+                  {(() => {
+                    const maxScore = Math.max(
+                      ...weeklyStats.positiveScores,
+                      ...weeklyStats.negativeScores,
+                      10
+                    )
+                    const step = Math.ceil(maxScore / 5)
+                    const ticks = []
+                    for (let i = 0; i <= 5; i++) {
+                      ticks.push(i * step)
+                    }
+                    return ticks.map((value, i) => (
+                      <g key={i}>
+                        <text
+                          x="30"
+                          y={220 - (i * 40)}
+                          fontSize="10"
+                          fill="#6b7280"
+                          textAnchor="end"
+                        >
+                          {value}
+                        </text>
+                      </g>
+                    ))
+                  })()}
+                  
+                  {/* 꺾은선 그래프 */}
+                  {(() => {
+                    const maxScore = Math.max(
+                      ...weeklyStats.positiveScores,
+                      ...weeklyStats.negativeScores,
+                      10
+                    )
+                    const scaleY = 200 / maxScore
+                    const stepX = 600 / 7
+                    
+                    // 긍정 점수 선
+                    const positivePoints = weeklyStats.positiveScores.map((score, i) => ({
+                      x: 60 + (i * stepX),
+                      y: 220 - (score * scaleY)
+                    }))
+                    
+                    // 부정 점수 선
+                    const negativePoints = weeklyStats.negativeScores.map((score, i) => ({
+                      x: 60 + (i * stepX),
+                      y: 220 - (score * scaleY)
+                    }))
+                    
+                    // 경로 생성
+                    const positivePath = `M ${positivePoints.map(p => `${p.x},${p.y}`).join(' L ')}`
+                    const negativePath = `M ${negativePoints.map(p => `${p.x},${p.y}`).join(' L ')}`
                       
                       return (
-                        <div key={emotion} className="emotion-bar-item">
-                          <div className="emotion-bar-label">
-                            <span className="emotion-bar-name">{emotion}</span>
-                            <span className="emotion-bar-value">{score}점</span>
+                      <>
+                        {/* 긍정 선 */}
+                        <path
+                          d={positivePath}
+                          fill="none"
+                          stroke="#22c55e"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        {/* 부정 선 */}
+                        <path
+                          d={negativePath}
+                          fill="none"
+                          stroke="#ef4444"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        
+                        {/* 긍정 점들 */}
+                        {positivePoints.map((point, i) => (
+                          <circle
+                            key={`positive-${i}`}
+                            cx={point.x}
+                            cy={point.y}
+                            r="5"
+                            fill="#22c55e"
+                          />
+                        ))}
+                        
+                        {/* 부정 점들 */}
+                        {negativePoints.map((point, i) => (
+                          <circle
+                            key={`negative-${i}`}
+                            cx={point.x}
+                            cy={point.y}
+                            r="5"
+                            fill="#ef4444"
+                          />
+                        ))}
+                        
+                        {/* X축 날짜 레이블 */}
+                        {weeklyStats.dates.map((dateStr, i) => {
+                          const date = new Date(dateStr + 'T00:00:00')
+                          const dayLabel = date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
+                          return (
+                            <text
+                              key={dateStr}
+                              x={60 + (i * stepX)}
+                              y="240"
+                              fontSize="10"
+                              fill="#6b7280"
+                              textAnchor="middle"
+                            >
+                              {dayLabel}
+                            </text>
+                          )
+                        })}
+                      </>
+                    )
+                  })()}
+                </svg>
+                
+                {/* 범례 */}
+                <div className="line-graph-legend">
+                  <div className="line-graph-legend-item">
+                    <div className="line-graph-legend-line positive"></div>
+                    <span>긍정</span>
+                  </div>
+                  <div className="line-graph-legend-item">
+                    <div className="line-graph-legend-line negative"></div>
+                    <span>부정</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 추가 통계 섹션 */}
+          <div className="office-additional-stats">
+            {/* 연속 일기 작성 일수 (스트릭) */}
+            {diaryStreak && (
+              <div className="stats-card streak-card">
+                <h3 className="stats-subtitle">🔥 연속 일기 작성</h3>
+                <div className="streak-content">
+                  <div className="streak-number">{diaryStreak.streak}</div>
+                  <div className="streak-label">일 연속</div>
+                  {diaryStreak.streak > 0 && (
+                    <div className="streak-message">화이팅! 계속 써봐요! 💪</div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 일기 작성 활동도 */}
+            {writingActivity && (
+              <div className="stats-card activity-card">
+                <h3 className="stats-subtitle">📝 일기 작성 활동도</h3>
+                <div className="activity-content">
+                  <div className="activity-item">
+                    <div className="activity-label">이번 달</div>
+                    <div className="activity-value">
+                      <span className="activity-number">{writingActivity.monthlyCount}</span>
+                      <span className="activity-unit">/{writingActivity.monthlyGoal}일</span>
+                    </div>
+                    <div className="activity-bar">
+                      <div 
+                        className="activity-bar-fill"
+                        style={{ width: `${Math.min((writingActivity.monthlyCount / writingActivity.monthlyGoal) * 100, 100)}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  <div className="activity-item">
+                    <div className="activity-label">이번 주</div>
+                    <div className="activity-value">
+                      <span className="activity-number">{writingActivity.weeklyCount}</span>
+                      <span className="activity-unit">일</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 감정별 평균 점수 비교 */}
+            {emotionAverages && emotionAverages.totalDiaries > 0 && (
+              <div className="stats-card averages-card">
+                <h3 className="stats-subtitle">📊 감정별 평균 점수</h3>
+                <div className="averages-content">
+                  {Object.entries(emotionAverages.emotionAverages)
+                    .filter(([_, avg]) => avg > 0)
+                    .sort(([_, a], [__, b]) => b - a)
+                    .map(([emotion, avg]) => (
+                      <div key={emotion} className="average-item">
+                        <div className="average-label">
+                          <span 
+                            className="average-color"
+                            style={{ backgroundColor: getEmotionColorByName(emotion) }}
+                          ></span>
+                          <span>{emotion}</span>
                           </div>
-                          <div className="emotion-bar-container">
+                        <div className="average-bar-container">
                             <div
-                              className="emotion-bar"
+                            className="average-bar"
                               style={{
-                                width: `${percentage}%`,
+                              width: `${(avg / 100) * 100}%`,
                                 backgroundColor: getEmotionColorByName(emotion)
                               }}
                             ></div>
                           </div>
+                        <div className="average-value">{avg.toFixed(1)}점</div>
                         </div>
-                      )
-                    })}
+                    ))}
+                  {Object.values(emotionAverages.emotionAverages).every(v => v === 0) && (
+                    <p className="stats-empty">평균 점수 데이터가 없어요</p>
+                  )}
                 </div>
               </div>
+            )}
 
-              {/* 긍정/부정 추이 그래프 */}
-              <div className="stats-trend-graph">
-                <h3 className="stats-subtitle">긍정/부정 추이</h3>
-                <div className="trend-graph-container">
-                  <div className="trend-graph-labels">
-                    <div className="trend-label positive">긍정</div>
-                    <div className="trend-label negative">부정</div>
-                  </div>
-                  <div className="trend-graph-bars">
-                    {weeklyStats.dates.map((dateStr, index) => {
-                      const date = new Date(dateStr + 'T00:00:00')
-                      const dayLabel = date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
-                      const positiveHeight = (weeklyStats.positiveTrend[index] / maxGraphValue) * 100
-                      const negativeHeight = (weeklyStats.negativeTrend[index] / maxGraphValue) * 100
+            {/* 요일별 작성 패턴 */}
+            {weekdayPattern && (
+              <div className="stats-card weekday-card">
+                <h3 className="stats-subtitle">📅 요일별 작성 패턴</h3>
+                <div className="weekday-content">
+                  {weekdayPattern.weekdayLabels.map((day, index) => {
+                    const count = weekdayPattern.weekdayPattern[day] || 0
+                    const maxCount = Math.max(...Object.values(weekdayPattern.weekdayPattern), 1)
+                    const heightPercent = maxCount > 0 ? (count / maxCount) * 100 : 0
 
                       return (
-                        <div key={dateStr} className="trend-day">
-                          <div className="trend-day-bars">
+                      <div key={day} className="weekday-item">
+                        <div className="weekday-bar-container">
                             <div
-                              className="trend-bar positive"
-                              style={{ height: `${positiveHeight}%` }}
-                              title={`긍정: ${weeklyStats.positiveTrend[index]}점`}
-                            ></div>
-                            <div
-                              className="trend-bar negative"
-                              style={{ height: `${negativeHeight}%` }}
-                              title={`부정: ${weeklyStats.negativeTrend[index]}점`}
+                            className="weekday-bar"
+                            style={{ height: `${heightPercent}%` }}
                             ></div>
                           </div>
-                          <div className="trend-day-label">{dayLabel}</div>
+                        <div className="weekday-label">{day}</div>
+                        <div className="weekday-count">{count}</div>
                         </div>
                       )
                     })}
-                  </div>
                 </div>
               </div>
-            </>
           )}
+          </div>
         </div>
       </div>
     </div>

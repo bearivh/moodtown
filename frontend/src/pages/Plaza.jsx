@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { getDiariesByDate, getPlazaConversationByDate, savePlazaConversationByDate } from '../utils/storage'
 import { analyzeDiary, parseDialogue, chatWithCharacters } from '../utils/api'
 import { normalizeEmotionScores } from '../utils/emotionUtils'
+import FloatingResidents from '../components/FloatingResidents'
 import redImage from '../assets/characters/red.png'
 import orangeImage from '../assets/characters/orange.png'
 import yellowImage from '../assets/characters/yellow.png'
@@ -39,6 +40,9 @@ function Plaza({ onNavigate, selectedDate }) {
   
   // 설명서 관련 상태
   const [showInfo, setShowInfo] = useState(false)
+  
+  // 이전 날짜와 대화를 저장 (페이지 재진입 시 즉시 표시)
+  const savedDataRef = useRef({})
 
   useEffect(() => {
     if (!selectedDate) return
@@ -46,6 +50,21 @@ function Plaza({ onNavigate, selectedDate }) {
     let isMounted = true // 컴포넌트가 마운트되어 있는지 추적
 
     const loadData = async () => {
+      // 먼저 저장된 대화를 확인 (캐시된 데이터 확인)
+      if (savedDataRef.current[selectedDate]) {
+        const cached = savedDataRef.current[selectedDate]
+        setConversation(cached.conversation)
+        setEmotionScores(cached.emotionScores || {})
+        setDateDiaries(cached.diaries || [])
+        setLoading(false)
+        if (cached.conversation && cached.conversation.length > 0) {
+          setShowChat(true)
+        }
+      }
+      
+      // 로딩 상태를 먼저 false로 설정 (이미 저장된 대화가 있을 경우를 대비)
+      setLoading(false)
+      
       // 선택한 날짜의 일기 가져오기
       const diaries = await getDiariesByDate(selectedDate)
       if (!isMounted) return
@@ -59,14 +78,23 @@ function Plaza({ onNavigate, selectedDate }) {
         if (!isMounted) return
         
         if (savedConversation && savedConversation.conversation && savedConversation.conversation.length > 0) {
-          // 저장된 대화가 있으면 불러오기 (재생성하지 않음)
+          // 저장된 대화가 있으면 불러오기 (재생성하지 않음, 로딩 없이 즉시 표시)
           setConversation(savedConversation.conversation)
           setEmotionScores(savedConversation.emotionScores || {})
           setLoading(false)
           // 대화가 있으면 챗봇 활성화
           setShowChat(true)
+          
+          // 캐시에 저장
+          savedDataRef.current[selectedDate] = {
+            conversation: savedConversation.conversation,
+            emotionScores: savedConversation.emotionScores || {},
+            diaries: diaries
+          }
+          return // 저장된 대화가 있으면 여기서 종료
         } else {
-          // 저장된 대화가 없으면 새로 생성
+          // 저장된 대화가 없으면 새로 생성 (이 경우에만 로딩 표시)
+          setLoading(true)
           const combinedContent = diaries.map(d => d.content).join('\n\n')
           analyzeDateDiaries(combinedContent)
         }
@@ -74,6 +102,13 @@ function Plaza({ onNavigate, selectedDate }) {
         setConversation([])
         setEmotionScores({})
         setLoading(false)
+        
+        // 캐시에도 저장
+        savedDataRef.current[selectedDate] = {
+          conversation: [],
+          emotionScores: {},
+          diaries: diaries
+        }
       }
     }
     
@@ -110,7 +145,51 @@ function Plaza({ onNavigate, selectedDate }) {
       setEmotionScores(scores)
       
       // 대화 파싱
-      const dialogue = parseDialogue(result.openai_dialogue || '')
+      let dialogue = parseDialogue(result.openai_dialogue || '')
+      
+      // 가장 높은 감정이 대화에 포함되어 있는지 확인
+      if (scores && Object.keys(scores).length > 0) {
+        const sortedEmotions = Object.entries(scores)
+          .sort(([, a], [, b]) => (b || 0) - (a || 0))
+        const highestEmotion = sortedEmotions[0]?.[0]
+        
+        if (highestEmotion) {
+          const highestEmotionName = CHARACTER_INFO[highestEmotion]?.name
+          
+          // 가장 높은 감정의 주민이 대화에 참여했는지 확인
+          const hasHighestEmotion = dialogue.some(msg => {
+            const emotion = msg.감정 || msg.emotion || ''
+            const characterName = msg.캐릭터 || msg.character || ''
+            return emotion === highestEmotion || characterName === highestEmotionName
+          })
+          
+          // 가장 높은 감정의 주민이 대화에 없으면 추가
+          if (!hasHighestEmotion && highestEmotionName) {
+            const highestEmotionInfo = CHARACTER_INFO[highestEmotion]
+            if (highestEmotionInfo) {
+              // 가장 높은 감정의 주민 대화 추가 (간단한 대사)
+              dialogue = [
+                {
+                  캐릭터: highestEmotionName,
+                  character: highestEmotionName,
+                  감정: highestEmotion,
+                  emotion: highestEmotion,
+                  대사: `${highestEmotionName === '초록이' ? '오늘 정말 따뜻한 하루였어.' : 
+                         highestEmotionName === '노랑이' ? '와! 정말 기분 좋은 하루였어!' :
+                         highestEmotionName === '파랑이' ? '오늘은 좀 그런 날이었어...' :
+                         highestEmotionName === '빨강이' ? '오늘 정말 짜증났어.' :
+                         highestEmotionName === '남색이' ? '오늘 좀 불안했어...' :
+                         highestEmotionName === '주황이' ? '오늘 좀 창피했어...' :
+                         highestEmotionName === '보라' ? '헉! 오늘 정말 놀라운 일이 있었어!' :
+                         '오늘 하루 생각해본다.'}`
+                },
+                ...dialogue
+              ]
+            }
+          }
+        }
+      }
+      
       setConversation(dialogue)
       
       // 대화 저장
@@ -118,6 +197,13 @@ function Plaza({ onNavigate, selectedDate }) {
         await savePlazaConversationByDate(selectedDate, dialogue, scores)
         // 대화 생성 완료 후 챗봇 활성화
         setShowChat(true)
+        
+        // 캐시에 저장 (다음에 재진입 시 즉시 표시)
+        savedDataRef.current[selectedDate] = {
+          conversation: dialogue,
+          emotionScores: scores,
+          diaries: dateDiaries
+        }
       }
       
     } catch (err) {
@@ -225,6 +311,7 @@ function Plaza({ onNavigate, selectedDate }) {
 
   return (
     <div className="plaza-container">
+      <FloatingResidents count={2} />
       <div className="plaza-header">
         {onNavigate && (
           <button

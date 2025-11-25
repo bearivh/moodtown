@@ -1,4 +1,5 @@
 .write-diary-container {
+  z-index: 1;
   min-height: 100vh;
   position: relative;
   overflow: hidden;
@@ -36,7 +37,7 @@
   border-radius: 50px;
   border: 2px solid rgba(224, 246, 255, 0.6);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(224, 246, 255, 0.3);
-  padding: 0.5rem 1.6rem;
+  padding: 0.5rem 2.2rem;
   margin: 0 auto;
   width: fit-content;
 }

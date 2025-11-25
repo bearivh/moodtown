@@ -1,3 +1,5 @@
+import { getEmotionColorByName, EMOTION_COLOR_MAP } from './emotionColorMap'
+
 /**
  * 감정 점수를 퍼센트로 정규화하는 공통 함수
  * @param {Object} emotionScores - 감정 점수 객체
@@ -73,4 +75,96 @@ export function formatEmotionScore(score) {
     return `${Math.round(score * 100)}%`
   }
   return '0%'
+}
+
+/**
+ * 영문 감정명을 한글로 변환하는 매핑
+ */
+const EMOTION_NAME_MAP = {
+  // 영문 → 한글
+  'joy': '기쁨',
+  'happiness': '기쁨',
+  'love': '사랑',
+  'surprise': '놀람',
+  'fear': '두려움',
+  'anger': '분노',
+  'angry': '분노',
+  'shame': '부끄러움',
+  'shy': '부끄러움',
+  'sadness': '슬픔',
+  'sad': '슬픔',
+  // 한글은 그대로
+  '기쁨': '기쁨',
+  '사랑': '사랑',
+  '놀람': '놀람',
+  '두려움': '두려움',
+  '분노': '분노',
+  '부끄러움': '부끄러움',
+  '슬픔': '슬픔'
+}
+
+/**
+ * 감정명(영문 또는 한글)을 한글로 변환
+ * @param {string} emotion - 감정명 (영문 또는 한글)
+ * @returns {string} 한글 감정명
+ */
+export function getEmotionName(emotion) {
+  if (!emotion) return '기쁨'
+  
+  const normalized = typeof emotion === 'string' ? emotion.toLowerCase().trim() : ''
+  return EMOTION_NAME_MAP[normalized] || EMOTION_NAME_MAP[emotion] || emotion || '기쁨'
+}
+
+/**
+ * 감정명으로 색상 가져오기 (영문/한글 모두 지원)
+ * @param {string} emotion - 감정명 (영문 또는 한글)
+ * @returns {string} 색상 코드
+ */
+export function getEmotionColor(emotion) {
+  if (!emotion) return '#9ca3af'
+  
+  // 한글로 변환
+  const koreanName = getEmotionName(emotion)
+  
+  // 색상 반환
+  return getEmotionColorByName(koreanName)
+}
+
+/**
+ * 감정 점수를 맥락 기반으로 긍정/부정 분류 (emotion_polarity 활용)
+ * @param {Object} emotionScores - 감정 점수 객체
+ * @param {Object} emotionPolarity - 감정 극성 정보 { "놀람": "positive", "부끄러움": "negative" }
+ * @returns {Object} { positive: number, negative: number }
+ */
+export function classifyEmotionsWithContext(emotionScores, emotionPolarity = {}) {
+  const scores = emotionScores || {}
+  const polarity = emotionPolarity || {}
+  
+  // 기본 긍정/부정 감정
+  let positive = (scores['기쁨'] || 0) + (scores['사랑'] || 0)
+  let negative = (scores['분노'] || 0) + (scores['슬픔'] || 0) + (scores['두려움'] || 0)
+  
+  // 놀람: 맥락 기반 분류
+  const surprise = scores['놀람'] || 0
+  if (surprise > 0 && polarity['놀람']) {
+    if (polarity['놀람'] === 'positive') {
+      positive += surprise
+    } else if (polarity['놀람'] === 'negative') {
+      negative += surprise
+    }
+    // null이면 중립으로 처리 (어디에도 포함 안됨)
+  }
+  
+  // 부끄러움: 맥락 기반 분류
+  const shame = scores['부끄러움'] || 0
+  if (shame > 0 && polarity['부끄러움']) {
+    if (polarity['부끄러움'] === 'positive') {
+      positive += shame
+    } else if (polarity['부끄러움'] === 'negative') {
+      negative += shame
+    }
+    // null이면 중립으로 처리 (어디에도 포함 안됨)
+  }
+  
+  return { positive, negative }
 }

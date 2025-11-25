@@ -200,24 +200,79 @@ def predict(text: str) -> Dict:
                 joy_reduction = original_joy - new_joy
                 emotion_scores["기쁨"] = new_joy
                 
-                # 감소한 기쁨 점수를 다른 감정에 재분배 (부정 감정 우선)
+                # 감소한 기쁨 점수를 다른 감정에 재분배 (부정 감정 우선, 두려움 과도 증가 방지)
                 if joy_reduction > 0:
-                    negative_emotions = ["두려움", "슬픔", "분노", "놀람"]
+                    negative_emotions = ["슬픔", "분노", "놀람", "두려움"]  # 두려움을 마지막으로 이동
                     neg_total = sum(emotion_scores.get(e, 0) for e in negative_emotions)
+                    
+                    # 두려움이 이미 높으면 재분배 비중 축소
+                    fear_before = emotion_scores.get("두려움", 0)
+                    fear_penalty = 0.4 if fear_before >= 0.4 else (0.6 if fear_before >= 0.3 else 0.8)
+                    
                     if neg_total > 0:
+                        # 두려움을 제외한 다른 감정의 총합
+                        other_neg_total = sum(emotion_scores.get(e, 0) for e in ["슬픔", "분노", "놀람"])
+                        
                         for neg_emo in negative_emotions:
                             if neg_emo in emotion_scores:
-                                ratio = emotion_scores[neg_emo] / neg_total
-                                emotion_scores[neg_emo] += joy_reduction * ratio
+                                if neg_emo == "두려움":
+                                    # 두려움은 축소된 비율로 재분배
+                                    fear_ratio = (emotion_scores[neg_emo] / neg_total) * fear_penalty
+                                    emotion_scores[neg_emo] += joy_reduction * fear_ratio
+                                else:
+                                    # 다른 감정은 증가된 비율로 재분배
+                                    if other_neg_total > 0:
+                                        base_ratio = emotion_scores[neg_emo] / neg_total
+                                        # 두려움에서 줄어든 만큼 추가 분배
+                                        fear_ratio_original = fear_before / neg_total
+                                        fear_reduction = fear_ratio_original * (1 - fear_penalty)
+                                        additional_ratio = (fear_reduction / other_neg_total) * (emotion_scores[neg_emo] / other_neg_total)
+                                        emotion_scores[neg_emo] += joy_reduction * (base_ratio + additional_ratio)
+                                    else:
+                                        # 다른 부정 감정이 없으면 균등 분배
+                                        emotion_scores[neg_emo] += joy_reduction / 3  # 두려움 제외
                     else:
-                        per_emotion = joy_reduction / len(negative_emotions)
+                        # 부정 감정이 없으면 균등 분배 (두려움 비중 축소)
+                        per_emotion_other = joy_reduction * 0.35  # 35%씩
+                        per_emotion_fear = joy_reduction * 0.2    # 두려움은 20%만
                         for neg_emo in negative_emotions:
-                            emotion_scores[neg_emo] = emotion_scores.get(neg_emo, 0) + per_emotion
+                            if neg_emo == "두려움":
+                                emotion_scores[neg_emo] = emotion_scores.get(neg_emo, 0) + per_emotion_fear
+                            else:
+                                emotion_scores[neg_emo] = emotion_scores.get(neg_emo, 0) + per_emotion_other
                 
                 # 재정규화
                 total = sum(emotion_scores.values())
                 if total > 0:
                     emotion_scores = {k: v / total for k, v in emotion_scores.items()}
+            
+            # 두려움 점수가 과도하게 높으면 (0.4 이상) 다른 감정으로 재분배
+            fear_score = emotion_scores.get("두려움", 0)
+            if fear_score > 0.4:
+                # 0.35로 제한 (더 강하게 제한)
+                max_fear = 0.35
+                if fear_score > max_fear:
+                    excess_fear = fear_score - max_fear
+                    emotion_scores["두려움"] = max_fear
+                
+                    # 초과분을 다른 부정 감정에 재분배 (슬픔, 분노 우선)
+                    other_negative = ["슬픔", "분노", "놀람", "부끄러움"]
+                    other_total = sum(emotion_scores.get(e, 0) for e in other_negative)
+                    
+                    if other_total > 0:
+                        for emo in other_negative:
+                            if emo in emotion_scores:
+                                ratio = emotion_scores[emo] / other_total
+                                emotion_scores[emo] += excess_fear * ratio  # 100% 재분배
+                    else:
+                        # 다른 부정 감정이 없으면 슬픔과 분노에 균등 분배
+                        emotion_scores["슬픔"] = emotion_scores.get("슬픔", 0) + excess_fear * 0.5
+                        emotion_scores["분노"] = emotion_scores.get("분노", 0) + excess_fear * 0.5
+                    
+                    # 재정규화
+                    total = sum(emotion_scores.values())
+                    if total > 0:
+                        emotion_scores = {k: v / total for k, v in emotion_scores.items()}
             
             # 긍정 키워드가 많을 때 기쁨 증가 및 부정 감정 감소
             if should_boost_joy:

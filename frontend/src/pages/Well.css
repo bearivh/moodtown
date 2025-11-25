@@ -2,6 +2,7 @@
   min-height: 100vh;
   position: relative;
   overflow: hidden;
+  z-index: 1;
   /* 그라데이션과 도트 패턴을 함께 적용 */
   background: 
     /* 윗줄 도트 */
@@ -36,9 +37,10 @@
   border-radius: 50px;
   border: 2px solid rgba(224, 246, 255, 0.6);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(224, 246, 255, 0.3);
-  padding: 0.5rem 1.6rem;
+  padding: 0.5rem 2.2rem;
   margin: 0 auto;
   width: fit-content;
+  z-index: 5;
 }
 
 .well-back-button {
@@ -205,13 +207,85 @@
   color: #1e40af;
 }
 
+.well-reduced-message {
+  background: linear-gradient(135deg, rgba(219, 234, 254, 0.98) 0%, rgba(191, 219, 254, 0.95) 100%);
+  border: 1.5px solid rgba(59, 130, 246, 0.6);
+  border-radius: 8px;
+  padding: 0.6rem 0.85rem;
+  padding-right: 2rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+  font-size: 1.1rem;
+  max-width: 400px;
+  line-height: 1.4;
+  position: relative;
+  min-height: 2.8rem;
+  margin-bottom: 0.75rem;
+}
+
+.well-reduced-icon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.well-reduced-text {
+  font-size: 1.1rem;
+  color: #1e40af;
+  font-weight: 500;
+  display: inline;
+}
+
+.well-reduced-text strong {
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+.well-reduced-message .well-alert-close {
+  color: #1e40af;
+}
+
+.well-warning-alert {
+  background: linear-gradient(135deg, rgba(254, 243, 199, 0.98) 0%, rgba(253, 230, 138, 0.95) 100%);
+  border: 1.5px solid rgba(245, 158, 11, 0.6);
+  border-radius: 8px;
+  padding: 0.6rem 0.85rem;
+  padding-right: 2rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+  font-size: 1.1rem;
+  max-width: 400px;
+  line-height: 1.4;
+  position: relative;
+  min-height: 2.8rem;
+}
+
+.well-warning-alert-icon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.well-warning-alert-text {
+  font-size: 1.1rem;
+  color: #78350f;
+  font-weight: 500;
+  display: inline;
+}
+
+.well-warning-alert .well-alert-close {
+  color: #92400e;
+}
+
 .well-content {
   max-width: 1200px;
   margin: 0 auto;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: calc(100vh - 300px);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  align-items: stretch;
 }
 
 .well-display-section {
@@ -222,15 +296,294 @@
   border: 1px solid rgba(224, 246, 255, 0.3);
 }
 
-.well-display-center {
-  max-width: 900px;
-  width: 100%;
-  margin: 0 auto;
-}
-
 .well-visual {
   position: relative;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.well-status-message {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%);
+  border: 2px solid rgba(59, 130, 246, 0.2);
+  border-radius: 16px;
+  padding: 1.2rem 1.5rem;
+  margin-top: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.well-status-message.well-status-overflowing {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 3px solid #f59e0b;
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.3);
+  animation: warning-pulse-subtle 2s ease-in-out infinite;
+}
+
+@keyframes warning-pulse-subtle {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 16px rgba(245, 158, 11, 0.3);
+  }
+  50% {
+    transform: scale(1.01);
+    box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4);
+  }
+}
+
+.well-status-message.well-status-overflowing .well-status-title {
+  color: #92400e;
+}
+
+.well-status-message.well-status-overflowing .well-status-description {
+  color: #78350f;
+}
+
+.well-reset-button {
+  margin-left: auto;
+  padding: 0.8rem 1.5rem;
+  background: #ffffff;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  color: #1f2937;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  font-family: 'Dongle', sans-serif;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.well-reset-button:hover {
+  background: #f9fafb;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  border-color: rgba(0, 0, 0, 0.3);
+}
+
+.well-reset-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* 우물 비우기 확인 다이얼로그 */
+.well-reset-confirm-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+.well-reset-confirm-content {
+  background: white;
+  border-radius: 1.5rem;
+  padding: 2.5rem;
+  max-width: 500px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  animation: slideUp 0.3s ease;
+}
+
+.well-reset-confirm-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.well-reset-confirm-title {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #1f2937;
+  margin: 0 0 1rem 0;
+  font-family: 'Dongle', sans-serif;
+}
+
+.well-reset-confirm-message {
+  margin: 1.5rem 0;
+  color: #374151;
+  line-height: 1.8;
+  font-size: 1.2rem;
+  font-family: 'Dongle', sans-serif;
+}
+
+.well-reset-confirm-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.well-reset-confirm-button {
+  flex: 1;
+  padding: 1rem 2rem;
+  border: none;
+  border-radius: 0.75rem;
+  font-size: 1.4rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Dongle', sans-serif;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.well-reset-confirm-button-cancel {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.well-reset-confirm-button-cancel:hover {
+  background: #e5e7eb;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.well-reset-confirm-button-confirm {
+  background: linear-gradient(135deg, #D7B899 0%, #C8A882 100%);
+  color: white;
+}
+
+.well-reset-confirm-button-confirm:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(215, 184, 153, 0.45);
+  background: linear-gradient(135deg, #C8A882 0%, #B89A7A 100%);
+}
+
+.well-reset-confirm-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* 우물 비우기 완료 팝업 */
+.well-reset-success-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+.well-reset-success-popup-content {
+  background: white;
+  border-radius: 1.5rem;
+  padding: 2.5rem;
+  max-width: 500px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  animation: slideUp 0.3s ease;
+}
+
+.well-reset-success-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  animation: bounce 0.6s ease;
+}
+
+.well-reset-success-title {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #1f2937;
+  margin: 0 0 1rem 0;
+  font-family: 'Dongle', sans-serif;
+}
+
+.well-reset-success-message {
+  margin: 1.5rem 0;
+  color: #374151;
+  line-height: 1.8;
+  font-size: 1.2rem;
+  font-family: 'Dongle', sans-serif;
+}
+
+.well-reset-success-button {
+  width: 100%;
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, #D7B899 0%, #C8A882 100%);
+  color: white;
+  border: none;
+  border-radius: 0.75rem;
+  font-size: 1.4rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Dongle', sans-serif;
+  margin-top: 1rem;
+  box-shadow: 0 4px 12px rgba(215, 184, 153, 0.3);
+}
+
+.well-reset-success-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(215, 184, 153, 0.45);
+  background: linear-gradient(135deg, #C8A882 0%, #B89A7A 100%);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.well-status-emoji {
+  font-size: 2rem;
+  flex-shrink: 0;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+}
+
+.well-status-content {
+  flex: 1;
+}
+
+.well-status-title {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #1e3a8a;
+  margin-bottom: 0.4rem;
+}
+
+.well-status-description {
+  font-size: 1rem;
+  color: #4a5568;
+  line-height: 1.5;
 }
 
 .well-structure {
@@ -312,6 +665,21 @@
     inset 0 2px 4px rgba(255, 255, 255, 0.1);
 }
 
+.well-water-level-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.5),
+    0 0 8px rgba(0, 0, 0, 0.3);
+  z-index: 5;
+  pointer-events: none;
+}
+
 .well-overflow-warning {
   position: absolute;
   top: -100px;
@@ -354,83 +722,6 @@
   line-height: 1.5;
 }
 
-.well-stats {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin-bottom: 2rem;
-}
-
-.well-stat-item {
-  background-color: rgba(255, 255, 255, 0.9);
-  padding: 1rem;
-  border-radius: 16px;
-  text-align: center;
-  border: 1px solid rgba(224, 246, 255, 0.4);
-  box-shadow: 0 2px 8px rgba(224, 246, 255, 0.2);
-}
-
-.well-stat-label {
-  display: block;
-  font-size: 1.1rem;
-  color: #6b7280;
-  margin-bottom: 0.5rem;
-}
-
-.well-stat-value {
-  display: block;
-  font-size: 1.8rem;
-  font-weight: bold;
-  color: #2d3748;
-}
-
-.well-progress-section {
-  margin-top: 2rem;
-}
-
-.well-progress-bar-container {
-  width: 100%;
-  height: 24px;
-  background-color: #e5e7eb;
-  border-radius: 12px;
-  overflow: hidden;
-  margin-bottom: 0.5rem;
-}
-
-.well-progress-bar {
-  height: 100%;
-  background: linear-gradient(90deg, #bfdbfe 0%, #93c5fd 100%);
-  border-radius: 12px;
-  transition: width 0.5s ease;
-}
-
-.well-progress-bar-full {
-  background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
-  animation: progress-pulse 1s ease-in-out infinite;
-}
-
-@keyframes progress-pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.8;
-  }
-}
-
-.well-progress-label {
-  font-size: 1.1rem;
-  color: #4a5568;
-  text-align: center;
-  margin-bottom: 0.5rem;
-}
-
-.well-water-level {
-  font-size: 1.2rem;
-  color: #2d3748;
-  text-align: center;
-  font-weight: 500;
-}
 
 .well-info-section {
   background-color: rgba(255, 255, 255, 0.95);
@@ -456,7 +747,7 @@
 }
 
 .well-info-toggle {
-  padding: 0.5rem 0.75rem;
+  padding: 0.5rem 1rem;
   background: linear-gradient(135deg, rgba(219, 234, 254, 0.6) 0%, rgba(191, 219, 254, 0.4) 100%);
   border: 1.5px solid rgba(191, 219, 254, 0.5);
   border-radius: 12px;
@@ -619,6 +910,90 @@
   color: #4a5568;
 }
 
+/* 감정별 기여도 섹션 */
+.well-contribution-section {
+  background-color: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(224, 246, 255, 0.2);
+  border: 1px solid rgba(224, 246, 255, 0.3);
+}
+
+.well-contribution-title {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #2d3748;
+  margin-bottom: 0.5rem;
+}
+
+.well-contribution-description {
+  font-size: 1rem;
+  color: #6b7280;
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+.well-contribution-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.well-contribution-item {
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 12px;
+  padding: 1rem;
+  border: 1px solid rgba(224, 246, 255, 0.4);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.well-contribution-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.well-contribution-emotion {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #000000;
+}
+
+.well-contribution-percent {
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: #2d3748;
+}
+
+.well-contribution-bar-container {
+  width: 100%;
+  height: 20px;
+  background-color: #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.well-contribution-bar {
+  height: 100%;
+  border-radius: 10px;
+  transition: width 0.5s ease;
+}
+
+.well-contribution-score {
+  font-size: 0.9rem;
+  color: #6b7280;
+  text-align: right;
+}
+
+.well-contribution-empty {
+  font-size: 1rem;
+  color: #9ca3af;
+  text-align: center;
+  padding: 2rem;
+}
+
 /* 모바일 반응형 */
 @media (max-width: 768px) {
   .well-container {
@@ -639,9 +1014,6 @@
     padding: 1rem;
   }
 
-  .well-stats {
-    grid-template-columns: 1fr;
-  }
 
   .well-info-content {
     flex-direction: column;

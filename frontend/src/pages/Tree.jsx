@@ -8,8 +8,11 @@ import {
   getPointsToNextStage,
   TREE_STAGES
 } from '../utils/treeUtils'
-import { getDiariesByDate } from '../utils/storage'
+import FloatingResidents from '../components/FloatingResidents'
+import { getDiariesByDate, getAllDiaries } from '../utils/storage'
 import { getTodayDateString } from '../utils/dateUtils'
+import { classifyEmotionsWithContext } from '../utils/emotionUtils'
+import { getEmotionColorByName } from '../utils/emotionColorMap'
 import './Tree.css'
 
 function Tree({ onNavigate, selectedDate }) {
@@ -22,11 +25,84 @@ function Tree({ onNavigate, selectedDate }) {
   const [bonusInfo, setBonusInfo] = useState(null)
   const [hideDateNotice, setHideDateNotice] = useState(false)
   const [hideDateImpact, setHideDateImpact] = useState(false)
+  const [emotionContributions, setEmotionContributions] = useState([])
   const today = getTodayDateString()
   const isPastDate = selectedDate && selectedDate < today
 
+  // 보너스 정보 검증 및 로드
+  const loadAndValidateBonusInfo = async () => {
+    const treeBonusStr = localStorage.getItem('treeBonus')
+    if (!treeBonusStr) {
+      setBonusInfo(null)
+      return
+    }
+    
+    try {
+      const bonusData = JSON.parse(treeBonusStr)
+      // 24시간 이내의 보너스만 표시
+      if (Date.now() - bonusData.timestamp >= 24 * 60 * 60 * 1000) {
+        localStorage.removeItem('treeBonus')
+        setBonusInfo(null)
+        return
+      }
+      
+      // 보너스 날짜의 일기를 확인하여 실제로 사랑/기쁨만 있었는지 검증
+      const bonusDate = bonusData.date
+      if (bonusDate) {
+        const diaries = await getDiariesByDate(bonusDate)
+        if (diaries.length > 0) {
+          const diary = diaries[0]
+          const emotionScores = diary.emotion_scores || {}
+          const emotionPolarity = diary.emotion_polarity || {}
+          
+          // 부정 감정 확인
+          const fear = emotionScores['두려움'] || 0
+          const anger = emotionScores['분노'] || 0
+          const sadness = emotionScores['슬픔'] || 0
+          
+          // 놀람/부끄러움 극성 확인
+          const surprise = emotionScores['놀람'] || 0
+          const shame = emotionScores['부끄러움'] || 0
+          const surprisePolarity = emotionPolarity['놀람']
+          const shamePolarity = emotionPolarity['부끄러움']
+          
+          // 부정 감정이 있으면 보너스 메시지 표시하지 않음
+          if (fear > 0 || anger > 0 || sadness > 0) {
+            console.log('[나무 보너스 무효] 부정 감정이 있음:', { fear, anger, sadness, emotionScores })
+            localStorage.removeItem('treeBonus')
+            setBonusInfo(null)
+            return
+          }
+          
+          // 놀람이 부정으로 분류되었으면 보너스 무효
+          if (surprise > 0 && surprisePolarity !== 'positive') {
+            console.log('[나무 보너스 무효] 놀람이 부정:', { surprise, surprisePolarity })
+            localStorage.removeItem('treeBonus')
+            setBonusInfo(null)
+            return
+          }
+          
+          // 부끄러움이 부정으로 분류되었으면 보너스 무효
+          if (shame > 0 && shamePolarity !== 'positive') {
+            console.log('[나무 보너스 무효] 부끄러움이 부정:', { shame, shamePolarity })
+            localStorage.removeItem('treeBonus')
+            setBonusInfo(null)
+            return
+          }
+        }
+      }
+      
+      setBonusInfo(bonusData)
+    } catch (e) {
+      console.error('[나무 보너스 파싱 오류]', e)
+      localStorage.removeItem('treeBonus')
+      setBonusInfo(null)
+    }
+  }
+
   useEffect(() => {
     loadTreeData()
+    loadEmotionContributions()
     // 선택한 날짜가 있으면 해당 날짜, 없으면 오늘 날짜의 일기 확인
     const dateToCheck = selectedDate || today
     if (dateToCheck) {
@@ -35,29 +111,13 @@ function Tree({ onNavigate, selectedDate }) {
       setSelectedDateImpact(null)
     }
     
-    // localStorage에서 보너스 정보 확인
-    const treeBonusStr = localStorage.getItem('treeBonus')
-    if (treeBonusStr) {
-      try {
-        const bonusData = JSON.parse(treeBonusStr)
-        // 24시간 이내의 보너스만 표시
-        if (Date.now() - bonusData.timestamp < 24 * 60 * 60 * 1000) {
-          setBonusInfo(bonusData)
-        } else {
-          localStorage.removeItem('treeBonus')
-          setBonusInfo(null)
-        }
-      } catch (e) {
-        localStorage.removeItem('treeBonus')
-        setBonusInfo(null)
-      }
-    } else {
-      setBonusInfo(null)
-    }
+    // 보너스 정보 검증 및 로드
+    loadAndValidateBonusInfo()
     
     // 주기적으로 상태 업데이트 (5초마다)
     const interval = setInterval(() => {
       loadTreeData()
+      loadEmotionContributions()
       const dateToCheck = selectedDate || today
       if (dateToCheck) {
         loadSelectedDateImpact(dateToCheck)
@@ -76,18 +136,69 @@ function Tree({ onNavigate, selectedDate }) {
       return
     }
     
-    // 선택한 날짜의 일기 감정 점수 계산
+    // 선택한 날짜의 일기 감정 점수 계산 (맥락 기반 분류 사용)
+    // 보너스 점수도 포함하여 실제 성장 점수 계산
     let totalPositiveScore = 0
+    let totalBonusScore = 0
+    
     for (const diary of diaries) {
       const emotionScores = diary.emotion_scores || {}
-      const positiveScore = (emotionScores['기쁨'] || 0) + (emotionScores['사랑'] || 0)
-      totalPositiveScore += positiveScore
+      const emotionPolarity = diary.emotion_polarity || {}
+      const { positive } = classifyEmotionsWithContext(emotionScores, emotionPolarity)
+      totalPositiveScore += positive
+      
+      // 보너스 점수 계산 (사랑/기쁨만 있는 경우)
+      if (positive > 0) {
+        const joy = emotionScores['기쁨'] || 0
+        const love = emotionScores['사랑'] || 0
+        const fear = emotionScores['두려움'] || 0
+        const anger = emotionScores['분노'] || 0
+        const sadness = emotionScores['슬픔'] || 0
+        const surprise = emotionScores['놀람'] || 0
+        const shame = emotionScores['부끄러움'] || 0
+        
+        // 부정 감정 확인
+        const hasNegative = fear > 0 || anger > 0 || sadness > 0
+        
+        // 놀람/부끄러움 극성 확인
+        const surpriseIsNegative = surprise > 0 && emotionPolarity['놀람'] !== 'positive'
+        const shameIsNegative = shame > 0 && emotionPolarity['부끄러움'] !== 'positive'
+        
+        // 사랑/기쁨 중 하나 이상 있고, 부정 감정이 없으면 보너스
+        if ((joy > 0 || love > 0) && !hasNegative && !surpriseIsNegative && !shameIsNegative) {
+          totalBonusScore += Math.floor(positive * 0.25) // 25% 보너스
+        }
+      }
     }
     
-    if (totalPositiveScore > 0) {
+    const totalGrowth = totalPositiveScore + totalBonusScore
+    
+    // 오늘 날짜이고 일기가 있는 경우, 성장이 없어도 메시지 표시
+    if (date === today && diaries.length > 0) {
+      if (totalGrowth > 0) {
+        setSelectedDateImpact({
+          date: date,
+          positiveScore: totalGrowth,  // 보너스 포함 실제 성장 점수
+          baseScore: totalPositiveScore,
+          bonusScore: totalBonusScore,
+          hasGrowth: true
+        })
+      } else {
+        // 성장이 없는 경우
+        setSelectedDateImpact({
+          date: date,
+          positiveScore: 0,
+          hasGrowth: false
+        })
+      }
+    } else if (totalGrowth > 0) {
+      // 과거 날짜는 성장이 있을 때만 표시
       setSelectedDateImpact({
         date: date,
-        positiveScore: totalPositiveScore
+        positiveScore: totalGrowth,  // 보너스 포함 실제 성장 점수
+        baseScore: totalPositiveScore,
+        bonusScore: totalBonusScore,
+        hasGrowth: true
       })
     } else {
       setSelectedDateImpact(null)
@@ -106,6 +217,59 @@ function Tree({ onNavigate, selectedDate }) {
     setPointsToNext(pointsNeeded)
   }
 
+  const loadEmotionContributions = async () => {
+    try {
+      const allDiaries = await getAllDiaries()
+      
+      // 감정별 긍정 점수 합산
+      const emotionTotals = {
+        '기쁨': 0,
+        '사랑': 0,
+        '놀람': 0,
+        '부끄러움': 0
+      }
+      
+      for (const diary of allDiaries) {
+        const scores = diary.emotion_scores || {}
+        const emotionPolarity = diary.emotion_polarity || {}
+        
+        // 기쁨, 사랑은 항상 긍정
+        emotionTotals['기쁨'] += scores['기쁨'] || 0
+        emotionTotals['사랑'] += scores['사랑'] || 0
+        
+        // 놀람: 맥락 기반
+        const surprise = scores['놀람'] || 0
+        if (surprise > 0 && emotionPolarity['놀람'] === 'positive') {
+          emotionTotals['놀람'] += surprise
+        }
+        
+        // 부끄러움: 맥락 기반
+        const shame = scores['부끄러움'] || 0
+        if (shame > 0 && emotionPolarity['부끄러움'] === 'positive') {
+          emotionTotals['부끄러움'] += shame
+        }
+      }
+      
+      // 총합 계산
+      const total = Object.values(emotionTotals).reduce((sum, val) => sum + val, 0)
+      
+      // 비율로 변환하여 기여도 배열 생성
+      const contributions = Object.entries(emotionTotals)
+        .map(([emotion, score]) => ({
+          emotion,
+          score,
+          ratio: total > 0 ? score / total : 0
+        }))
+        .filter(item => item.score > 0) // 점수가 있는 것만
+        .sort((a, b) => b.score - a.score) // 점수 높은 순으로 정렬
+      
+      setEmotionContributions(contributions)
+    } catch (error) {
+      console.error('감정 기여도 계산 실패:', error)
+      setEmotionContributions([])
+    }
+  }
+
   if (!treeState) {
     return (
       <div className="tree-container">
@@ -120,6 +284,7 @@ function Tree({ onNavigate, selectedDate }) {
 
   return (
     <div className="tree-container">
+      <FloatingResidents count={2} />
       <div className="tree-header">
         {onNavigate && (
           <button
@@ -175,6 +340,55 @@ function Tree({ onNavigate, selectedDate }) {
                 </div>
               </div>
             </div>
+            
+            {/* 나무 단계 정보 */}
+            <div className="tree-stages-info">
+              <h4 className="tree-stages-title">나무 성장 단계</h4>
+              <div className="tree-stages-list">
+                <div className="tree-stage-item">
+                  <span className="tree-stage-emoji">🟤</span>
+                  <div className="tree-stage-detail">
+                    <span className="tree-stage-name">씨앗</span>
+                    <span className="tree-stage-threshold">0점 이상</span>
+                  </div>
+                </div>
+                <div className="tree-stage-item">
+                  <span className="tree-stage-emoji">🌱</span>
+                  <div className="tree-stage-detail">
+                    <span className="tree-stage-name">새싹</span>
+                    <span className="tree-stage-threshold">40점 이상</span>
+                  </div>
+                </div>
+                <div className="tree-stage-item">
+                  <span className="tree-stage-emoji">🪴</span>
+                  <div className="tree-stage-detail">
+                    <span className="tree-stage-name">묘목</span>
+                    <span className="tree-stage-threshold">100점 이상</span>
+                  </div>
+                </div>
+                <div className="tree-stage-item">
+                  <span className="tree-stage-emoji">🌲</span>
+                  <div className="tree-stage-detail">
+                    <span className="tree-stage-name">중간 나무</span>
+                    <span className="tree-stage-threshold">220점 이상</span>
+                  </div>
+                </div>
+                <div className="tree-stage-item">
+                  <span className="tree-stage-emoji">🌳</span>
+                  <div className="tree-stage-detail">
+                    <span className="tree-stage-name">큰 나무</span>
+                    <span className="tree-stage-threshold">380점 이상</span>
+                  </div>
+                </div>
+                <div className="tree-stage-item">
+                  <span className="tree-stage-emoji">🍎</span>
+                  <div className="tree-stage-detail">
+                    <span className="tree-stage-name">열매 열림</span>
+                    <span className="tree-stage-threshold">600점 이상</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -198,7 +412,7 @@ function Tree({ onNavigate, selectedDate }) {
           <div className="tree-bonus-message">
             <span className="tree-bonus-icon">🌱</span>
             <span className="tree-bonus-text">
-              사랑과 기쁨만 있어서 나무가 <strong>{bonusInfo.bonusScore}점</strong> 더 성장했어요!
+              긍정적인 감정만 있어서 나무가 <strong>{bonusInfo.bonusScore}점</strong> 더 성장했어요!
             </span>
             <button
               className="tree-alert-close"
@@ -215,7 +429,13 @@ function Tree({ onNavigate, selectedDate }) {
           <div className="tree-date-impact">
             <span className="tree-date-impact-icon">📝</span>
             <span className="tree-date-impact-text">
-              {selectedDateImpact.date === today ? '오늘의 일기로' : `${new Date(selectedDateImpact.date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}의 일기로`} 행복 나무가 <strong>{selectedDateImpact.positiveScore}점</strong> 성장했어요! 🌱
+              {selectedDateImpact.hasGrowth === false ? (
+                <>오늘은 나무가 자라지 않았어요. 😊</>
+              ) : (
+                <>
+                  {selectedDateImpact.date === today ? '오늘의 일기로' : `${new Date(selectedDateImpact.date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}의 일기로`} 행복 나무가 <strong>{selectedDateImpact.positiveScore}점</strong> 성장했어요! 🌱
+                </>
+              )}
             </span>
             <button
               className="tree-alert-close"
@@ -233,6 +453,14 @@ function Tree({ onNavigate, selectedDate }) {
           <div className="tree-visual">
             <div className="tree-emoji">{stageEmoji}</div>
             <div className="tree-stage-name">{stageName}</div>
+            
+            {/* 행복 열매를 나무 밑에 작게 표시 */}
+            {fruitCount > 0 && (
+              <div className="tree-fruit-under">
+                <span className="tree-fruit-emoji-small">🍎</span>
+                <span className="tree-fruit-count-small">{fruitCount}개</span>
+              </div>
+            )}
           </div>
 
           {/* 성장 진행도 */}
@@ -278,17 +506,44 @@ function Tree({ onNavigate, selectedDate }) {
           </div>
         </div>
 
-        {/* 행복 열매 바구니 */}
-        <div className="tree-basket-section">
-          <h2 className="tree-basket-title">행복 열매 바구니</h2>
-          <div className="tree-basket">
-            <div className="tree-basket-icon">🧺</div>
-            <div className="tree-basket-count">{fruitCount}개</div>
-            <div className="tree-basket-label">행복 열매</div>
-          </div>
-          <p className="tree-basket-description">
-            나무가 열매를 맺을 때마다 바구니에 모여요.
+        {/* 감정별 기여도 섹션 */}
+        <div className="tree-contribution-section">
+          <h2 className="tree-contribution-title">행복 나무 성장 기여도</h2>
+          <p className="tree-contribution-description">
+            어떤 감정이 나무 성장에 기여했는지 확인할 수 있어요.
           </p>
+          {emotionContributions.length > 0 ? (
+            <div className="tree-contribution-list">
+              {emotionContributions.map((item) => (
+                <div key={item.emotion} className="tree-contribution-item">
+                  <div className="tree-contribution-label">
+                    <span className="tree-contribution-emotion">
+                      {item.emotion}
+                    </span>
+                    <span className="tree-contribution-percent">
+                      {Math.round(item.ratio * 100)}%
+                    </span>
+                  </div>
+                  <div className="tree-contribution-bar-container">
+                    <div
+                      className="tree-contribution-bar"
+                      style={{ 
+                        width: `${item.ratio * 100}%`,
+                        backgroundColor: getEmotionColorByName(item.emotion)
+                      }}
+                    />
+                  </div>
+                  <div className="tree-contribution-score">
+                    {Math.round(item.score)}점
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="tree-contribution-empty">
+              아직 기여도 데이터가 없어요. 일기를 작성하면 확인할 수 있어요.
+            </p>
+          )}
         </div>
       </div>
     </div>

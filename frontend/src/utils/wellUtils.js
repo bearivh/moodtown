@@ -1,6 +1,7 @@
 // 스트레스 우물 관련 유틸리티 함수들
 
-const API_BASE_URL = 'http://127.0.0.1:5000'
+// Vite 프록시를 통해 같은 origin에서 실행되므로 상대 경로 사용
+const API_BASE_URL = ''
 
 // 우물 최대 용량 (넘침 임계값)
 export const WELL_MAX_CAPACITY = 500
@@ -76,9 +77,10 @@ export function getWaterLevelPercent(waterLevel) {
 /**
  * 부정적인 감정만 있는지 확인 (보너스 점수 조건)
  * @param {Object} emotionScores - 감정 점수 객체
+ * @param {Object} emotionPolarity - 감정 극성 정보 (선택적)
  * @returns {boolean} 부정적인 감정만 있는 경우 true
  */
-function isOnlyNegativeEmotions(emotionScores) {
+function isOnlyNegativeEmotions(emotionScores, emotionPolarity = {}) {
   if (!emotionScores) return false
   
   const joy = emotionScores['기쁨'] || 0
@@ -86,11 +88,43 @@ function isOnlyNegativeEmotions(emotionScores) {
   const anger = emotionScores['분노'] || 0
   const sadness = emotionScores['슬픔'] || 0
   const fear = emotionScores['두려움'] || 0
+  const surprise = emotionScores['놀람'] || 0
+  const shame = emotionScores['부끄러움'] || 0
   
-  // 부정적인 감정(분노, 슬픔, 두려움)이 있고, 긍정적인 감정(기쁨, 사랑)의 합이 10 이하인 경우
-  const positiveEmotionsSum = joy + love
+  // 항상 긍정 감정 (기쁨, 사랑)이 있으면 안 됨 (0점이어야 함)
+  if (joy > 0 || love > 0) {
+    return false
+  }
+  
+  // 부정 감정(분노, 슬픔, 두려움) 중 하나라도 있어야 함
   const negativeEmotionsSum = anger + sadness + fear
-  return negativeEmotionsSum > 0 && positiveEmotionsSum <= 10
+  if (negativeEmotionsSum === 0) {
+    // 부정 감정이 없으면 놀람/부끄러움만으로는 보너스 불가
+    return false
+  }
+  
+  // 놀람과 부끄러움 처리
+  const surprisePolarity = emotionPolarity['놀람']
+  const shamePolarity = emotionPolarity['부끄러움']
+  
+  // 놀람이 있으면 부정으로 분류되어야 함 (없거나 null이면 허용하지 않음)
+  if (surprise > 0) {
+    if (surprisePolarity !== 'negative') {
+      // 놀람이 있는데 부정이 아니면 보너스 없음
+      return false
+    }
+  }
+  
+  // 부끄러움이 있으면 부정으로 분류되어야 함 (없거나 null이면 허용하지 않음)
+  if (shame > 0) {
+    if (shamePolarity !== 'negative') {
+      // 부끄러움이 있는데 부정이 아니면 보너스 없음
+      return false
+    }
+  }
+  
+  // 모든 조건 통과: 긍정 감정 없음, 부정 감정 있음, 놀람/부끄러움은 부정이거나 없음
+  return true
 }
 
 /**
@@ -114,16 +148,56 @@ function hasNoNegativeEmotions(emotionScores) {
  * 부정 감정 점수 추가 및 우물 업데이트
  * @param {number} negativeScore - 추가할 부정 감정 점수
  * @param {Object} emotionScores - 감정 점수 객체 (보너스 계산용)
+ * @param {Object} emotionPolarity - 감정 극성 정보 (보너스 계산용, 선택적)
  * @returns {Promise<Object>} { waterLevel: number, isOverflowing: boolean, overflowed: boolean, bonusScore: number }
  */
-export async function addNegativeEmotion(negativeScore, emotionScores = null) {
+export async function addNegativeEmotion(negativeScore, emotionScores = null, emotionPolarity = null) {
   const state = await getWellState()
   
   // 보너스 점수 계산 (부정적인 감정만 있는 경우)
   let bonusScore = 0
-  if (emotionScores && isOnlyNegativeEmotions(emotionScores)) {
-    // 기본 점수의 25% 보너스
-    bonusScore = Math.floor(negativeScore * 0.25)
+  if (emotionScores) {
+    const polarity = emotionPolarity || {}
+    const isOnlyNegative = isOnlyNegativeEmotions(emotionScores, polarity)
+    
+    // 디버깅 로그
+    const joy = emotionScores['기쁨'] || 0
+    const love = emotionScores['사랑'] || 0
+    
+    if (isOnlyNegative) {
+      console.log('[우물 보너스] 부정 감정만 있음:', {
+        emotionScores,
+        emotionPolarity: polarity,
+        negativeScore,
+        bonusScore: Math.floor(negativeScore * 0.25)
+      })
+      // 기본 점수의 25% 보너스
+      bonusScore = Math.floor(negativeScore * 0.25)
+    } else {
+      // 긍정 감정이 있으면 보너스 없음 (명시적으로 확인)
+      if (joy > 0 || love > 0) {
+        console.log('[우물 보너스 차단] 긍정 감정이 있어서 보너스 없음:', {
+          emotionScores,
+          joy,
+          love,
+          negativeScore
+        })
+        bonusScore = 0
+      } else {
+        console.log('[우물 보너스] 부정 감정만 아님:', {
+          emotionScores,
+          emotionPolarity: polarity,
+          joy,
+          love,
+          anger: emotionScores['분노'] || 0,
+          sadness: emotionScores['슬픔'] || 0,
+          fear: emotionScores['두려움'] || 0,
+          surprise: emotionScores['놀람'] || 0,
+          shame: emotionScores['부끄러움'] || 0
+        })
+        bonusScore = 0
+      }
+    }
   }
   
   const totalScore = negativeScore + bonusScore
@@ -160,11 +234,13 @@ export async function addNegativeEmotion(negativeScore, emotionScores = null) {
 /**
  * 우물 물 감소 (긍정 감정 또는 열매 열림으로 인한 감소)
  * @param {number} amount - 감소시킬 점수
- * @returns {Promise<Object>} { waterLevel: number, isOverflowing: boolean }
+ * @returns {Promise<Object>} { waterLevel: number, isOverflowing: boolean, reducedAmount: number }
  */
 export async function reduceWaterLevel(amount) {
   const state = await getWellState()
+  const oldWaterLevel = state.waterLevel
   let newWaterLevel = Math.max(0, state.waterLevel - amount)
+  const actualReduced = oldWaterLevel - newWaterLevel  // 실제로 줄어든 양
   
   // 물이 줄어들면 넘침 상태 해제
   let isOverflowing = newWaterLevel >= WELL_MAX_CAPACITY
@@ -179,7 +255,8 @@ export async function reduceWaterLevel(amount) {
   
   return {
     waterLevel: newWaterLevel,
-    isOverflowing: isOverflowing
+    isOverflowing: isOverflowing,
+    reducedAmount: actualReduced  // 실제로 줄어든 양 반환
   }
 }
 

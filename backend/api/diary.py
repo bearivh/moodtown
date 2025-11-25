@@ -16,8 +16,11 @@ from db import (
     save_well_state,
     save_plaza_conversation,
     get_plaza_conversation_by_date,
+    save_letter,
 )
 from .middleware import get_current_user_id
+from services.letter_generator import generate_letter_with_gpt
+import json
 
 # 유사 일기 검색 서비스 import
 _HAS_SIMILARITY = False
@@ -71,7 +74,69 @@ def create_diary_endpoint():
     data = request.get_json()
     if not data:
         return jsonify({"error": "요청 데이터가 없습니다."}), 400
+    
     if save_diary(data, user_id):
+        # 일기 저장 성공 후 감정 점수 확인하여 편지 생성
+        emotion_scores_raw = data.get('emotion_scores', {})
+        
+        # emotion_scores 파싱 (다양한 형식 지원)
+        emotion_scores = {}
+        if isinstance(emotion_scores_raw, str):
+            try:
+                parsed = json.loads(emotion_scores_raw)
+                if isinstance(parsed, dict) and 'emotion_scores' in parsed:
+                    emotion_scores = parsed.get('emotion_scores', {})
+                else:
+                    emotion_scores = parsed
+            except:
+                emotion_scores = {}
+        elif isinstance(emotion_scores_raw, dict):
+            if 'emotion_scores' in emotion_scores_raw:
+                emotion_scores = emotion_scores_raw.get('emotion_scores', {})
+            else:
+                emotion_scores = emotion_scores_raw
+        
+        if emotion_scores and isinstance(emotion_scores, dict):
+            # 감정 점수가 70점 이상인 감정 찾기
+            EMOTION_THRESHOLD = 70
+            high_emotions = []
+            
+            for emotion, score in emotion_scores.items():
+                if isinstance(score, (int, float)) and score >= EMOTION_THRESHOLD:
+                    high_emotions.append({'emotion': emotion, 'score': score})
+            
+            # 가장 높은 감정 하나만 선택 (여러 개면 가장 높은 것)
+            if high_emotions:
+                high_emotions.sort(key=lambda x: x['score'], reverse=True)
+                top_emotion = high_emotions[0]
+                
+                try:
+                    # 해당 감정 주민에게 편지 생성
+                    letter_data = generate_letter_with_gpt(
+                        letter_type='emotion_high',
+                        emotion_scores={
+                            'emotion_name': top_emotion['emotion'],
+                            'score': top_emotion['score']
+                        },
+                        diary_text=data.get('content', '')
+                    )
+                    
+                    # 편지 저장
+                    letter = {
+                        'title': letter_data.get('title', '💌 주민들의 편지'),
+                        'content': letter_data.get('content', ''),
+                        'from': letter_data.get('from', '감정 마을'),
+                        'type': 'emotion_high',
+                        'date': data.get('date', datetime.now().strftime('%Y-%m-%d'))
+                    }
+                    save_letter(letter, user_id)
+                    print(f"[편지 생성] {top_emotion['emotion']} 감정이 {top_emotion['score']}점으로 높아서 편지 생성됨")
+                except Exception as e:
+                    print(f"[편지 생성 실패] 감정 점수 기반 편지 생성 오류: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    # 편지 생성 실패해도 일기 저장은 성공으로 처리
+        
         return jsonify({"success": True, "message": "일기가 저장되었습니다."})
     return jsonify({"error": "일기 저장에 실패했습니다."}), 500
 
@@ -247,8 +312,15 @@ def get_office_stats():
 @diary_bp.route("/api/plaza/conversations/<date>", methods=["GET"])
 def get_plaza_conversation(date):
     """특정 날짜의 광장 대화 가져오기"""
+    user_id = get_current_user_id()
+    if not user_id:
+        return jsonify({
+            "conversation": [],
+            "emotionScores": {}
+        })
+    
     try:
-        conversation = get_plaza_conversation_by_date(date)
+        conversation = get_plaza_conversation_by_date(date, user_id)
         if conversation:
             return jsonify({
                 "conversation": conversation.get("conversation", []),
@@ -273,6 +345,10 @@ def get_plaza_conversation(date):
 @diary_bp.route("/api/plaza/conversations", methods=["POST"])
 def save_plaza_conversation_endpoint():
     """광장 대화 저장"""
+    user_id = get_current_user_id()
+    if not user_id:
+        return jsonify({"error": "로그인이 필요합니다."}), 401
+    
     data = request.get_json() or {}
     date = data.get("date")
     conversation = data.get("conversation", [])
@@ -281,7 +357,7 @@ def save_plaza_conversation_endpoint():
     if not date:
         return jsonify({"error": "날짜가 필요합니다."}), 400
     
-    if save_plaza_conversation(date, conversation, emotion_scores):
+    if save_plaza_conversation(date, conversation, emotion_scores, user_id):
         return jsonify({"success": True, "message": "대화가 저장되었습니다."})
     return jsonify({"error": "대화 저장에 실패했습니다."}), 500
 

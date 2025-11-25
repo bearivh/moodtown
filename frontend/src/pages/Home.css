@@ -26,6 +26,31 @@
   z-index: 1;
 }
 
+.home-logout-section {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+  position: relative;
+  z-index: 10;
+}
+
+.home-logout-button {
+  padding: 0.5rem 1rem;
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  font-size: 1rem;
+  font-family: 'Dongle', sans-serif;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.home-logout-button:hover {
+  background-color: #e8e8e8;
+  color: #333;
+}
+
 /* --- 부드러운 뭉게구름 배경 --- */
 .home-sky-clouds {
   position: absolute;

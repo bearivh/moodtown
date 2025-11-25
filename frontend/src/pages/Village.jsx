@@ -5,7 +5,7 @@ import { getUnreadLetterCount } from '../utils/mailboxUtils'
 import { getEmotionColorByName } from '../utils/emotionColorMap'
 import './Village.css'
 
-function Village({ onNavigate, selectedDate }) {
+function Village({ onNavigate, selectedDate, user, onLogout }) {
   const [hasDiary, setHasDiary] = useState(false)
   const [dominantEmotion, setDominantEmotion] = useState('joy')
   const [dateDiaries, setDateDiaries] = useState([])
@@ -195,6 +195,20 @@ function Village({ onNavigate, selectedDate }) {
           <div className="village-date-display">
             <h2 className="village-date-title">{selectedDate ? formatDate(selectedDate) : ''}</h2>
           </div>
+          {/* 로그아웃 버튼 */}
+          {onLogout && (
+            <div className="village-user-info">
+              <span className="village-user-name">
+                {user?.name ? `${user.name}(${user.username || '사용자'})` : (user?.username || '사용자')}
+              </span>
+              <button
+                className="village-logout-button"
+                onClick={onLogout}
+              >
+                로그아웃
+              </button>
+            </div>
+          )}
         </div>
 
         {/* 일기 상태 표시 */}

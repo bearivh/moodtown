@@ -1,6 +1,9 @@
 // 데이터베이스 API 호출 유틸리티 함수들
 
-const API_BASE_URL = 'http://127.0.0.1:5000'
+import { classifyEmotionsWithContext } from './emotionUtils'
+
+// Vite 프록시를 통해 같은 origin에서 실행되므로 상대 경로 사용
+const API_BASE_URL = ''
 
 /**
  * 모든 일기 가져오기
@@ -8,7 +11,9 @@ const API_BASE_URL = 'http://127.0.0.1:5000'
  */
 export async function getAllDiaries() {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/diaries`)
+    const response = await fetch(`${API_BASE_URL}/api/diaries`, {
+      credentials: 'include'
+    })
     if (!response.ok) {
       throw new Error(`API 오류: ${response.status}`)
     }
@@ -43,6 +48,7 @@ export async function saveDiary(diary) {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify(newDiary),
     })
     
@@ -68,7 +74,9 @@ export async function saveDiary(diary) {
  */
 export async function getDiariesByDate(date) {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/diaries?date=${date}`)
+    const response = await fetch(`${API_BASE_URL}/api/diaries?date=${date}`, {
+      credentials: 'include'
+    })
     if (!response.ok) {
       throw new Error(`API 오류: ${response.status}`)
     }
@@ -306,23 +314,280 @@ export async function getWeeklyEmotionStats(startDate = null) {
         }
       })
 
-      // 긍정/부정 점수 계산
-      dayPositive += (scores['기쁨'] || 0) + (scores['사랑'] || 0)
-      dayNegative += (scores['분노'] || 0) + 
-                     (scores['슬픔'] || 0) + 
-                     (scores['두려움'] || 0) + 
-                     (scores['부끄러움'] || 0)
+      // 긍정/부정 점수 계산 (맥락 기반 분류 사용)
+      const emotionPolarity = diary.emotion_polarity || {}
+      const { positive, negative } = classifyEmotionsWithContext(scores, emotionPolarity)
+      dayPositive += positive
+      dayNegative += negative
     })
+
+    // 긍정/부정 합이 100이 되도록 정규화
+    const totalDay = dayPositive + dayNegative
+    if (totalDay > 0) {
+      dayPositive = Math.round((dayPositive / totalDay) * 100)
+      dayNegative = 100 - dayPositive // 반올림 오차 보정
+    } else {
+      // 둘 다 0이면 0:0으로 설정
+      dayPositive = 0
+      dayNegative = 0
+    }
 
     positiveTrend.push(dayPositive)
     negativeTrend.push(dayNegative)
   })
 
+  // 일별 실제 점수 (정규화 전)
+  const positiveScores = []
+  const negativeScores = []
+
+  dateStrings.forEach(dateStr => {
+    const dayDiaries = diaries.filter(d => d.date === dateStr)
+    
+    let dayPositiveScore = 0
+    let dayNegativeScore = 0
+
+    dayDiaries.forEach(diary => {
+      const scores = diary.emotion_scores || {}
+      const emotionPolarity = diary.emotion_polarity || {}
+      const { positive, negative } = classifyEmotionsWithContext(scores, emotionPolarity)
+      dayPositiveScore += positive
+      dayNegativeScore += negative
+    })
+
+    positiveScores.push(dayPositiveScore)
+    negativeScores.push(dayNegativeScore)
+  })
+
   return {
     dates: dateStrings,
     emotionStats,
-    positiveTrend,
-    negativeTrend
+    positiveTrend, // 정규화된 비율 (0-100)
+    negativeTrend, // 정규화된 비율 (0-100)
+    positiveScores, // 실제 점수
+    negativeScores  // 실제 점수
+  }
+}
+
+/**
+ * 이번 달 감정 통계 가져오기
+ * @returns {Promise<Object>} { emotionStats: Object }
+ */
+export async function getMonthlyEmotionStats() {
+  const diaries = await getAllDiaries()
+  const today = new Date()
+  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+  
+  // 이번 달 날짜 범위
+  const startDateStr = startOfMonth.toISOString().split('T')[0]
+  const endDateStr = endOfMonth.toISOString().split('T')[0]
+  
+  // 이번 달 일기만 필터링
+  const monthlyDiaries = diaries.filter(d => {
+    return d.date >= startDateStr && d.date <= endDateStr
+  })
+  
+  // 감정별 통계
+  const emotionStats = {
+    '기쁨': 0,
+    '사랑': 0,
+    '놀람': 0,
+    '두려움': 0,
+    '분노': 0,
+    '부끄러움': 0,
+    '슬픔': 0
+  }
+  
+  monthlyDiaries.forEach(diary => {
+    const scores = diary.emotion_scores || {}
+    Object.keys(scores).forEach(emotion => {
+      if (emotionStats.hasOwnProperty(emotion)) {
+        emotionStats[emotion] += scores[emotion] || 0
+      }
+    })
+  })
+  
+  return { emotionStats }
+}
+
+/**
+ * 연속 일기 작성 일수 계산 (스트릭)
+ * @returns {Promise<Object>} { streak: number, lastWrittenDate: string }
+ */
+export async function getDiaryStreak() {
+  const diaries = await getAllDiaries()
+  if (diaries.length === 0) {
+    return { streak: 0, lastWrittenDate: null }
+  }
+  
+  // 날짜별로 정렬 (최신순)
+  const dateSet = new Set(diaries.map(d => d.date))
+  const sortedDates = Array.from(dateSet).sort((a, b) => b.localeCompare(a))
+  
+  // 오늘부터 역순으로 연속된 날짜 계산
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  
+  let streak = 0
+  let checkDate = new Date(today)
+  let lastWrittenDate = sortedDates[0] || null
+  
+  // 오늘이 포함되어 있으면 스트릭 시작
+  const todayStr = today.toISOString().split('T')[0]
+  if (sortedDates.includes(todayStr)) {
+    streak = 1
+    checkDate.setDate(checkDate.getDate() - 1)
+  } else {
+    // 오늘 일기가 없으면 어제부터 시작
+    checkDate.setDate(checkDate.getDate() - 1)
+  }
+  
+  // 연속된 날짜 체크
+  while (true) {
+    const checkDateStr = checkDate.toISOString().split('T')[0]
+    if (sortedDates.includes(checkDateStr)) {
+      streak++
+      checkDate.setDate(checkDate.getDate() - 1)
+    } else {
+      break
+    }
+  }
+  
+  return { streak, lastWrittenDate }
+}
+
+/**
+ * 감정별 평균 점수 계산
+ * @returns {Promise<Object>} { emotionAverages: Object, totalDiaries: number }
+ */
+export async function getEmotionAverages() {
+  const diaries = await getAllDiaries()
+  if (diaries.length === 0) {
+    return {
+      emotionAverages: {},
+      totalDiaries: 0
+    }
+  }
+  
+  const emotionTotals = {
+    '기쁨': 0,
+    '사랑': 0,
+    '놀람': 0,
+    '두려움': 0,
+    '분노': 0,
+    '부끄러움': 0,
+    '슬픔': 0
+  }
+  
+  const emotionCounts = {
+    '기쁨': 0,
+    '사랑': 0,
+    '놀람': 0,
+    '두려움': 0,
+    '분노': 0,
+    '부끄러움': 0,
+    '슬픔': 0
+  }
+  
+  diaries.forEach(diary => {
+    const scores = diary.emotion_scores || {}
+    Object.keys(scores).forEach(emotion => {
+      if (emotionTotals.hasOwnProperty(emotion)) {
+        const score = scores[emotion] || 0
+        if (score > 0) {
+          emotionTotals[emotion] += score
+          emotionCounts[emotion]++
+        }
+      }
+    })
+  })
+  
+  // 평균 계산
+  const emotionAverages = {}
+  Object.keys(emotionTotals).forEach(emotion => {
+    if (emotionCounts[emotion] > 0) {
+      emotionAverages[emotion] = Math.round((emotionTotals[emotion] / emotionCounts[emotion]) * 10) / 10
+    } else {
+      emotionAverages[emotion] = 0
+    }
+  })
+  
+  return {
+    emotionAverages,
+    totalDiaries: diaries.length
+  }
+}
+
+/**
+ * 요일별 일기 작성 패턴 분석
+ * @returns {Promise<Object>} { weekdayPattern: Object, weekdayLabels: Array }
+ */
+export async function getWeekdayPattern() {
+  const diaries = await getAllDiaries()
+  
+  const weekdayCounts = {
+    0: 0, // 일요일
+    1: 0, // 월요일
+    2: 0, // 화요일
+    3: 0, // 수요일
+    4: 0, // 목요일
+    5: 0, // 금요일
+    6: 0  // 토요일
+  }
+  
+  diaries.forEach(diary => {
+    const date = new Date(diary.date + 'T00:00:00')
+    const weekday = date.getDay()
+    weekdayCounts[weekday] = (weekdayCounts[weekday] || 0) + 1
+  })
+  
+  const weekdayLabels = ['일', '월', '화', '수', '목', '금', '토']
+  const weekdayPattern = {}
+  
+  weekdayLabels.forEach((label, index) => {
+    weekdayPattern[label] = weekdayCounts[index] || 0
+  })
+  
+  return { weekdayPattern, weekdayLabels }
+}
+
+/**
+ * 이번 달 일기 작성 활동도
+ * @returns {Promise<Object>} { monthlyCount: number, monthlyGoal: number, weeklyCount: number }
+ */
+export async function getWritingActivity() {
+  const diaries = await getAllDiaries()
+  const today = new Date()
+  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+  
+  const startDateStr = startOfMonth.toISOString().split('T')[0]
+  const endDateStr = endOfMonth.toISOString().split('T')[0]
+  
+  // 이번 달 일기
+  const monthlyDiaries = diaries.filter(d => {
+    return d.date >= startDateStr && d.date <= endDateStr
+  })
+  
+  // 이번 주 일기
+  const startOfWeek = new Date(today)
+  startOfWeek.setDate(today.getDate() - today.getDay())
+  startOfWeek.setHours(0, 0, 0, 0)
+  const startWeekStr = startOfWeek.toISOString().split('T')[0]
+  
+  const weeklyDiaries = diaries.filter(d => {
+    return d.date >= startWeekStr && d.date <= endDateStr
+  })
+  
+  // 이번 달 목표 (월의 일수)
+  const daysInMonth = endOfMonth.getDate()
+  const daysPassed = today.getDate()
+  const monthlyGoal = Math.ceil((daysPassed / daysInMonth) * daysInMonth) // 경과일 기준 목표
+  
+  return {
+    monthlyCount: monthlyDiaries.length,
+    monthlyGoal: daysInMonth, // 월 전체 일수
+    weeklyCount: weeklyDiaries.length
   }
 }
 
@@ -333,10 +598,12 @@ export async function getWeeklyEmotionStats(startDate = null) {
  */
 export async function getPlazaConversationByDate(date) {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/plaza/conversations/${date}`)
+    const response = await fetch(`${API_BASE_URL}/api/plaza/conversations/${date}`, {
+      credentials: 'include'
+    })
     if (!response.ok) {
       // 404나 500 에러도 조용히 처리 (대화가 없는 것으로 간주)
-      if (response.status === 404 || response.status === 500) {
+      if (response.status === 404 || response.status === 500 || response.status === 401) {
         return null
       }
       throw new Error(`API 오류: ${response.status}`)
@@ -369,6 +636,7 @@ export async function savePlazaConversationByDate(date, conversation, emotionSco
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({
         date,
         conversation,

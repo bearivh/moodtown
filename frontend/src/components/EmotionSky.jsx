@@ -52,7 +52,7 @@ function EmotionSky({ emotion = 'joy', hasDiary = true }) {
             ?
             <div className="emotion-sky-tooltip">
               {isCloudy 
-                ? '이 날짜에는 일기가 없어서 구름이 낀 하늘이에요. 일기를 쓰면 감정의 색으로 바뀌어요!'
+                ? '이 날짜에는 아직 일기가 없어서 구름이 낀 하늘이에요. 일기를 쓰면 감정의 색으로 바뀌어요!'
                 : '이 날짜의 일기에서 가장 많이 나타난 감정의 색으로 하늘이 표시돼요!'}
             </div>
           </span>

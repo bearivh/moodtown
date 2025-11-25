@@ -1,6 +1,7 @@
 // 행복 나무 관련 유틸리티 함수들
 
-const API_BASE_URL = 'http://127.0.0.1:5000'
+// Vite 프록시를 통해 같은 origin에서 실행되므로 상대 경로 사용
+const API_BASE_URL = ''
 
 // 나무 성장 단계 설정
 export const TREE_STAGES = {
@@ -151,9 +152,10 @@ export function getStageProgress(currentGrowth, currentStage) {
 /**
  * 사랑/기쁨만 있는지 확인 (보너스 점수 조건)
  * @param {Object} emotionScores - 감정 점수 객체
+ * @param {Object} emotionPolarity - 감정 극성 정보 (선택적)
  * @returns {boolean} 사랑/기쁨만 있는 경우 true
  */
-function isOnlyLoveAndJoy(emotionScores) {
+function isOnlyLoveAndJoy(emotionScores, emotionPolarity = {}) {
   if (!emotionScores) return false
   
   const joy = emotionScores['기쁨'] || 0
@@ -164,23 +166,40 @@ function isOnlyLoveAndJoy(emotionScores) {
   const shame = emotionScores['부끄러움'] || 0
   const sadness = emotionScores['슬픔'] || 0
   
-  // 사랑과 기쁨이 있고, 다른 감정들의 합이 10 이하인 경우
-  const otherEmotionsSum = surprise + fear + anger + shame + sadness
-  return (joy > 0 || love > 0) && otherEmotionsSum <= 10
+  // 사랑과 기쁨 중 하나라도 있어야 함
+  if (joy === 0 && love === 0) return false
+  
+  // 항상 부정 감정 (두려움, 분노, 슬픔)이 있으면 안 됨
+  if (fear > 0 || anger > 0 || sadness > 0) return false
+  
+  // 놀람과 부끄러움 처리
+  // 긍정으로 분류된 경우만 허용, 나머지는 불허
+  const surprisePolarity = emotionPolarity['놀람']
+  const shamePolarity = emotionPolarity['부끄러움']
+  
+  // 놀람이 있으면 긍정으로 분류되어야 함
+  if (surprise > 0 && surprisePolarity !== 'positive') return false
+  
+  // 부끄러움이 있으면 긍정으로 분류되어야 함
+  if (shame > 0 && shamePolarity !== 'positive') return false
+  
+  // 모든 조건 통과: 사랑/기쁨만 있거나, 긍정으로 분류된 놀람/부끄러움만 있는 경우
+  return true
 }
 
 /**
  * 긍정 감정 점수 추가 및 나무 성장 처리
  * @param {number} positiveScore - 추가할 긍정 감정 점수 (기쁨 + 사랑)
  * @param {Object} emotionScores - 감정 점수 객체 (보너스 계산용)
+ * @param {Object} emotionPolarity - 감정 극성 정보 (보너스 계산용, 선택적)
  * @returns {Promise<Object>} { growth: number, stage: number, fruitProduced: boolean, bonusScore: number }
  */
-export async function addPositiveEmotion(positiveScore, emotionScores = null) {
+export async function addPositiveEmotion(positiveScore, emotionScores = null, emotionPolarity = null) {
   const state = await getTreeState()
   
   // 보너스 점수 계산 (사랑/기쁨만 있는 경우)
   let bonusScore = 0
-  if (emotionScores && isOnlyLoveAndJoy(emotionScores)) {
+  if (emotionScores && isOnlyLoveAndJoy(emotionScores, emotionPolarity || {})) {
     // 기본 점수의 25% 보너스
     bonusScore = Math.floor(positiveScore * 0.25)
   }
@@ -210,7 +229,18 @@ export async function addPositiveEmotion(positiveScore, emotionScores = null) {
     
     // 열매가 열리면 우물 물이 조금 줄어듦 (동적 import로 순환 참조 방지)
     const { reduceWaterLevel } = await import('./wellUtils')
-    await reduceWaterLevel(50) // 50점 감소
+    const reduceResult = await reduceWaterLevel(50) // 50점 감소
+    
+    // 물이 줄어들었다면 localStorage에 저장 (Well 페이지에서 표시)
+    if (reduceResult.reducedAmount > 0) {
+      const today = new Date().toISOString().split('T')[0]
+      localStorage.setItem('wellReduced', JSON.stringify({
+        reducedAmount: reduceResult.reducedAmount,
+        date: today,
+        timestamp: Date.now()
+      }))
+      console.log('[우물 물 감소] 열매로 인한 물 감소:', reduceResult.reducedAmount, '점')
+    }
     
     // 나무 상태 초기화 (성장도는 0으로, 단계는 SEED로)
     newGrowth = 0
@@ -311,11 +341,11 @@ export function getStageName(stage) {
  */
 export function getStageEmoji(stage) {
   const stageEmojis = {
-    [TREE_STAGES.SEED]: '🌱',
-    [TREE_STAGES.SPROUT]: '🌿',
-    [TREE_STAGES.SEEDLING]: '🌳',
+    [TREE_STAGES.SEED]: '🟤',
+    [TREE_STAGES.SPROUT]: '🌱',
+    [TREE_STAGES.SEEDLING]: '🪴',
     [TREE_STAGES.MEDIUM]: '🌲',
-    [TREE_STAGES.LARGE]: '🌴',
+    [TREE_STAGES.LARGE]: '🌳',
     [TREE_STAGES.FRUIT]: '🍎'
   }
   return stageEmojis[stage] || '🌱'

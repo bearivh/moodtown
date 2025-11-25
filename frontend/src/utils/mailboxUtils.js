@@ -1,6 +1,7 @@
 // 우체통 관련 유틸리티 함수들
 
-const API_BASE_URL = 'http://127.0.0.1:5000'
+// Vite 프록시를 통해 같은 origin에서 실행되므로 상대 경로 사용
+const API_BASE_URL = ''
 
 /**
  * 모든 편지 가져오기

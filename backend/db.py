@@ -381,9 +381,12 @@ def delete_diary(diary_id: str) -> bool:
 # 광장 대화 관련 함수
 # ===============================
 
-def save_plaza_conversation(date: str, conversation: List[Dict], emotion_scores: Dict) -> bool:
+def save_plaza_conversation(date: str, conversation: List[Dict], emotion_scores: Dict, user_id: int = None) -> bool:
     """광장 대화 저장"""
     try:
+        if user_id is None:
+            user_id = 0
+        
         conn = get_db_connection()
         cursor = conn.cursor()
         
@@ -393,23 +396,28 @@ def save_plaza_conversation(date: str, conversation: List[Dict], emotion_scores:
         
         cursor.execute('''
             INSERT OR REPLACE INTO plaza_conversations 
-            (date, conversation, emotion_scores, saved_at)
-            VALUES (?, ?, ?, ?)
-        ''', (date, conversation_json, emotion_scores_json, saved_at))
+            (date, user_id, conversation, emotion_scores, saved_at)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (date, user_id, conversation_json, emotion_scores_json, saved_at))
         
         conn.commit()
         conn.close()
         return True
     except Exception as e:
         print(f"대화 저장 실패: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
-def get_plaza_conversation_by_date(date: str) -> Optional[Dict[str, Any]]:
+def get_plaza_conversation_by_date(date: str, user_id: int = None) -> Optional[Dict[str, Any]]:
     """특정 날짜의 광장 대화 가져오기"""
     try:
+        if user_id is None:
+            user_id = 0
+        
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM plaza_conversations WHERE date = ?', (date,))
+        cursor.execute('SELECT * FROM plaza_conversations WHERE date = ? AND user_id = ?', (date, user_id))
         row = cursor.fetchone()
         conn.close()
         
@@ -686,9 +694,12 @@ def save_well_state(state: Dict[str, Any], user_id: int = None) -> bool:
 # 우체통 편지 관련 함수
 # ===============================
 
-def save_letter(letter: Dict[str, Any]) -> bool:
+def save_letter(letter: Dict[str, Any], user_id: int = None) -> bool:
     """편지 저장"""
     try:
+        if user_id is None:
+            user_id = 0
+        
         conn = get_db_connection()
         cursor = conn.cursor()
         
@@ -703,9 +714,9 @@ def save_letter(letter: Dict[str, Any]) -> bool:
         
         cursor.execute('''
             INSERT INTO letters 
-            (id, title, content, from_character, type, date, is_read, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (letter_id, title, content, from_character, letter_type, date, is_read, created_at))
+            (id, user_id, title, content, from_character, type, date, is_read, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (letter_id, user_id, title, content, from_character, letter_type, date, is_read, created_at))
         
         conn.commit()
         conn.close()
@@ -714,12 +725,17 @@ def save_letter(letter: Dict[str, Any]) -> bool:
         print(f"편지 저장 실패: {e}")
         return False
 
-def get_all_letters() -> List[Dict[str, Any]]:
-    """모든 편지 가져오기"""
+def get_all_letters(user_id: int = None) -> List[Dict[str, Any]]:
+    """모든 편지 가져오기 (user_id가 있으면 필터링)"""
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM letters ORDER BY created_at DESC')
+        
+        if user_id is not None:
+            cursor.execute('SELECT * FROM letters WHERE user_id = ? ORDER BY created_at DESC', (user_id,))
+        else:
+            cursor.execute('SELECT * FROM letters ORDER BY created_at DESC')
+        
         rows = cursor.fetchall()
         conn.close()
         
@@ -735,12 +751,15 @@ def get_all_letters() -> List[Dict[str, Any]]:
         print(f"편지 불러오기 실패: {e}")
         return []
 
-def mark_letter_as_read(letter_id: str) -> bool:
+def mark_letter_as_read(letter_id: str, user_id: int = None) -> bool:
     """편지 읽음 표시"""
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('UPDATE letters SET is_read = 1 WHERE id = ?', (letter_id,))
+        if user_id is not None:
+            cursor.execute('UPDATE letters SET is_read = 1 WHERE id = ? AND user_id = ?', (letter_id, user_id))
+        else:
+            cursor.execute('UPDATE letters SET is_read = 1 WHERE id = ?', (letter_id,))
         conn.commit()
         conn.close()
         return True
@@ -748,12 +767,15 @@ def mark_letter_as_read(letter_id: str) -> bool:
         print(f"편지 읽음 표시 실패: {e}")
         return False
 
-def delete_letter(letter_id: str) -> bool:
+def delete_letter(letter_id: str, user_id: int = None) -> bool:
     """편지 삭제"""
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('DELETE FROM letters WHERE id = ?', (letter_id,))
+        if user_id is not None:
+            cursor.execute('DELETE FROM letters WHERE id = ? AND user_id = ?', (letter_id, user_id))
+        else:
+            cursor.execute('DELETE FROM letters WHERE id = ?', (letter_id,))
         conn.commit()
         conn.close()
         return True
@@ -761,12 +783,15 @@ def delete_letter(letter_id: str) -> bool:
         print(f"편지 삭제 실패: {e}")
         return False
 
-def get_unread_letter_count() -> int:
+def get_unread_letter_count(user_id: int = None) -> int:
     """읽지 않은 편지 개수"""
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT COUNT(*) as count FROM letters WHERE is_read = 0')
+        if user_id is not None:
+            cursor.execute('SELECT COUNT(*) as count FROM letters WHERE is_read = 0 AND user_id = ?', (user_id,))
+        else:
+            cursor.execute('SELECT COUNT(*) as count FROM letters WHERE is_read = 0')
         row = cursor.fetchone()
         conn.close()
         return dict(row)['count'] if row else 0

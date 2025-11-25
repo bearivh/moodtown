@@ -1,9 +1,17 @@
 import ResidentsIntro from '../components/ResidentsIntro'
 import './Guide.css'
 
-function Guide({ onNavigate }) {
+function Guide({ onNavigate, user }) {
   return (
     <div className="guide-container">
+      {/* 배경 구름 레이어 */}
+      <div className="guide-sky-clouds" aria-hidden="true">
+        <div className="guide-cloud cloud-1" />
+        <div className="guide-cloud cloud-2" />
+        <div className="guide-cloud cloud-3" />
+        <div className="guide-cloud cloud-4" />
+      </div>
+
       <div className="guide-content">
         {/* 헤더 */}
         <div className="guide-header">
@@ -25,8 +33,8 @@ function Guide({ onNavigate }) {
           <div className="guide-section-content">
             <p className="guide-intro-text">
               이곳은 당신의 감정들이 살아숨쉬는 특별한 마을이에요.<br />
-              일기를 쓰면 감정 주민들이 모습을 드러내고, 서로의 이야기를 건네기 시작해요.<br />
-              마을은 당신의 하루를 닮아 변해가요.
+              일기를 쓰면 무지개 주민들이 모습을 드러내고, 서로의 이야기를 건네기 시작해요.<br />
+              마을은 {user?.name ? `${user.name}님` : '당신'}의 하루를 닮아 변해가요.
             </p>
           </div>
         </section>
@@ -42,7 +50,7 @@ function Guide({ onNavigate }) {
               <div className="guide-place-icon">📝</div>
               <h3 className="guide-place-title">일기 쓰기</h3>
               <p className="guide-place-description">
-                매일의 하루를 기록하고 감정을 표현해 보세요.<br />
+                {user?.name ? `${user.name}님` : '당신'}의 하루를 기록하고 감정을 표현해 보세요.<br />
               </p>
             </div>
             
@@ -50,7 +58,7 @@ function Guide({ onNavigate }) {
               <div className="guide-place-icon">💬</div>
               <h3 className="guide-place-title">와글와글 광장</h3>
               <p className="guide-place-description">
-                일기의 감정을 바탕으로 주민들이 모여 대화하는 곳이에요.<br />
+                일기의 감정을 바탕으로<br />무지개 주민들이 모여 대화하는 곳이에요.<br />
                 주민들에게 말을 걸 수 있어요.
               </p>
             </div>
@@ -69,8 +77,8 @@ function Guide({ onNavigate }) {
               <h3 className="guide-place-title">행복 나무</h3>
               <p className="guide-place-description">
                 행복한 감정이 쌓일수록 나무가 자라요.<br /> 
-                나무가 열매를 맺으면 주민들이 축하 메시지를 보내 줘요!.<br />
-                맺힌 열매로 스트레스 우물의 물을 줄일 수 있어요.
+                나무가 다 자라서 열매를 맺으면<br />무지개 주민들이 축하 메시지를 보내 줘요!<br />
+                행복 열매로 스트레스 우물의 물을 줄일 수 있어요.
               </p>
             </div>
             
@@ -96,7 +104,7 @@ function Guide({ onNavigate }) {
 
         {/* 주민 소개 섹션 */}
         <section className="guide-section">
-          <ResidentsIntro />
+          <ResidentsIntro user={user} />
         </section>
       </div>
     </div>

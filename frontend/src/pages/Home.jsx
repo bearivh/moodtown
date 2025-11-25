@@ -3,7 +3,7 @@ import { getAllDiaries } from '../utils/storage'
 import { getTodayDateString } from '../utils/dateUtils'
 import './Home.css'
 
-function Home({ onNavigate, selectedDate }) {
+function Home({ onNavigate, selectedDate, user, onLogout }) {
   const [date, setDate] = useState(selectedDate || getTodayDateString())
   const [availableDates, setAvailableDates] = useState([])
   const [showDateList, setShowDateList] = useState(false)
@@ -75,6 +75,18 @@ function Home({ onNavigate, selectedDate }) {
       </div>
 
       <div className="home-content">
+        {/* 로그아웃 버튼 */}
+        {onLogout && (
+          <div className="home-logout-section">
+            <button
+              className="home-logout-button"
+              onClick={onLogout}
+            >
+              로그아웃
+            </button>
+          </div>
+        )}
+        
         {/* 마을 입구 제목 */}
         <div className="home-title-section">
           <h1 className="home-title">
@@ -100,14 +112,14 @@ function Home({ onNavigate, selectedDate }) {
               오늘은 어떤 마음의 마을로 놀러갈까요?
             </p>
             <p className="home-action-intro-hint">
-              날짜를 선택하면, 그날의 감정들이 살고 있는 작은 마을이 열려요
+              날짜를 선택하면, 그날의 감정들이 살고 있는 작은 마을이 열려요.
             </p>
           </div>
 
           {/* 날짜 선택 섹션 - 포탈 박스 */}
           <div className="home-date-section">
             <label htmlFor="date-select" className="home-date-label">
-              확인할 날짜를 선택하세요
+              확인할 날짜를 선택하세요.
             </label>
             <div className="home-portal-box">
               <div className="home-portal-glow"></div>
@@ -159,7 +171,7 @@ function Home({ onNavigate, selectedDate }) {
               className="enter-village-button"
               onClick={handleEnterVillage}
             >
-              🏘️ 마을 입장하기
+              🏘️ 마을 입장하기!
             </button>
           </div>
         </div>

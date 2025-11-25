@@ -4,9 +4,13 @@ import traceback
 from typing import Dict, Any
 from core.common import client, EMOTION_KEYS
 
+# ---------------------------------------
+# JSON 추출
+# ---------------------------------------
 def extract_json(text: str):
     if not text:
         return None
+
     # <BEGIN_JSON> ~ <END_JSON>
     m = re.search(r"<BEGIN_JSON>([\s\S]*?)<END_JSON>", text)
     if m:
@@ -15,220 +19,223 @@ def extract_json(text: str):
             return json.loads(block)
         except:
             pass
-    # 브레이스 기반
+
+    # fallback: {...} 블록만
     try:
         start = text.find("{")
         end = text.rfind("}")
         if start != -1 and end != -1 and end > start:
-            block = text[start:end + 1]
-            return json.loads(block)
+            return json.loads(text[start:end + 1])
     except:
         pass
+
     return None
 
+
+# ===============================================================
+#  Hybrid Polarity 시스템
+# ===============================================================
+
+POSITIVE_SURPRISE = [
+    "기쁘", "좋은 소식", "반가운", "감동", "선물", "축하",
+    "합격", "성공", "칭찬", "대박", "행복한", "잘됐다"
+]
+
+NEGATIVE_SURPRISE = [
+    "충격", "실망", "황당", "어이없", "문제 생겼",
+    "사고", "망했다", "나쁜 소식", "당황", "멘붕", "큰일", "무서웠"
+]
+
+POSITIVE_SHY = [
+    "설레", "좋아하는 사람", "썸", "두근", "얼굴 빨개졌",
+    "부끄러웠지만 좋았", "칭찬받아", "기분 좋게"
+]
+
+NEGATIVE_SHY = [
+    "창피", "민망", "수치심", "망신", "무안",
+    "머쓱", "욕먹었", "오해받", "실수해서", "잘못해서"
+]
+
+
+def rule_based_polarity(text: str, score_surprise: int, score_shy: int):
+    """
+    규칙 기반 polarity 계산
+    """
+    t = text.lower()
+    result = {"놀람": None, "부끄러움": None}
+
+    # --- 놀람 분석 ---
+    if score_surprise > 0:
+        pos = sum(1 for w in POSITIVE_SURPRISE if w in t)
+        neg = sum(1 for w in NEGATIVE_SURPRISE if w in t)
+
+        if pos > neg and pos > 0:
+            result["놀람"] = "positive"
+        elif neg > pos and neg > 0:
+            result["놀람"] = "negative"
+        else:
+            result["놀람"] = None
+
+    # --- 부끄러움 분석 ---
+    if score_shy > 0:
+        pos = sum(1 for w in POSITIVE_SHY if w in t)
+        neg = sum(1 for w in NEGATIVE_SHY if w in t)
+
+        if pos > neg and pos > 0:
+            result["부끄러움"] = "positive"
+        elif neg > pos and neg > 0:
+            result["부끄러움"] = "negative"
+        else:
+            result["부끄러움"] = None
+
+    return result
+
+
+def hybrid_polarity(
+    text: str,
+    gpt_polarity: dict,
+    score_surprise: int,
+    score_shy: int
+):
+    """
+    GPT + 규칙 기반 Hybrid Polarity
+    """
+    rule = rule_based_polarity(text, score_surprise, score_shy)
+    final = {"놀람": None, "부끄러움": None}
+
+    for emo in ["놀람", "부끄러움"]:
+        score = score_surprise if emo == "놀람" else score_shy
+        if score == 0:
+            final[emo] = None
+            continue
+
+        rule_val = rule.get(emo)
+        gpt_val = gpt_polarity.get(emo)
+
+        # 규칙 기반이 있으면 무조건 우선
+        if rule_val is not None:
+            final[emo] = rule_val
+            continue
+
+        # GPT만 있으면 GPT 값 채택
+        if gpt_val in ["positive", "negative"]:
+            final[emo] = gpt_val
+            continue
+
+        final[emo] = None
+
+    return final
+
+
+# ===============================================================
+#  메인 감정 분석 함수
+# ===============================================================
 def analyze_emotions_with_gpt(diary_text: str) -> Dict[str, Any]:
     """
-    GPT 기반 7감정 분석 (강화 버전)
+    GPT + 규칙 기반 하이브리드 감정 분석기
     """
+    # 기본 fallback
     default_scores = {
         "기쁨": 25, "사랑": 20, "놀람": 15,
         "두려움": 10, "분노": 10, "부끄러움": 10, "슬픔": 10
     }
     default_top = ["기쁨", "사랑", "놀람", "슬픔"]
 
-    # 강화 프롬프트
-    emotion_prompt = f"""
-당신은 감정 분석 전문가입니다. 
-다음 일기를 읽고 7가지 감정(기쁨, 사랑, 놀람, 두려움, 분노, 부끄러움, 슬픔)의 강도를 
-0~100 사이 정수로만 분석하세요.
+    # ---------------- GPT Prompt ----------------
+    prompt = f"""
+당신은 감정 분석 전문가입니다.
 
-⚠️ 절대적으로 지켜야 할 규칙(중요!)
-1. 결과는 무조건 JSON 형식으로만 출력하세요.
-2. 각 감정 값은 반드시 정수여야 하며, "높음", "낮음" 같은 단어 표현 금지.
-3. 감정은 반드시 0~100 사이 정수이며, 소수점·문자열 금지.
-4. 일기에서 감정이 명확하게 드러나지 않는 경우 반드시 0점.
-5. 과거를 회상하는 내용은 슬픔이 아님(좋은 추억은 슬픔 X).
-6. 슬픔/우울/눈물/아픔 표현이 없으면 슬픔은 기본적으로 0~5점 이하.
-7. 긍정 일기(행복/만족/감사 등) → 기쁨·사랑 높음, 슬픔 0~5점.
-8. 분노/짜증 명확 → 분노 높음(기쁨·사랑 낮음).
-9. 불안/걱정/초조/두려움 명확 → 두려움 높음.
-10. 피곤/힘듦/지침/번아웃 표현이 있으면:
-   - 기쁨은 0~5점 이하
-   - 슬픔과 두려움 상대적으로 높음
-   - 분노/부끄러움은 높은 점수 지양
-11. 모든 감정이 0점이면 안 됨.
+다음 일기를 읽고 7가지 감정(기쁨, 사랑, 놀람, 두려움, 분노, 부끄러움, 슬픔)을
+0~100 정수로 분석하세요.
 
-⚠️ 중요한 추가 분석:
-12. 놀람과 부끄러움의 경우, 일기 내용의 맥락을 정확히 분석하여 긍정/부정 여부를 판단하세요:
-    - 놀람: 
-      * 긍정적 맥락: 좋은 소식, 예상치 못한 행복, 기쁜 일, 만족스러운 결과, 선물 받음, 합격/합격 소식 등
-      * 부정적 맥락: 나쁜 소식, 충격적인 일, 실망스러운 결과, 불행한 사건, 사고, 갑작스러운 문제 등
-    - 부끄러움:
-      * 긍정적 맥락: 좋아하는 사람과의 부끄러움, 설레는 상황, 로맨틱한 부끄러움, 칭찬받아 부끄러움 등
-      * 부정적 맥락: 창피함, 자괴감, 실수로 인한 부끄러움, 당황스러운 상황, 수치심 등
-    
-    일기 전체의 맥락과 톤을 종합적으로 고려하여 판단하세요.
-
-⚠️ 출력 형식(절대 어기지 말 것)
 <BEGIN_JSON>
 {{
   "emotion_scores": {{
-    "기쁨": 0~100 정수,
-    "사랑": 0~100 정수,
-    "놀람": 0~100 정수,
-    "두려움": 0~100 정수,
-    "분노": 0~100 정수,
-    "부끄러움": 0~100 정수,
-    "슬픔": 0~100 정수
+    "기쁨": 0,
+    "사랑": 0,
+    "놀람": 0,
+    "두려움": 0,
+    "분노": 0,
+    "부끄러움": 0,
+    "슬픔": 0
   }},
   "emotion_polarity": {{
-    "놀람": "positive" 또는 "negative" (놀람 점수가 0이면 null),
-    "부끄러움": "positive" 또는 "negative" (부끄러움 점수가 0이면 null)
+    "놀람": null,
+    "부끄러움": null
   }}
 }}
-</END_JSON>
+<END_JSON>
 
-아래 일기를 분석하세요:
-
---- 일기 시작 ---
+일기:
 {diary_text}
---- 일기 끝 ---
 
-JSON 형식만 출력하세요.
+JSON만 출력하세요.
 """.strip()
 
     try:
-        # GPT 호출
-        emotion_response = client.chat.completions.create(
+        gpt_resp = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "당신은 전문 감정 분석기입니다. "
-                        "감정 점수를 매우 엄격하고 일관되게 평가합니다. "
-                        "지시한 JSON 형식 외 모든 출력 금지."
-                    )
-                },
-                {"role": "user", "content": emotion_prompt}
+                {"role": "system", "content": "감정 분석만 수행. JSON 이외 출력 금지."},
+                {"role": "user", "content": prompt},
             ],
             temperature=0.1,
             max_tokens=400
         )
-        emotion_reply = emotion_response.choices[0].message.content or ""
-        parsed = extract_json(emotion_reply)
+        raw = gpt_resp.choices[0].message.content or ""
+        parsed = extract_json(raw)
+    except:
+        parsed = None
 
-        # 파싱 실패 → 기본값
-        if not parsed or "emotion_scores" not in parsed:
-            scores = default_scores.copy()
-        else:
-            scores = parsed.get("emotion_scores", {})
+    # ---------------- 파싱 실패 → 기본값 ----------------
+    if not parsed or "emotion_scores" not in parsed:
+        scores = default_scores.copy()
+        gpt_polarity = {"놀람": None, "부끄러움": None}
+    else:
+        scores = parsed.get("emotion_scores", {})
+        gpt_polarity = parsed.get("emotion_polarity", {})
 
-        if not isinstance(scores, dict):
-            scores = default_scores.copy()
+    # ---------------- 숫자 정제 ----------------
+    final_scores = {}
+    for emo in EMOTION_KEYS:
+        v = scores.get(emo, 0)
+        try:
+            v = int(float(v))
+        except:
+            v = 0
+        final_scores[emo] = max(0, min(100, v))
 
-        # 모든 감정 키 보장
-        for emo in EMOTION_KEYS:
-            if emo not in scores:
-                scores[emo] = 0
+    # ---------------- 모두 0 → 기본값 ----------------
+    if sum(final_scores.values()) == 0:
+        final_scores = default_scores.copy()
 
-        # 숫자 변환 + 0~100 클램핑
-        for emo in list(scores.keys()):
-            try:
-                v = int(float(scores[emo]))
-            except:
-                v = 0
-            scores[emo] = max(0, min(100, v))
+    # ---------------- 정규화 (합=100%) ----------------
+    total = sum(final_scores.values())
+    norm = {emo: int(round(final_scores[emo] / total * 100)) for emo in EMOTION_KEYS}
 
-        # 총합 0이면 기본값
-        total_raw = sum(scores.values())
-        if total_raw == 0:
-            scores = default_scores.copy()
-            total_raw = sum(scores.values())
+    # 반올림 오차 수정
+    diff = 100 - sum(norm.values())
+    if diff != 0:
+        max_emo = max(norm.items(), key=lambda x: x[1])[0]
+        norm[max_emo] += diff
 
-        # 정규화(합 100)
-        norm_scores = {emo: int(round(scores[emo] / total_raw * 100)) for emo in EMOTION_KEYS}
-        diff = 100 - sum(norm_scores.values())
-        if diff != 0:
-            max_emo = max(norm_scores.items(), key=lambda x: x[1])[0]
-            norm_scores[max_emo] += diff
+    # ---------------- Hybrid Polarity 계산 ----------------
+    final_polarity = hybrid_polarity(
+        text=diary_text,
+        gpt_polarity=gpt_polarity,
+        score_surprise=norm["놀람"],
+        score_shy=norm["부끄러움"]
+    )
 
-        # 피곤/지침 보정
-        fatigue = any(k in diary_text for k in ["피곤", "지치", "지침", "힘들", "고단", "피로"])
-        if fatigue and norm_scores["기쁨"] > 10:
-            cut = norm_scores["기쁨"] - 10
-            norm_scores["기쁨"] = 10
-            norm_scores["슬픔"] += int(round(cut * 0.6))
-            norm_scores["두려움"] += int(round(cut * 0.4))
+    # ---------------- Top emotions ----------------
+    sorted_emotions = sorted(norm.items(), key=lambda x: x[1], reverse=True)
+    top_emotions = [emo for emo, score in sorted_emotions[:4] if score > 0]
 
-        # 5% 이하 감정 제거 및 재정규화
-        # 1단계: 5% 이하 감정을 0으로 처리
-        filtered_scores = {}
-        for emo in EMOTION_KEYS:
-            if norm_scores[emo] > 5:  # 5% 초과만 유지
-                filtered_scores[emo] = norm_scores[emo]
-            else:
-                filtered_scores[emo] = 0
-        
-        # 2단계: 남은 감정만 다시 정규화하여 합이 100이 되도록
-        remaining_total = sum(filtered_scores.values())
-        if remaining_total > 0:
-            # 남은 감정들의 비율을 유지하면서 합이 100이 되도록 정규화
-            norm_scores = {emo: int(round(filtered_scores[emo] / remaining_total * 100)) for emo in EMOTION_KEYS}
-            # 반올림으로 인한 차이 보정
-            diff = 100 - sum(norm_scores.values())
-            if diff != 0:
-                # 0이 아닌 감정 중 가장 큰 값에 차이 추가
-                non_zero_emotions = [(emo, val) for emo, val in norm_scores.items() if val > 0]
-                if non_zero_emotions:
-                    max_emo = max(non_zero_emotions, key=lambda x: x[1])[0]
-                    norm_scores[max_emo] += diff
-        else:
-            # 모든 감정이 5% 이하인 경우 기본값 사용
-            norm_scores = default_scores.copy()
-            # 기본값도 정규화
-            default_total = sum(norm_scores.values())
-            norm_scores = {emo: int(round(norm_scores[emo] / default_total * 100)) for emo in EMOTION_KEYS}
-            diff = 100 - sum(norm_scores.values())
-            if diff != 0:
-                max_emo = max(norm_scores.items(), key=lambda x: x[1])[0]
-                norm_scores[max_emo] += diff
+    if not top_emotions:
+        top_emotions = default_top
 
-        # 상위 4개
-        sorted_emotions = sorted(norm_scores.items(), key=lambda x: x[1], reverse=True)
-        top_emotions = [emo for emo, val in sorted_emotions[:4] if val > 0] or default_top
-
-        # emotion_polarity 파싱 및 처리
-        emotion_polarity = parsed.get("emotion_polarity", {}) if parsed else {}
-        if not isinstance(emotion_polarity, dict):
-            emotion_polarity = {}
-        
-        # 놀람/부끄러움이 없으면 null 처리
-        if norm_scores.get("놀람", 0) == 0:
-            emotion_polarity["놀람"] = None
-        if norm_scores.get("부끄러움", 0) == 0:
-            emotion_polarity["부끄러움"] = None
-        
-        # 값 검증 (positive, negative, null만 허용)
-        for emotion in ["놀람", "부끄러움"]:
-            if emotion in emotion_polarity:
-                value = emotion_polarity[emotion]
-                if value not in ["positive", "negative", None]:
-                    # 잘못된 값이면 null로 설정
-                    emotion_polarity[emotion] = None
-            else:
-                # 키가 없으면 null로 설정
-                emotion_polarity[emotion] = None
-
-        return {
-            "emotion_scores": norm_scores,
-            "top_emotions": top_emotions,
-            "emotion_polarity": emotion_polarity
-        }
-    except Exception:
-        traceback.print_exc()
-        return {
-            "emotion_scores": default_scores.copy(),
-            "top_emotions": default_top[:],
-            "emotion_polarity": {"놀람": None, "부끄러움": None}
-        }
+    return {
+        "emotion_scores": norm,
+        "top_emotions": top_emotions,
+        "emotion_polarity": final_polarity
+    }

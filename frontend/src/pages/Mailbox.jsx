@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getAllLetters, markLetterAsRead, deleteLetter, getUnreadLetterCount } from '../utils/mailboxUtils'
+import FloatingResidents from '../components/FloatingResidents'
 import './Mailbox.css'
 
 function Mailbox({ onNavigate, selectedDate }) {
@@ -21,9 +22,85 @@ function Mailbox({ onNavigate, selectedDate }) {
 
   const loadLetters = async () => {
     const allLetters = await getAllLetters()
-    setLetters(allLetters)
-    // getAllLetters에서 이미 편지 목록을 가져왔으므로, 여기서는 읽지 않은 개수만 계산
-    const unreadCount = allLetters.filter(letter => !letter.isRead && !letter.read).length
+    
+    // 편지 정렬: 안 읽은 편지가 먼저, 그 다음 최신순
+    const sortedLetters = allLetters.sort((a, b) => {
+      // 안 읽은 편지 우선 (isRead 또는 read 또는 is_read 필드 확인)
+      const aIsRead = !!(a.isRead || a.read || a.is_read)
+      const bIsRead = !!(b.isRead || b.read || b.is_read)
+      
+      // 안 읽은 편지가 위로 (false가 먼저)
+      if (aIsRead !== bIsRead) {
+        return aIsRead ? 1 : -1
+      }
+      
+      // 같은 읽음 상태면 날짜/시간으로 정렬 (최신순)
+      // created_at을 우선적으로 사용하고, 없으면 date 사용
+      const aTime = a.createdAt || a.created_at || a.date || ''
+      const bTime = b.createdAt || b.created_at || b.date || ''
+      
+      // 날짜/시간을 Date 객체로 변환하여 비교
+      let aDate = null
+      let bDate = null
+      
+      try {
+        if (aTime) {
+          // ISO 형식 타임스탬프 (2024-01-01T12:00:00.000Z) 또는 날짜 형식 (2024-01-01)
+          if (aTime.includes('T')) {
+            aDate = new Date(aTime)
+          } else {
+            // YYYY-MM-DD 형식인 경우
+            aDate = new Date(aTime + 'T00:00:00')
+          }
+        }
+      } catch (e) {
+        console.warn('날짜 파싱 실패:', aTime, e)
+      }
+      
+      try {
+        if (bTime) {
+          if (bTime.includes('T')) {
+            bDate = new Date(bTime)
+          } else {
+            bDate = new Date(bTime + 'T00:00:00')
+          }
+        }
+      } catch (e) {
+        console.warn('날짜 파싱 실패:', bTime, e)
+      }
+      
+      // 둘 다 날짜가 있으면 비교 (더 최신 것이 먼저)
+      if (aDate && bDate) {
+        const diff = bDate.getTime() - aDate.getTime()
+        if (diff !== 0) return diff > 0 ? 1 : -1
+      } else if (aDate && !bDate) {
+        return -1 // a가 더 최신
+      } else if (!aDate && bDate) {
+        return 1 // b가 더 최신
+      }
+      
+      // 날짜가 없으면 문자열로 비교
+      if (aTime && bTime) {
+        const diff = bTime.localeCompare(aTime)
+        if (diff !== 0) return diff
+      } else if (aTime && !bTime) {
+        return -1
+      } else if (!aTime && bTime) {
+        return 1
+      }
+      
+      // 날짜도 없으면 ID로 정렬 (큰 ID가 먼저, 더 최근 것)
+      const aId = parseInt(a.id) || 0
+      const bId = parseInt(b.id) || 0
+      return bId - aId
+    })
+    
+    setLetters(sortedLetters)
+    // 읽지 않은 개수 계산
+    const unreadCount = sortedLetters.filter(letter => {
+      const isRead = letter.isRead || letter.read || letter.is_read
+      return !isRead
+    }).length
     setUnreadCount(unreadCount)
   }
 
@@ -38,7 +115,7 @@ function Mailbox({ onNavigate, selectedDate }) {
   }
 
   const handleDeleteLetter = async (id) => {
-    if (window.confirm('이 편지를 삭제하시겠습니까?')) {
+    if (window.confirm('이 편지를 정말 삭제하시겠어요?')) {
       await deleteLetter(id)
       await loadLetters()
       
@@ -87,6 +164,7 @@ function Mailbox({ onNavigate, selectedDate }) {
 
   return (
     <div className="mailbox-container">
+      <FloatingResidents count={2} />
       <div className="mailbox-header">
         {onNavigate && (
           <button
@@ -99,7 +177,7 @@ function Mailbox({ onNavigate, selectedDate }) {
         <div className="mailbox-header-content">
           <h1 className="mailbox-title">감정 우체통</h1>
           <p className="mailbox-subtitle">
-            주민들이 보낸 편지를 확인하세요
+            주민들이 보낸 편지를 확인하세요.
           </p>
         </div>
         <button 
@@ -167,8 +245,7 @@ function Mailbox({ onNavigate, selectedDate }) {
               <div className="mailbox-empty-icon">📭</div>
               <p>편지가 없습니다.</p>
               <p className="mailbox-empty-hint">
-                행복 나무에서 열매가 열리거나, 스트레스 우물이 넘치거나,<br />
-                일기를 작성하면 주민들이 편지를 보내요!
+                행복 나무에서 열매가 열리거나, 스트레스 우물이 넘치면<br />무지개 주민들이 편지를 보내요!
               </p>
             </div>
           ) : (

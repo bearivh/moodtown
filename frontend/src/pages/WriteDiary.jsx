@@ -5,7 +5,8 @@ import { addPositiveEmotion, getHappyFruitCount } from '../utils/treeUtils'
 import { addNegativeEmotion, reduceWaterLevel, getWellState } from '../utils/wellUtils'
 import { addHappyFruitCelebrationLetter, addWellOverflowComfortLetter } from '../utils/mailboxUtils'
 import { getTodayDateString } from '../utils/dateUtils'
-import { normalizeEmotionScores } from '../utils/emotionUtils'
+import { normalizeEmotionScores, classifyEmotionsWithContext } from '../utils/emotionUtils'
+import FloatingResidents from '../components/FloatingResidents'
 import './WriteDiary.css'
 
 function WriteDiary({ onNavigate, selectedDate }) {
@@ -64,20 +65,18 @@ function WriteDiary({ onNavigate, selectedDate }) {
         // 저장 시에는 미리보기 결과를 표시하지 않음 (setDemoResult 호출 안 함)
       }
       const emotionScores = analysisResult.emotion_result?.emotion_scores || {}
+      const emotionPolarity = analysisResult.emotion_result?.emotion_polarity || {}
       
-      // 2. 긍정 감정 점수 계산 (기쁨 + 사랑)
-      const positiveScore = (emotionScores['기쁨'] || 0) + (emotionScores['사랑'] || 0)
-      
-      // 3. 부정 감정 점수 계산 (분노 + 슬픔 + 두려움)
-      const negativeScore = (emotionScores['분노'] || 0) + 
-                           (emotionScores['슬픔'] || 0) + 
-                           (emotionScores['두려움'] || 0)
+      // 2-3. 긍정/부정 감정 점수 계산 (맥락 기반 분류)
+      const { positive: positiveScore, negative: negativeScore } = 
+        classifyEmotionsWithContext(emotionScores, emotionPolarity)
       
       const newDiaryData = {
         title: title.trim() || '제목 없음',
         content: content.trim(),
         date: date,
         emotion_scores: emotionScores,
+        emotion_polarity: emotionPolarity,
         analyzed_at: new Date().toISOString()
       }
 
@@ -159,47 +158,207 @@ function WriteDiary({ onNavigate, selectedDate }) {
         await saveDiary(diaryData)
       }
 
-      // 나무 성장 처리 (감정 점수도 전달하여 보너스 계산)
-      if (positiveScore > 0) {
-        const treeResult = await addPositiveEmotion(positiveScore, emotionScores)
-        
-        // 보너스 점수가 있으면 localStorage에 저장 (나무 페이지에서 표시)
-        if (treeResult.bonusScore > 0) {
-          localStorage.setItem('treeBonus', JSON.stringify({
-            bonusScore: treeResult.bonusScore,
-            date: date,
-            timestamp: Date.now()
-          }))
+      // 먼저 같은 날짜의 기존 정보 모두 삭제 (덮어쓰기 방지)
+      const existingWellBonusStr = localStorage.getItem('wellBonus')
+      const existingWellReducedStr = localStorage.getItem('wellReduced')
+      
+      if (existingWellBonusStr) {
+        try {
+          const bonusData = JSON.parse(existingWellBonusStr)
+          if (bonusData.date === date) {
+            localStorage.removeItem('wellBonus')
+            console.log('[우물 정보 삭제] 같은 날짜의 기존 보너스 제거')
+          }
+        } catch (e) {
+          localStorage.removeItem('wellBonus')
         }
-        
-        // 열매가 열리면 우체통에 편지 추가
-        if (treeResult.fruitProduced) {
-          const fruitCount = await getHappyFruitCount()
-          await addHappyFruitCelebrationLetter(fruitCount)
+      }
+      if (existingWellReducedStr) {
+        try {
+          const reducedData = JSON.parse(existingWellReducedStr)
+          if (reducedData.date === date) {
+            localStorage.removeItem('wellReduced')
+            console.log('[우물 정보 삭제] 같은 날짜의 기존 물 감소 제거')
+          }
+        } catch (e) {
+          localStorage.removeItem('wellReduced')
         }
       }
       
-      // 우물 업데이트 처리 (감정 점수도 전달하여 보너스 계산)
-      if (negativeScore > 0) {
-        const wellResult = await addNegativeEmotion(negativeScore, emotionScores)
+      // 감정 점수 확인
+      const joy = emotionScores['기쁨'] || 0
+      const love = emotionScores['사랑'] || 0
+      const hasPositiveEmotions = joy > 0 || love > 0
+      
+      // 나무 성장 처리 (감정 점수와 극성 정보도 전달하여 보너스 계산)
+      let fruitProduced = false
+      let fruitWaterReduced = false
+      let fruitReducedAmount = 0
+      
+      if (positiveScore > 0) {
+        const emotionPolarity = diaryData.emotion_polarity || {}
+        const treeResult = await addPositiveEmotion(positiveScore, emotionScores, emotionPolarity)
+        fruitProduced = treeResult.fruitProduced || false
         
-        // 보너스 점수가 있으면 localStorage에 저장 (우물 페이지에서 표시)
-        if (wellResult.bonusScore > 0) {
-          localStorage.setItem('wellBonus', JSON.stringify({
-            bonusScore: wellResult.bonusScore,
-            date: date,
-            timestamp: Date.now()
-          }))
+        // 열매가 열려서 물이 줄어든 경우 저장
+        if (fruitProduced) {
+          // treeUtils.js에서 이미 reduceWaterLevel을 호출했지만,
+          // 여기서는 정보만 저장 (나중에 우물 처리에서 검증)
+          fruitWaterReduced = true
+          fruitReducedAmount = 50
+          
+          const fruitCount = await getHappyFruitCount()
+          await addHappyFruitCelebrationLetter(fruitCount)
+        }
+        
+        // 보너스 점수가 있으면 localStorage에 저장 (나무 페이지에서 표시)
+        // 단, 실제로 사랑/기쁨만 있는지 다시 한 번 검증
+        if (treeResult.bonusScore > 0) {
+          // 부정 감정 확인
+          const fear = emotionScores['두려움'] || 0
+          const anger = emotionScores['분노'] || 0
+          const sadness = emotionScores['슬픔'] || 0
+          
+          // 놀람과 부끄러움의 극성 확인
+          const surprise = emotionScores['놀람'] || 0
+          const shame = emotionScores['부끄러움'] || 0
+          const surprisePolarity = emotionPolarity['놀람']
+          const shamePolarity = emotionPolarity['부끄러움']
+          
+          // 부정 감정이 있으면 보너스 점수 저장하지 않음
+          if (fear > 0 || anger > 0 || sadness > 0) {
+            console.log('[나무 보너스 무효] 부정 감정이 있음:', { fear, anger, sadness, emotionScores })
+            localStorage.removeItem('treeBonus')
+          } else if (surprise > 0 && surprisePolarity !== 'positive') {
+            console.log('[나무 보너스 무효] 놀람이 부정:', { surprise, surprisePolarity })
+            localStorage.removeItem('treeBonus')
+          } else if (shame > 0 && shamePolarity !== 'positive') {
+            console.log('[나무 보너스 무효] 부끄러움이 부정:', { shame, shamePolarity })
+            localStorage.removeItem('treeBonus')
+          } else {
+            // 모든 검증 통과: 보너스 점수 저장
+            localStorage.setItem('treeBonus', JSON.stringify({
+              bonusScore: treeResult.bonusScore,
+              date: date,
+              timestamp: Date.now()
+            }))
+          }
+        } else {
+          // 보너스 점수가 0이면 localStorage에서 삭제
+          localStorage.removeItem('treeBonus')
+        }
+      }
+      
+      // 우물 업데이트 처리 (감정 점수와 극성 정보도 전달하여 보너스 계산)
+      // 조건 분기: negativeScore 기준으로 명확하게 분리
+      if (negativeScore > 5) {
+        // 부정 감정이 충분히 있는 경우 (5점 초과): 물 증가 처리만
+        // 물 감소는 절대 일어나면 안 됨! (열매로 인한 감소 포함)
+        // 같은 날짜의 물 감소 정보 강제 삭제
+        if (existingWellReducedStr) {
+          try {
+            const reducedData = JSON.parse(existingWellReducedStr)
+            if (reducedData.date === date) {
+              localStorage.removeItem('wellReduced')
+              console.log('[우물 정보 삭제] 부정 감정만 있으므로 물 감소 정보 제거')
+            }
+          } catch (e) {
+            localStorage.removeItem('wellReduced')
+          }
+        }
+        localStorage.removeItem('wellReduced') // 추가로 한 번 더 삭제 (안전장치)
+        
+        const emotionPolarity = diaryData.emotion_polarity || {}
+        const wellResult = await addNegativeEmotion(negativeScore, emotionScores, emotionPolarity)
+        
+        // 보너스 점수 처리 (부정 감정만 있고 긍정 감정이 없는 경우만)
+        if (wellResult.bonusScore > 0 && !hasPositiveEmotions) {
+          // 최종 검증: 한 번 더 확인
+          const anger = emotionScores['분노'] || 0
+          const sadness = emotionScores['슬픔'] || 0
+          const fear = emotionScores['두려움'] || 0
+          const surprise = emotionScores['놀람'] || 0
+          const shame = emotionScores['부끄러움'] || 0
+          const surprisePolarity = emotionPolarity['놀람']
+          const shamePolarity = emotionPolarity['부끄러움']
+          
+          // 최종 검증: 긍정 감정이 없고, 부정 감정이 있고, 놀람/부끄러움이 부정이거나 없어야 함
+          const hasNegativeEmotions = anger > 0 || sadness > 0 || fear > 0
+          const surpriseIsNegative = surprise === 0 || surprisePolarity === 'negative'
+          const shameIsNegative = shame === 0 || shamePolarity === 'negative'
+          
+          if (hasNegativeEmotions && surpriseIsNegative && shameIsNegative && !hasPositiveEmotions) {
+            // 모든 검증 통과: 보너스 점수 저장
+            localStorage.setItem('wellBonus', JSON.stringify({
+              bonusScore: wellResult.bonusScore,
+              date: date,
+              timestamp: Date.now()
+            }))
+            console.log('[우물 보너스 저장] 보너스 점수:', wellResult.bonusScore, '감정 점수:', emotionScores, 'positiveScore:', positiveScore, 'negativeScore:', negativeScore)
+          } else {
+            console.log('[우물 보너스 무효] 최종 검증 실패:', {
+              hasNegativeEmotions,
+              surpriseIsNegative,
+              shameIsNegative,
+              hasPositiveEmotions,
+              emotionScores,
+              emotionPolarity
+            })
+            localStorage.removeItem('wellBonus')
+          }
+        } else {
+          // 보너스가 없거나 긍정 감정이 있으면 보너스 삭제
+          localStorage.removeItem('wellBonus')
         }
         
         // 우물이 넘치면 우체통에 위로 편지 추가
         if (wellResult.overflowed) {
           await addWellOverflowComfortLetter(emotionScores, diaryData.content)
         }
-      } else if (negativeScore <= 5) {
-        // 부정적인 감정이 하나도 없거나 매우 낮으면 우물 물이 조금 줄어듦
-        const wellState = await getWellState()
-        await reduceWaterLevel(30) // 30점 감소
+      } else if (negativeScore > 0 && negativeScore <= 5) {
+        // 부정 감정이 있지만 매우 낮은 경우 (5점 이하): 보너스 없음
+        const emotionPolarity = diaryData.emotion_polarity || {}
+        localStorage.removeItem('wellBonus') // 보너스 없음
+        
+        if (hasPositiveEmotions) {
+          // 긍정 감정이 있으면 물 감소 처리
+          const reduceResult = await reduceWaterLevel(30) // 30점 감소
+          
+          // 물이 줄어들었다면 localStorage에 저장
+          if (reduceResult.reducedAmount > 0) {
+            localStorage.setItem('wellReduced', JSON.stringify({
+              reducedAmount: reduceResult.reducedAmount,
+              date: date,
+              timestamp: Date.now()
+            }))
+            console.log('[우물 물 감소] 물이 줄어듦:', reduceResult.reducedAmount, '점', 'positiveScore:', positiveScore, 'negativeScore:', negativeScore)
+          }
+        } else {
+          // 긍정 감정이 없으면 물 증가 처리 (보너스 없음, negativeScore가 너무 낮음)
+          const wellResult = await addNegativeEmotion(negativeScore, emotionScores, emotionPolarity)
+          
+          if (wellResult.overflowed) {
+            await addWellOverflowComfortLetter(emotionScores, diaryData.content)
+          }
+        }
+      } else {
+        // 부정 감정이 없는 경우 (negativeScore === 0 또는 매우 낮음)
+        localStorage.removeItem('wellBonus')
+        
+        // 긍정 감정이 있고 부정 감정이 없으면 물 감소 처리
+        if (hasPositiveEmotions && negativeScore === 0) {
+          const reduceResult = await reduceWaterLevel(30) // 30점 감소
+          
+          // 물이 줄어들었다면 localStorage에 저장
+          if (reduceResult.reducedAmount > 0) {
+            localStorage.setItem('wellReduced', JSON.stringify({
+              reducedAmount: reduceResult.reducedAmount,
+              date: date,
+              timestamp: Date.now()
+            }))
+            console.log('[우물 물 감소] 물이 줄어듦:', reduceResult.reducedAmount, '점', 'positiveScore:', positiveScore, 'negativeScore:', negativeScore)
+          }
+        }
       }
       
       // 메시지 구성 (보너스 메시지 제거)
@@ -310,6 +469,39 @@ function WriteDiary({ onNavigate, selectedDate }) {
     )
   }
 
+  // ML 결과 전용 렌더링 함수 (이미 정규화된 값 표시)
+  const renderNormalizedScores = (normalizedScores, orderKeys = null, hideZeros = false) => {
+    if (!normalizedScores || typeof normalizedScores !== 'object') return null
+    
+    let entries
+    if (Array.isArray(orderKeys) && orderKeys.length > 0) {
+      // 지정된 순서로 표시(누락은 0)
+      entries = orderKeys.map(k => [k, normalizedScores[k] || 0])
+    } else {
+      // 점수 내림차순
+      entries = Object.entries(normalizedScores)
+        .map(([k, v]) => [k, typeof v === 'number' ? v : 0])
+        .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))
+    }
+    if (hideZeros) {
+      entries = entries.filter(([, v]) => typeof v === 'number' ? v > 0 : true)
+    }
+    if (entries.length === 0) return null
+    
+    return (
+      <div className="demo-scores">
+        {entries.map(([k, v]) => (
+          <div key={k} className="demo-score-row">
+            <span className="demo-score-label">{k}</span>
+            <span className="demo-score-value">
+              {Math.round(v)}%
+            </span>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   // ML 데모 전용: 퍼센트로 변환하고 합이 100이 되도록 정규화
   const normalizeScoresForDisplay = (scores, thresholdPercent = 0) => {
     if (!scores || typeof scores !== 'object') return {}
@@ -371,6 +563,7 @@ function WriteDiary({ onNavigate, selectedDate }) {
 
   return (
     <div className="write-diary-container">
+      <FloatingResidents count={2} />
       <div className="write-diary-header">
         {onNavigate && (
           <button
@@ -519,7 +712,7 @@ function WriteDiary({ onNavigate, selectedDate }) {
                           <div style={{ marginBottom: 8 }}>
                             예측 감정: <strong>{demoResult?.result?.label || '-'}</strong>
                           </div>
-                          {renderScores(normalized, null, false)}
+                          {renderNormalizedScores(normalized, null, false)}
                           <div style={{ marginTop: 6 }}>
                             <button
                               type="button"
