@@ -1,22 +1,39 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import EmotionSky from '../components/EmotionSky'
 import { getDiariesByDate, getDominantEmotionByDate } from '../utils/storage'
 import { getUnreadLetterCount } from '../utils/mailboxUtils'
 import { getEmotionColorByName } from '../utils/emotionColorMap'
 import './Village.css'
 
+// 모듈 레벨 캐시 - 컴포넌트 언마운트와 무관하게 유지됨
+const villageStateCache = new Map()
+
 function Village({ onNavigate, selectedDate, user, onLogout }) {
-  const [hasDiary, setHasDiary] = useState(false)
-  const [dominantEmotion, setDominantEmotion] = useState('joy')
+  // 캐시에서 초기값 가져오기 (lazy initialization) - 렌더링 전에 즉시 적용
+  const [hasDiary, setHasDiary] = useState(() => {
+    if (selectedDate) {
+      const cached = villageStateCache.get(selectedDate)
+      return cached?.hasDiary ?? false
+    }
+    return false
+  })
+  
+  const [dominantEmotion, setDominantEmotion] = useState(() => {
+    if (selectedDate) {
+      const cached = villageStateCache.get(selectedDate)
+      return cached?.dominantEmotion ?? 'joy'
+    }
+    return 'joy'
+  })
+  
   const [dateDiaries, setDateDiaries] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
-  const dateStateCacheRef = useRef(new Map()) // 날짜별 상태 캐시
   
   useEffect(() => {
     if (!selectedDate) return
 
-    // 같은 날짜로 다시 돌아올 때는 캐시된 상태를 즉시 복원
-    const cachedState = dateStateCacheRef.current.get(selectedDate)
+    // 선택된 날짜가 변경될 때 캐시에서 즉시 복원
+    const cachedState = villageStateCache.get(selectedDate)
     if (cachedState) {
       setHasDiary(cachedState.hasDiary)
       setDominantEmotion(cachedState.dominantEmotion)
@@ -59,8 +76,8 @@ function Village({ onNavigate, selectedDate, user, onLogout }) {
       setDominantEmotion(newDominantEmotion)
       setUnreadCount(count)
       
-      // 날짜별 상태 캐시 저장
-      dateStateCacheRef.current.set(selectedDate, {
+      // 모듈 레벨 캐시에 저장 (컴포넌트 언마운트와 무관하게 유지됨)
+      villageStateCache.set(selectedDate, {
         hasDiary: newHasDiary,
         dominantEmotion: newDominantEmotion
       })
