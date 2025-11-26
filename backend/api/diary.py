@@ -203,8 +203,8 @@ def replace_diary():
             },
             user_id
         )
-    delete_plaza_conversation_by_date(date)
-    delete_diary_by_date(date)
+    delete_plaza_conversation_by_date(date, user_id)
+    delete_diary_by_date(date, user_id)
     if save_diary(new_diary_data, user_id):
         return jsonify({"success": True, "message": "일기가 덮어씌워졌습니다."})
     return jsonify({"error": "일기 저장에 실패했습니다."}), 500

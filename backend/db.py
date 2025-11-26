@@ -392,22 +392,31 @@ def get_diary_by_id(diary_id: str) -> Optional[Dict[str, Any]]:
     
     return diary
 
-def delete_diary(diary_id: str) -> bool:
+def delete_diary(diary_id: str, user_id: int = None) -> bool:
+    """일기 삭제 (user_id가 있으면 해당 사용자의 일기만 삭제)"""
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("DELETE FROM diaries WHERE id = %s", (diary_id,))
+    if user_id is not None:
+        cur.execute("DELETE FROM diaries WHERE id = %s AND user_id = %s", (diary_id, user_id))
+    else:
+        cur.execute("DELETE FROM diaries WHERE id = %s", (diary_id,))
+    deleted_count = cur.rowcount
     conn.commit()
     conn.close()
-    return True
+    return deleted_count > 0
 
-def delete_diary_by_date(date: str) -> bool:
-    """특정 날짜의 일기 삭제"""
+def delete_diary_by_date(date: str, user_id: int = None) -> bool:
+    """특정 날짜의 일기 삭제 (user_id가 있으면 해당 사용자의 일기만 삭제)"""
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("DELETE FROM diaries WHERE date = %s", (date,))
+    if user_id is not None:
+        cur.execute("DELETE FROM diaries WHERE date = %s AND user_id = %s", (date, user_id))
+    else:
+        cur.execute("DELETE FROM diaries WHERE date = %s", (date,))
+    deleted_count = cur.rowcount
     conn.commit()
     conn.close()
-    return True
+    return deleted_count > 0
 
 # =========================================
 # Plaza Functions
@@ -457,14 +466,18 @@ def get_plaza_conversation_by_date(date: str, user_id: int = None):
     item["emotionScores"] = json.loads(item.get("emotion_scores") or "{}")
     return item
 
-def delete_plaza_conversation_by_date(date: str) -> bool:
-    """특정 날짜의 광장 대화 삭제"""
+def delete_plaza_conversation_by_date(date: str, user_id: int = None) -> bool:
+    """특정 날짜의 광장 대화 삭제 (user_id가 있으면 해당 사용자의 대화만 삭제)"""
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("DELETE FROM plaza_conversations WHERE date = %s", (date,))
+    if user_id is not None:
+        cur.execute("DELETE FROM plaza_conversations WHERE date = %s AND user_id = %s", (date, user_id))
+    else:
+        cur.execute("DELETE FROM plaza_conversations WHERE date = %s", (date,))
+    deleted_count = cur.rowcount
     conn.commit()
     conn.close()
-    return True
+    return deleted_count > 0
 
 # =========================================
 # Tree Functions
