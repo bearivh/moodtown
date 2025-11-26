@@ -459,7 +459,7 @@ function WriteDiary({ onNavigate, selectedDate }) {
       <div className="demo-scores">
         {entries.map(([k, v]) => (
           <div key={k} className="demo-score-row">
-            <span className="demo-score-label">{k}</span>
+            <span className="demo-score-label">{k} </span>
             <span className="demo-score-value">
               {Math.round(v)}%
             </span>
@@ -492,7 +492,7 @@ function WriteDiary({ onNavigate, selectedDate }) {
       <div className="demo-scores">
         {entries.map(([k, v]) => (
           <div key={k} className="demo-score-row">
-            <span className="demo-score-label">{k}</span>
+            <span className="demo-score-label">{k} </span>
             <span className="demo-score-value">
               {Math.round(v)}%
             </span>
@@ -698,7 +698,8 @@ function WriteDiary({ onNavigate, selectedDate }) {
                               borderRadius: 6,
                               background: '#f0f0f0',
                               cursor: 'pointer',
-                              marginTop: 8
+                              marginTop: 8,
+                              fontFamily: "'Dongle', sans-serif"
                             }}
                           >
                             분석결과 전체 보기
@@ -724,7 +725,8 @@ function WriteDiary({ onNavigate, selectedDate }) {
                                 border: '1px solid #ccc',
                                 borderRadius: 6,
                                 background: '#fafafa',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                fontFamily: "'Dongle', sans-serif"
                               }}
                             >
                               간단히 보기
