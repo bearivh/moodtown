@@ -28,16 +28,35 @@ USE_POSTGRESQL_ENV = os.environ.get('USE_POSTGRESQL', '').lower() == 'true'
 # PostgreSQL 자동 감지
 # 1. DATABASE_URL이 있고 postgres를 포함하면 PostgreSQL 사용
 # 2. 또는 USE_POSTGRESQL=true이고 DATABASE_URL이나 개별 PostgreSQL 환경 변수가 있으면 사용
+
+# 디버깅: 환경 변수 확인
+print(f"🔍 DATABASE_URL 존재 여부: {bool(DATABASE_URL)}")
+if DATABASE_URL:
+    # 민감 정보 보호를 위해 앞부분만 표시
+    db_url_preview = DATABASE_URL[:30] + "..." if len(DATABASE_URL) > 30 else DATABASE_URL
+    print(f"🔍 DATABASE_URL 미리보기: {db_url_preview}")
+    print(f"🔍 DATABASE_URL에 'postgres' 포함 여부: {'postgres' in DATABASE_URL.lower()}")
+print(f"🔍 USE_POSTGRESQL 환경 변수: {USE_POSTGRESQL_ENV}")
+print(f"🔍 PGHOST: {os.environ.get('PGHOST', '(없음)')}")
+print(f"🔍 PGDATABASE: {os.environ.get('PGDATABASE', '(없음)')}")
+print(f"🔍 PSYCOPG2_AVAILABLE: {PSYCOPG2_AVAILABLE}")
+
 USE_POSTGRESQL = False
 if DATABASE_URL and 'postgres' in DATABASE_URL.lower():
     USE_POSTGRESQL = True
+    print("✅ DATABASE_URL에서 PostgreSQL 감지됨")
 elif USE_POSTGRESQL_ENV:
     # USE_POSTGRESQL=true인 경우, DATABASE_URL이나 개별 환경 변수가 있어야 함
     if DATABASE_URL or (os.environ.get('PGHOST') and os.environ.get('PGDATABASE')):
         USE_POSTGRESQL = True
+        print("✅ USE_POSTGRESQL=true로 설정되어 PostgreSQL 사용")
     else:
         # PostgreSQL 환경 변수가 없으면 SQLite 사용
         print("⚠️  USE_POSTGRESQL=true이지만 DATABASE_URL 또는 PostgreSQL 환경 변수가 없습니다. SQLite를 사용합니다.")
+else:
+    print("ℹ️  PostgreSQL 환경 변수가 없습니다. SQLite를 사용합니다.")
+
+print(f"🔍 최종 USE_POSTGRESQL 값: {USE_POSTGRESQL}")
 
 DB_PATH = os.path.join(os.path.dirname(__file__), 'moodtown.db')
 
