@@ -75,6 +75,21 @@ SQLite를 사용하는 경우:
 - 로그에서 "⚠️  PostgreSQL 연결 실패" 메시지 확인
 - `DATABASE_URL` 형식이 올바른지 확인
 - `psycopg2-binary` 패키지가 `requirements.txt`에 있는지 확인
+- **중요**: `postgres.railway.internal` 호스트명은 같은 프로젝트 내 서비스에서만 작동합니다
+  - 백엔드 서비스와 PostgreSQL 서비스가 같은 Railway 프로젝트에 있는지 확인
+  - 다른 경우, PostgreSQL 서비스의 Connect 탭에서 공개 연결 정보 사용
+
+### Railway 내부 네트워크 문제
+`postgres.railway.internal` 연결이 실패하는 경우:
+
+1. **개별 환경 변수 사용**:
+   - PostgreSQL 서비스 → Variables 탭에서 `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` 복사
+   - 백엔드 서비스 → Variables 탭에 이 변수들을 모두 추가
+   - `DATABASE_URL` 대신 개별 변수를 사용하면 공개 호스트를 사용할 수 있습니다
+
+2. **공개 연결 정보 확인**:
+   - PostgreSQL 서비스 → Connect 탭 → "Public Networking" 섹션 확인
+   - 공개 호스트명이나 IP 사용
 
 ## 참고
 
