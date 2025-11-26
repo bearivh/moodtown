@@ -22,12 +22,22 @@ except ImportError:
     psycopg2 = type('module', (), {'errors': DummyErrors()})()
 
 # 데이터베이스 타입 감지
-USE_POSTGRESQL = os.environ.get('USE_POSTGRESQL', '').lower() == 'true'
 DATABASE_URL = os.environ.get('DATABASE_URL')
+USE_POSTGRESQL_ENV = os.environ.get('USE_POSTGRESQL', '').lower() == 'true'
 
-# PostgreSQL 자동 감지 (DATABASE_URL이 있으면 PostgreSQL로 간주)
+# PostgreSQL 자동 감지
+# 1. DATABASE_URL이 있고 postgres를 포함하면 PostgreSQL 사용
+# 2. 또는 USE_POSTGRESQL=true이고 DATABASE_URL이나 개별 PostgreSQL 환경 변수가 있으면 사용
+USE_POSTGRESQL = False
 if DATABASE_URL and 'postgres' in DATABASE_URL.lower():
     USE_POSTGRESQL = True
+elif USE_POSTGRESQL_ENV:
+    # USE_POSTGRESQL=true인 경우, DATABASE_URL이나 개별 환경 변수가 있어야 함
+    if DATABASE_URL or (os.environ.get('PGHOST') and os.environ.get('PGDATABASE')):
+        USE_POSTGRESQL = True
+    else:
+        # PostgreSQL 환경 변수가 없으면 SQLite 사용
+        print("⚠️  USE_POSTGRESQL=true이지만 DATABASE_URL 또는 PostgreSQL 환경 변수가 없습니다. SQLite를 사용합니다.")
 
 DB_PATH = os.path.join(os.path.dirname(__file__), 'moodtown.db')
 
@@ -35,22 +45,36 @@ def get_db_connection():
     """데이터베이스 연결 반환 (SQLite 또는 PostgreSQL)"""
     if USE_POSTGRESQL:
         if not PSYCOPG2_AVAILABLE:
-            raise ImportError("psycopg2-binary가 설치되지 않았습니다. pip install psycopg2-binary를 실행하세요.")
+            print("⚠️  psycopg2-binary가 설치되지 않았습니다. SQLite를 사용합니다.")
+            conn = sqlite3.connect(DB_PATH)
+            conn.row_factory = sqlite3.Row
+            return conn
         
-        # DATABASE_URL에서 연결 정보 파싱
-        if DATABASE_URL:
-            conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
-        else:
-            # 개별 환경 변수 사용
-            conn = psycopg2.connect(
-                host=os.environ.get('PGHOST', 'localhost'),
-                port=os.environ.get('PGPORT', '5432'),
-                database=os.environ.get('PGDATABASE', 'moodtown'),
-                user=os.environ.get('PGUSER', 'postgres'),
-                password=os.environ.get('PGPASSWORD', ''),
-                cursor_factory=RealDictCursor
-            )
-        return conn
+        try:
+            # DATABASE_URL에서 연결 정보 파싱
+            if DATABASE_URL:
+                conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+            elif os.environ.get('PGHOST') and os.environ.get('PGDATABASE'):
+                # 개별 환경 변수 사용 (모두 있어야 함)
+                conn = psycopg2.connect(
+                    host=os.environ.get('PGHOST'),
+                    port=os.environ.get('PGPORT', '5432'),
+                    database=os.environ.get('PGDATABASE'),
+                    user=os.environ.get('PGUSER', 'postgres'),
+                    password=os.environ.get('PGPASSWORD', ''),
+                    cursor_factory=RealDictCursor
+                )
+            else:
+                # PostgreSQL 환경 변수가 없으면 SQLite로 폴백
+                raise ValueError("PostgreSQL 연결 정보가 없습니다")
+            return conn
+        except Exception as e:
+            # PostgreSQL 연결 실패 시 SQLite로 폴백
+            print(f"⚠️  PostgreSQL 연결 실패: {e}")
+            print("⚠️  SQLite를 사용합니다.")
+            conn = sqlite3.connect(DB_PATH)
+            conn.row_factory = sqlite3.Row
+            return conn
     else:
         # SQLite 사용
         conn = sqlite3.connect(DB_PATH)
@@ -78,11 +102,16 @@ def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    db_type = "PostgreSQL" if USE_POSTGRESQL else "SQLite"
+    # 실제 연결 타입 확인 (PostgreSQL은 RealDictCursor를 사용)
+    actual_db_type = "PostgreSQL" if hasattr(conn, 'cursor_factory') or isinstance(conn.__class__.__module__, str) and 'psycopg2' in conn.__class__.__module__ else "SQLite"
+    # 더 확실한 방법: connection 객체의 타입 확인
+    is_postgres = 'psycopg2' in str(type(conn)) or hasattr(conn, 'server_version')
+    
+    db_type = "PostgreSQL" if is_postgres else "SQLite"
     print(f"🔌 {db_type} 데이터베이스 연결 중...")
     
     # 사용자 테이블
-    if USE_POSTGRESQL:
+    if is_actual_postgres:
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
@@ -105,16 +134,20 @@ def init_db():
     
     # 마이그레이션: 기존 email 컬럼을 username으로 변경 (있으면)
     try:
-        if USE_POSTGRESQL:
+        if is_postgres:
             cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(255)")
         else:
             cursor.execute("ALTER TABLE users ADD COLUMN username TEXT")
         cursor.execute("UPDATE users SET username = email WHERE username IS NULL AND email IS NOT NULL")
-    except (sqlite3.OperationalError if not USE_POSTGRESQL else psycopg2.errors.DuplicateColumn):
-        pass  # 이미 username 컬럼이 있거나 마이그레이션이 완료된 경우
+    except (sqlite3.OperationalError, AttributeError):
+        try:
+            if hasattr(psycopg2, 'errors') and is_postgres:
+                pass  # PostgreSQL의 경우 이미 처리됨
+        except:
+            pass  # 이미 username 컬럼이 있거나 마이그레이션이 완료된 경우
     
     # 일기 테이블
-    if USE_POSTGRESQL:
+    if is_postgres:
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS diaries (
                 id TEXT PRIMARY KEY,
@@ -145,16 +178,16 @@ def init_db():
     
     # 기존 테이블에 user_id 컬럼 추가 (마이그레이션)
     try:
-        if USE_POSTGRESQL:
+        if is_postgres:
             cursor.execute("ALTER TABLE diaries ADD COLUMN IF NOT EXISTS user_id INTEGER")
         else:
             cursor.execute("ALTER TABLE diaries ADD COLUMN user_id INTEGER")
         cursor.execute("UPDATE diaries SET user_id = 0 WHERE user_id IS NULL")
-    except (sqlite3.OperationalError if not USE_POSTGRESQL else psycopg2.errors.DuplicateColumn):
+    except (sqlite3.OperationalError, AttributeError):
         pass
     
     # 광장 대화 테이블
-    if USE_POSTGRESQL:
+    if is_postgres:
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS plaza_conversations (
                 date TEXT NOT NULL,
@@ -181,12 +214,12 @@ def init_db():
     
     # 마이그레이션: 기존 plaza_conversations에 user_id 추가
     try:
-        if USE_POSTGRESQL:
+        if is_postgres:
             cursor.execute("ALTER TABLE plaza_conversations ADD COLUMN IF NOT EXISTS user_id INTEGER")
         else:
             cursor.execute("ALTER TABLE plaza_conversations ADD COLUMN user_id INTEGER")
         cursor.execute("UPDATE plaza_conversations SET user_id = 0 WHERE user_id IS NULL")
-    except (sqlite3.OperationalError if not USE_POSTGRESQL else psycopg2.errors.DuplicateColumn):
+    except (sqlite3.OperationalError, AttributeError):
         pass
     
     # 행복 나무 상태 테이블
@@ -230,12 +263,12 @@ def init_db():
     
     # 마이그레이션: letters에 user_id 추가
     try:
-        if USE_POSTGRESQL:
+        if is_postgres:
             cursor.execute("ALTER TABLE letters ADD COLUMN IF NOT EXISTS user_id INTEGER")
         else:
             cursor.execute("ALTER TABLE letters ADD COLUMN user_id INTEGER")
         cursor.execute("UPDATE letters SET user_id = 0 WHERE user_id IS NULL")
-    except (sqlite3.OperationalError if not USE_POSTGRESQL else psycopg2.errors.DuplicateColumn):
+    except (sqlite3.OperationalError, AttributeError):
         pass
     
     # 행복 열매 개수 테이블
@@ -251,7 +284,7 @@ def init_db():
     conn.commit()
     conn.close()
     
-    db_info = DATABASE_URL if USE_POSTGRESQL else DB_PATH
+    db_info = DATABASE_URL if is_postgres else DB_PATH
     print(f"✅ {db_type} 데이터베이스 초기화 완료: {db_info}")
 
 # ===============================
