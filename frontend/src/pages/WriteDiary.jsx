@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
-import { saveDiary, getDiariesByDate, replaceDiary } from '../utils/storage'
+import { saveDiary, getDiariesByDate, replaceDiary, getDominantEmotionByDate } from '../utils/storage'
 import { analyzeDiary, analyzeText } from '../utils/api'
 import { addPositiveEmotion, getHappyFruitCount } from '../utils/treeUtils'
 import { addNegativeEmotion, reduceWaterLevel, getWellState } from '../utils/wellUtils'
 import { addHappyFruitCelebrationLetter, addWellOverflowComfortLetter } from '../utils/mailboxUtils'
 import { getTodayDateString } from '../utils/dateUtils'
 import { normalizeEmotionScores, classifyEmotionsWithContext } from '../utils/emotionUtils'
+import { clearDiaryCacheForDate, setDiariesForDate } from '../utils/diaryCache'
+import { clearVillageCacheForDate, updateVillageCacheForDate } from './Village'
 import FloatingResidents from '../components/FloatingResidents'
 import './WriteDiary.css'
 
@@ -359,6 +361,53 @@ function WriteDiary({ onNavigate, selectedDate }) {
             console.log('[우물 물 감소] 물이 줄어듦:', reduceResult.reducedAmount, '점', 'positiveScore:', positiveScore, 'negativeScore:', negativeScore)
           }
         }
+      }
+      
+      // 캐시 업데이트: 일기 저장 후 마을 페이지 캐시 무효화 및 업데이트
+      try {
+        // 일기 캐시 무효화 (최신 데이터 가져오기 위해)
+        clearDiaryCacheForDate(date)
+        
+        // 최신 일기 데이터 가져오기
+        const updatedDiaries = await getDiariesByDate(date)
+        
+        // 일기 캐시 업데이트
+        setDiariesForDate(date, updatedDiaries)
+        
+        // Village 캐시 무효화
+        clearVillageCacheForDate(date)
+        
+        // 가장 강한 감정 찾기
+        const hasDiary = updatedDiaries.length > 0
+        let dominantEmotion = 'joy'
+        if (hasDiary) {
+          const dominant = await getDominantEmotionByDate(date)
+          if (dominant) {
+            const emotionMap = {
+              '기쁨': 'joy',
+              '사랑': 'love',
+              '놀람': 'surprise',
+              '두려움': 'fear',
+              '분노': 'anger',
+              '부끄러움': 'shame',
+              '슬픔': 'sadness'
+            }
+            dominantEmotion = emotionMap[dominant.emotion] || 'joy'
+          }
+        } else {
+          dominantEmotion = null
+        }
+        
+        // Village 캐시 업데이트
+        updateVillageCacheForDate(date, {
+          hasDiary: hasDiary,
+          dominantEmotion: dominantEmotion
+        })
+        
+        console.log('[캐시 업데이트] 일기 저장 후 캐시 갱신 완료:', { date, hasDiary, dominantEmotion })
+      } catch (cacheError) {
+        console.error('[캐시 업데이트] 오류:', cacheError)
+        // 캐시 업데이트 실패해도 일기 저장은 성공했으므로 계속 진행
       }
       
       // 메시지 구성 (보너스 메시지 제거)

@@ -8,6 +8,20 @@ import './Village.css'
 // 모듈 레벨 캐시 - 컴포넌트 언마운트와 무관하게 유지됨
 const villageStateCache = new Map()
 
+// 캐시 무효화 함수 (다른 컴포넌트에서 호출 가능)
+export function clearVillageCacheForDate(date) {
+  if (date) {
+    villageStateCache.delete(date)
+  }
+}
+
+// 캐시 업데이트 함수
+export function updateVillageCacheForDate(date, state) {
+  if (date && state) {
+    villageStateCache.set(date, state)
+  }
+}
+
 function Village({ onNavigate, selectedDate, user, onLogout }) {
   // 캐시에서 초기값 가져오기 (lazy initialization) - 렌더링 전에 즉시 적용
   const [hasDiary, setHasDiary] = useState(() => {
@@ -33,10 +47,15 @@ function Village({ onNavigate, selectedDate, user, onLogout }) {
     if (!selectedDate) return
 
     // 선택된 날짜가 변경될 때 캐시에서 즉시 복원
+    // (일기 저장 후 같은 날짜로 돌아와도 최신 캐시 반영)
     const cachedState = villageStateCache.get(selectedDate)
     if (cachedState) {
       setHasDiary(cachedState.hasDiary)
       setDominantEmotion(cachedState.dominantEmotion)
+    } else {
+      // 캐시가 없으면 기본값으로 설정 (로딩 중 표시 방지)
+      setHasDiary(false)
+      setDominantEmotion('joy')
     }
 
     const loadData = async () => {
