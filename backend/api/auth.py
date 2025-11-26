@@ -1,7 +1,7 @@
 import os
 import sys
 from flask import Blueprint, request, jsonify, session
-from datetime import datetime
+from datetime import datetime, timedelta
 
 sys.path.append(os.path.dirname(__file__) + "/..")
 from db import create_user, verify_user_password, get_user_by_id
@@ -37,6 +37,9 @@ def register():
         
         if len(password) < 4:
             return jsonify({"error": "비밀번호는 최소 4자 이상이어야 합니다."}), 400
+        
+        # 회원가입 전에 이전 세션 정리 (중요: 로그아웃 후 재가입 시 문제 방지)
+        session.clear()
         
         # 사용자 생성
         user_id = create_user(username, password, name)
@@ -90,6 +93,9 @@ def login():
             print(f"[로그인] 유효성 검사 실패 - username 비어있음: {not username}, password 비어있음: {not password}")
             return jsonify({"error": "아이디와 비밀번호를 입력해주세요."}), 400
         
+        # 로그인 전에 이전 세션 정리 (중요: 로그아웃 후 재로그인 시 문제 방지)
+        session.clear()
+        
         # 사용자 인증
         user = verify_user_password(username, password)
         
@@ -126,10 +132,46 @@ def login():
 def logout():
     """로그아웃"""
     try:
+        from flask import current_app
+        
+        # 세션 정보 출력 (디버깅)
+        print(f"[로그아웃] 로그아웃 전 세션: {dict(session)}")
+        
+        # 세션 clear
         session.clear()
-        return jsonify({"success": True}), 200
+        
+        # 쿠키를 명시적으로 삭제하기 위해 응답에 쿠키 만료 설정
+        response = jsonify({"success": True})
+        
+        # Flask의 세션 쿠키 이름 가져오기 (기본값: 'session')
+        session_cookie_name = current_app.config.get('SESSION_COOKIE_NAME', 'session')
+        
+        # 쿠키를 삭제하기 위해 만료 시간을 과거로 설정
+        expires = datetime.utcnow() - timedelta(days=1)
+        
+        is_production = os.environ.get('ENVIRONMENT') == 'production' or os.environ.get('RAILWAY_ENVIRONMENT')
+        
+        response.set_cookie(
+            session_cookie_name,
+            '',
+            expires=expires,
+            httponly=True,
+            samesite='None' if is_production else 'Lax',
+            secure=is_production,
+            path='/'
+        )
+        
+        print(f"[로그아웃] 로그아웃 후 세션: {dict(session)}")
+        print(f"[로그아웃] 세션 쿠키 삭제: {session_cookie_name}")
+        
+        return response, 200
     except Exception as e:
         print(f"로그아웃 오류: {e}")
+        # 오류가 발생해도 세션은 정리
+        try:
+            session.clear()
+        except:
+            pass
         return jsonify({"error": "로그아웃 중 오류가 발생했습니다."}), 500
 
 @auth_bp.route('/api/auth/me', methods=['GET'])

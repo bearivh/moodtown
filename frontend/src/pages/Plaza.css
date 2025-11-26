@@ -575,6 +575,7 @@
   font-size: 1.1rem;
   color: #374151;
   transition: all 0.2s ease;
+  font-family: 'Dongle', sans-serif;
 }
 
 .plaza-chat-toggle:hover {
@@ -684,6 +685,12 @@
   border-radius: 0.75rem;
   font-size: 1.1rem;
   transition: all 0.2s ease;
+  font-family: 'Dongle', sans-serif;
+}
+
+.plaza-chat-input::placeholder {
+  font-family: 'Dongle', sans-serif;
+  color: #9ca3af;
 }
 
 .plaza-chat-input:focus {
@@ -708,6 +715,7 @@
   transition: all 0.3s ease;
   white-space: nowrap;
   font-size: 1.1rem;
+  font-family: 'Dongle', sans-serif;
 }
 
 .plaza-chat-send-button:hover:not(:disabled) {

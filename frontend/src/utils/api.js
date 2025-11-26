@@ -370,6 +370,77 @@ export function parseDialogue(text) {
       }
     }
 
+    // 5. 텍스트 형식 파싱 (새 프롬프트 형식: "주민이름(감정): \"대사\"")
+    // 예: "빨강이(분노): \"맞아! 너 그 상황에서 진짜 화날 만했어!\""
+    const textFormatPattern = /([가-힣이]+)\(([가-힣]+)\)\s*:\s*["""']([^"""']+)["""']/g
+    const textMatches = [...text.matchAll(textFormatPattern)]
+    
+    if (textMatches.length > 0) {
+      const dialogue = textMatches.map(match => {
+        const characterName = match[1] || ''
+        const emotion = match[2] || ''
+        const dialogueText = match[3] || ''
+        
+        // 주민 이름 보정
+        const normalizedName = normalizeCharacterName(characterName, emotion)
+        
+        return {
+          캐릭터: normalizedName,
+          character: normalizedName,
+          감정: emotion,
+          emotion: emotion,
+          대사: dialogueText.trim(),
+          text: dialogueText.trim(),
+          dialogue: dialogueText.trim()
+        }
+      }).filter(msg => {
+        // 빈 텍스트 필터링
+        const text = msg.대사 || msg.text || msg.dialogue || ''
+        return text && text.trim().length > 0
+      })
+      
+      if (dialogue.length > 0) {
+        return dialogue
+      }
+    }
+
+    // 6. 더 유연한 텍스트 형식 (쌍따옴표 없이도 파싱)
+    // 예: "빨강이(분노): 맞아! 너 그 상황에서 진짜 화날 만했어!"
+    const flexibleTextPattern = /([가-힣이]+)\(([가-힣]+)\)\s*:\s*(.+?)(?=\n|$)/g
+    const flexibleMatches = [...text.matchAll(flexibleTextPattern)]
+    
+    if (flexibleMatches.length > 0) {
+      const dialogue = flexibleMatches.map(match => {
+        const characterName = match[1] || ''
+        const emotion = match[2] || ''
+        let dialogueText = (match[3] || '').trim()
+        
+        // 앞뒤 따옴표 제거
+        dialogueText = dialogueText.replace(/^["""']|["""']$/g, '')
+        
+        // 주민 이름 보정
+        const normalizedName = normalizeCharacterName(characterName, emotion)
+        
+        return {
+          캐릭터: normalizedName,
+          character: normalizedName,
+          감정: emotion,
+          emotion: emotion,
+          대사: dialogueText.trim(),
+          text: dialogueText.trim(),
+          dialogue: dialogueText.trim()
+        }
+      }).filter(msg => {
+        // 빈 텍스트 필터링
+        const text = msg.대사 || msg.text || msg.dialogue || ''
+        return text && text.trim().length > 0
+      })
+      
+      if (dialogue.length > 0) {
+        return dialogue
+      }
+    }
+
     console.warn('[파싱] 대화 파싱 실패:', text.substring(0, 200))
     return []
   } catch (error) {
