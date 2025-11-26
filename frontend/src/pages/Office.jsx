@@ -700,7 +700,7 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
           </div>
 
           {/* 일주일간 긍정/부정 점수 추이 그래프 (꺾은선) */}
-          {weeklyStats && weeklyStats.dates && weeklyStats.positiveScores && weeklyStats.negativeScores && (
+          {weeklyStats && weeklyStats.dates && Array.isArray(weeklyStats.positiveScores) && Array.isArray(weeklyStats.negativeScores) && (
             <div className="stats-line-graph">
               <h2 className="office-section-title">일주일간 긍정/부정 추이</h2>
               <h3 className="stats-subtitle">최근 7일간 감정 점수 변화예요</h3>

@@ -26,16 +26,24 @@ PostgreSQL 서비스가 생성되면:
 3. **"+ New Variable"** 클릭
 4. 다음 환경 변수 추가:
 
-### 옵션 1: DATABASE_URL 사용 (권장)
+### 옵션 1: DATABASE_PUBLIC_URL 사용 (권장 - railway.internal 오류 시)
+- **Variable Name**: `DATABASE_PUBLIC_URL`
+- **Value**: PostgreSQL 서비스의 `DATABASE_PUBLIC_URL` 값을 복사하여 붙여넣기
+  - 이 URL은 공개 네트워크용으로 `railway.internal` 호스트명을 사용하지 않습니다
+  - 예: `postgresql://postgres:password@containers-us-west-100.railway.app:5432/railway`
+  - **코드가 자동으로 `DATABASE_PUBLIC_URL`을 우선적으로 사용합니다**
+
+### 옵션 2: DATABASE_URL 사용
 - **Variable Name**: `DATABASE_URL`
 - **Value**: PostgreSQL 서비스의 `DATABASE_URL` 값을 복사하여 붙여넣기
-  - 예: `postgresql://postgres:password@hostname:5432/railway`
+  - `railway.internal` 호스트명을 포함할 수 있으나, 연결이 실패할 수 있습니다
+  - `DATABASE_PUBLIC_URL`이 없을 때만 사용됩니다
 
-### 옵션 2: USE_POSTGRESQL 강제 설정
+### 옵션 3: USE_POSTGRESQL 강제 설정
 PostgreSQL이 자동 감지되지 않는 경우:
 - **Variable Name**: `USE_POSTGRESQL`
 - **Value**: `true`
-- 그리고 `DATABASE_URL`도 함께 설정
+- 그리고 `DATABASE_PUBLIC_URL` 또는 `DATABASE_URL`도 함께 설정
 
 ## 4. 서버 재시작
 

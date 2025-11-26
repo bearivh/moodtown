@@ -15,10 +15,25 @@ import { classifyEmotionsWithContext } from '../utils/emotionUtils'
 import { getEmotionColorByName } from '../utils/emotionColorMap'
 import './Tree.css'
 
+// 모듈 레벨 캐시 - 나무 상태를 캐싱하여 즉시 표시
+const treeStateCache = { state: null, progress: 0, timestamp: 0 }
+
 function Tree({ onNavigate, selectedDate }) {
-  const [treeState, setTreeState] = useState(null)
+  // 캐시에서 초기값 가져오기 (lazy initialization)
+  const [treeState, setTreeState] = useState(() => {
+    if (treeStateCache.state && Date.now() - treeStateCache.timestamp < 60000) {
+      return treeStateCache.state
+    }
+    return null
+  })
+  
   const [fruitCount, setFruitCount] = useState(0)
-  const [progress, setProgress] = useState(0)
+  const [progress, setProgress] = useState(() => {
+    if (treeStateCache.progress !== undefined) {
+      return treeStateCache.progress
+    }
+    return 0
+  })
   const [pointsToNext, setPointsToNext] = useState(0)
   const [selectedDateImpact, setSelectedDateImpact] = useState(null)
   const [showInfo, setShowInfo] = useState(false)
@@ -101,6 +116,12 @@ function Tree({ onNavigate, selectedDate }) {
   }
 
   useEffect(() => {
+    // 캐시에서 즉시 복원
+    if (treeStateCache.state && Date.now() - treeStateCache.timestamp < 60000) {
+      setTreeState(treeStateCache.state)
+      setProgress(treeStateCache.progress || 0)
+    }
+    
     loadTreeData()
     loadEmotionContributions()
     // 선택한 날짜가 있으면 해당 날짜, 없으면 오늘 날짜의 일기 확인
@@ -215,6 +236,11 @@ function Tree({ onNavigate, selectedDate }) {
     setFruitCount(count)
     setProgress(progressPercent)
     setPointsToNext(pointsNeeded)
+    
+    // 모듈 레벨 캐시 업데이트
+    treeStateCache.state = state
+    treeStateCache.progress = progressPercent
+    treeStateCache.timestamp = Date.now()
   }
 
   const loadEmotionContributions = async () => {
@@ -464,12 +490,12 @@ function Tree({ onNavigate, selectedDate }) {
           </div>
 
           {/* 성장 진행도 */}
-          {!isFruitStage && (
+          {!isFruitStage && treeState && (
             <div className="tree-progress-section">
               <div className="tree-progress-bar-container">
                 <div
                   className="tree-progress-bar"
-                  style={{ width: `${progress}%` }}
+                  style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}
                 ></div>
               </div>
               <div className="tree-progress-info">
@@ -477,7 +503,7 @@ function Tree({ onNavigate, selectedDate }) {
                   다음 단계까지 {pointsToNext}점 필요
                 </span>
                 <span className="tree-progress-percent">
-                  {Math.round(progress)}%
+                  {Math.round(Math.max(0, Math.min(100, progress)))}%
                 </span>
               </div>
             </div>

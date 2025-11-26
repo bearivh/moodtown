@@ -67,7 +67,7 @@ function ResidentsIntro({user}) {
       pastelColor: '#d4d1ff',
       description: '#불안 #걱정 #초조',
       image: navyImage,
-      speech: '불안해해... 무슨 일이 일어날 것 같지 않아?'
+      speech: '불안해... 무슨 일이 일어날 것 같지 않아?'
     },
     {
       name: '보라',

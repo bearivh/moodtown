@@ -82,14 +82,20 @@ function Plaza({ onNavigate, selectedDate }) {
 
     // 캐시에서 즉시 복원
     const cached = plazaDataCache.get(selectedDate)
-    if (cached) {
+    if (cached && cached.conversation && cached.conversation.length > 0) {
+      // 캐시에 대화가 있으면 즉시 표시하고 API 호출 건너뛰기
       setConversation(cached.conversation || [])
       setEmotionScores(cached.emotionScores || {})
       setDateDiaries(cached.diaries || [])
       setLoading(false)
-      if (cached.conversation && cached.conversation.length > 0) {
-        setShowChat(true)
-      }
+      setShowChat(true)
+      return // 캐시에 저장된 대화가 있으면 여기서 종료
+    } else if (cached) {
+      // 캐시에 일기는 있지만 대화가 없는 경우
+      setConversation(cached.conversation || [])
+      setEmotionScores(cached.emotionScores || {})
+      setDateDiaries(cached.diaries || [])
+      setLoading(false)
     } else {
       // 일기 캐시 확인
       const cachedDiaries = getCachedDiariesForDate(selectedDate)
@@ -99,6 +105,11 @@ function Plaza({ onNavigate, selectedDate }) {
     }
 
     const loadData = async () => {
+      // 캐시에 저장된 대화가 있으면 API 호출 건너뛰기
+      const cached = plazaDataCache.get(selectedDate)
+      if (cached && cached.conversation && cached.conversation.length > 0) {
+        return
+      }
       // 선택한 날짜의 일기 가져오기 (캐시 확인 후)
       let diaries = getCachedDiariesForDate(selectedDate)
       if (!diaries) {

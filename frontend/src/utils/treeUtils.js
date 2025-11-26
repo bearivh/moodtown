@@ -3,6 +3,32 @@
 // 환경 변수에서 API URL을 가져오고, 없으면 빈 문자열(프록시 사용)
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
+// 전역 나무 상태 캐시 (모듈 레벨)
+export const treeStateCache = { state: null, progress: 0, timestamp: 0 }
+
+/**
+ * 나무 상태 캐시 업데이트
+ * @param {Object} state - 나무 상태
+ * @param {number} progress - 진행도 (0~100)
+ */
+export function updateTreeStateCache(state, progress) {
+  treeStateCache.state = state
+  treeStateCache.progress = progress || 0
+  treeStateCache.timestamp = Date.now()
+}
+
+/**
+ * 나무 상태 캐시 가져오기
+ * @returns {Object|null} 캐시된 나무 상태 또는 null
+ */
+export function getTreeStateCache() {
+  // 최근 1분 이내 캐시가 있으면 반환
+  if (treeStateCache.state && Date.now() - treeStateCache.timestamp < 60000) {
+    return { state: treeStateCache.state, progress: treeStateCache.progress }
+  }
+  return null
+}
+
 // 나무 성장 단계 설정
 export const TREE_STAGES = {
   SEED: 0,        // 씨앗
@@ -29,7 +55,9 @@ export const TREE_STAGE_THRESHOLDS = {
  */
 export async function getTreeState() {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/tree/state`)
+    const response = await fetch(`${API_BASE_URL}/api/tree/state`, {
+      credentials: 'include'
+    })
     if (!response.ok) {
       throw new Error(`API 오류: ${response.status}`)
     }
@@ -62,11 +90,17 @@ export async function getTreeState() {
       stage = calculatedStage
     }
     
-    return {
+    const treeState = {
       growth: growth,
       stage: stage,
       lastFruitDate: state.lastFruitDate || state.last_fruit_date || null
     }
+    
+    // 진행도 계산 및 캐시 업데이트
+    const progress = getStageProgress(growth, stage)
+    updateTreeStateCache(treeState, progress)
+    
+    return treeState
   } catch (error) {
     console.error('나무 상태 불러오기 실패:', error)
     // 기본값
@@ -90,6 +124,7 @@ export async function saveTreeState(state) {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({
         id: 1,
         growth: state.growth || 0,
@@ -263,6 +298,10 @@ export async function addPositiveEmotion(positiveScore, emotionScores = null, em
   
   await saveTreeState(newState)
   
+  // 캐시 업데이트 (일기 저장 후 즉시 표시되도록)
+  const progress = getStageProgress(newGrowth, newStage)
+  updateTreeStateCache(newState, progress)
+  
   return {
     growth: newGrowth,
     stage: newStage,
@@ -277,7 +316,9 @@ export async function addPositiveEmotion(positiveScore, emotionScores = null, em
  */
 export async function getHappyFruitCount() {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/tree/fruits`)
+    const response = await fetch(`${API_BASE_URL}/api/tree/fruits`, {
+      credentials: 'include'
+    })
     if (!response.ok) {
       throw new Error(`API 오류: ${response.status}`)
     }
@@ -303,6 +344,7 @@ export async function addHappyFruit() {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({ count: newCount }),
     })
     

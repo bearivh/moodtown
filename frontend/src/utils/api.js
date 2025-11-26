@@ -108,7 +108,9 @@ export async function chatWithCharacters(message, characters = [], date = null) 
  */
 export async function getOfficeStats() {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/stats/office`)
+    const response = await fetch(`${API_BASE_URL}/api/stats/office`, {
+      credentials: 'include'
+    })
     if (!response.ok) {
       throw new Error(`API 오류: ${response.status}`)
     }
@@ -133,7 +135,9 @@ export async function getSimilarDiaries(diaryId, limit = 5, minSimilarity = 0.3)
       limit: limit.toString(),
       min_similarity: minSimilarity.toString()
     })
-    const response = await fetch(`${API_BASE_URL}/api/diaries/${diaryId}/similar?${params}`)
+    const response = await fetch(`${API_BASE_URL}/api/diaries/${diaryId}/similar?${params}`, {
+      credentials: 'include'
+    })
     if (!response.ok) {
       if (response.status === 503) {
         // 모델이 학습되지 않은 경우
@@ -163,6 +167,7 @@ export async function findSimilarDiariesByText(text, limit = 5, minSimilarity = 
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({
         text,
         limit,

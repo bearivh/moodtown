@@ -3,7 +3,9 @@ import {
   getWellState,
   getWaterLevelPercent,
   WELL_MAX_CAPACITY,
-  resetWell
+  resetWell,
+  getWellStateCache,
+  wellStateCache
 } from '../utils/wellUtils'
 import FloatingResidents from '../components/FloatingResidents'
 import { getDiariesByDate, getAllDiaries } from '../utils/storage'
@@ -12,11 +14,24 @@ import { classifyEmotionsWithContext } from '../utils/emotionUtils'
 import { getEmotionColorByName } from '../utils/emotionColorMap'
 import './Well.css'
 
-// 이 함수들은 더 이상 사용되지 않습니다 (wellUtils.js에서 처리)
-
 function Well({ onNavigate, selectedDate }) {
-  const [wellState, setWellState] = useState(null)
-  const [waterPercent, setWaterPercent] = useState(0)
+  // 캐시에서 초기값 가져오기 (lazy initialization)
+  const [wellState, setWellState] = useState(() => {
+    // 최근 1분 이내 캐시가 있으면 사용
+    if (wellStateCache.state && Date.now() - wellStateCache.timestamp < 60000) {
+      return wellStateCache.state
+    }
+    return null
+  })
+  
+  const [waterPercent, setWaterPercent] = useState(() => {
+    // 캐시에서 물 높이 비율 계산
+    if (wellStateCache.state) {
+      const percent = (wellStateCache.state.waterLevel / WELL_MAX_CAPACITY) * 100
+      return Math.min(100, Math.max(0, percent))
+    }
+    return 0
+  })
   const [selectedDateImpact, setSelectedDateImpact] = useState(null)
   const [showInfo, setShowInfo] = useState(false)
   const [bonusInfo, setBonusInfo] = useState(null)
@@ -242,6 +257,13 @@ function Well({ onNavigate, selectedDate }) {
   }
 
   useEffect(() => {
+    // 캐시에서 즉시 복원
+    if (wellStateCache.state && Date.now() - wellStateCache.timestamp < 60000) {
+      setWellState(wellStateCache.state)
+      const percent = (wellStateCache.state.waterLevel / WELL_MAX_CAPACITY) * 100
+      setWaterPercent(Math.min(100, Math.max(0, percent)))
+    }
+    
     loadWellData()
     loadEmotionContributions()
     // 선택한 날짜가 있으면 해당 날짜, 없으면 오늘 날짜의 일기 확인
@@ -337,8 +359,13 @@ function Well({ onNavigate, selectedDate }) {
     const state = await getWellState()
     const percent = getWaterLevelPercent(state.waterLevel)
     
+    // 즉시 상태 업데이트
     setWellState(state)
     setWaterPercent(percent)
+    
+    // 모듈 레벨 캐시 업데이트
+    wellStateCache.state = state
+    wellStateCache.timestamp = Date.now()
   }
 
   // 우물 비우기 확인 다이얼로그 표시
@@ -653,17 +680,23 @@ function Well({ onNavigate, selectedDate }) {
             {/* 우물 구조 */}
             <div className="well-structure">
               {/* 물 */}
-              <div 
-                className={`well-water ${isOverflowing ? 'well-water-overflowing' : ''}`}
-                style={{ height: `${Math.min(100, waterPercent)}%` }}
-              >
-                <div className="well-water-wave"></div>
-              </div>
+              {wellState && (
+                <div 
+                  className={`well-water ${isOverflowing ? 'well-water-overflowing' : ''} ${wellState.waterLevel === 0 ? 'well-water-empty' : ''}`}
+                  style={{ height: `${Math.min(100, Math.max(0, waterPercent))}%` }}
+                >
+                  {wellState.waterLevel > 0 && (
+                    <div className="well-water-wave"></div>
+                  )}
+                </div>
+              )}
               
               {/* 물 높이 숫자 */}
-              <div className="well-water-level-text">
-                {wellState.waterLevel} / {WELL_MAX_CAPACITY}
-              </div>
+              {wellState && (
+                <div className="well-water-level-text">
+                  {wellState.waterLevel} / {WELL_MAX_CAPACITY}
+                </div>
+              )}
               
               {/* 우물 가장자리 */}
               <div className="well-rim"></div>

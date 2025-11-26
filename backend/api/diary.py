@@ -143,7 +143,11 @@ def create_diary_endpoint():
 
 @diary_bp.route("/api/diaries/<diary_id>", methods=["DELETE"])
 def delete_diary_endpoint(diary_id):
-    if delete_diary(diary_id):
+    user_id = get_current_user_id()
+    if not user_id:
+        return jsonify({"error": "로그인이 필요합니다."}), 401
+    
+    if delete_diary(diary_id, user_id):  # user_id도 전달해야 함
         return jsonify({"success": True, "message": "일기가 삭제되었습니다."})
     return jsonify({"error": "일기 삭제에 실패했습니다."}), 500
 

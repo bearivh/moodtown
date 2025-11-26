@@ -6,30 +6,60 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 // 우물 최대 용량 (넘침 임계값)
 export const WELL_MAX_CAPACITY = 500
 
+// 전역 우물 상태 캐시 (모듈 레벨)
+export const wellStateCache = { state: null, timestamp: 0 }
+
+/**
+ * 우물 상태 캐시 업데이트
+ * @param {Object} state - 우물 상태
+ */
+export function updateWellStateCache(state) {
+  wellStateCache.state = state
+  wellStateCache.timestamp = Date.now()
+}
+
+/**
+ * 우물 상태 캐시 가져오기
+ * @returns {Object|null} 캐시된 우물 상태 또는 null
+ */
+export function getWellStateCache() {
+  // 최근 1분 이내 캐시가 있으면 반환
+  if (wellStateCache.state && Date.now() - wellStateCache.timestamp < 60000) {
+    return wellStateCache.state
+  }
+  return null
+}
+
 /**
  * 우물 상태 가져오기
  * @returns {Promise<Object>} { waterLevel: number, isOverflowing: boolean, lastOverflowDate: string }
  */
 export async function getWellState() {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/well/state`)
+    const response = await fetch(`${API_BASE_URL}/api/well/state`, {
+      credentials: 'include'
+    })
     if (!response.ok) {
       throw new Error(`API 오류: ${response.status}`)
     }
     const state = await response.json()
-    return {
+    const wellState = {
       waterLevel: state.waterLevel || state.water_level || 0,
       isOverflowing: state.isOverflowing || state.is_overflowing === 1 || false,
       lastOverflowDate: state.lastOverflowDate || state.last_overflow_date || null
     }
+    // 캐시 업데이트
+    updateWellStateCache(wellState)
+    return wellState
   } catch (error) {
     console.error('우물 상태 불러오기 실패:', error)
     // 기본값
-    return {
+    const defaultState = {
       waterLevel: 0,
       isOverflowing: false,
       lastOverflowDate: null
     }
+    return defaultState
   }
 }
 
@@ -45,6 +75,7 @@ export async function saveWellState(state) {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({
         id: 1,
         waterLevel: state.waterLevel || 0,
@@ -223,6 +254,9 @@ export async function addNegativeEmotion(negativeScore, emotionScores = null, em
   
   await saveWellState(newState)
   
+  // 캐시 업데이트 (일기 저장 후 즉시 표시되도록)
+  updateWellStateCache(newState)
+  
   return {
     waterLevel: newWaterLevel,
     isOverflowing: isOverflowing,
@@ -253,6 +287,9 @@ export async function reduceWaterLevel(amount) {
   
   await saveWellState(newState)
   
+  // 캐시 업데이트 (일기 저장 후 즉시 표시되도록)
+  updateWellStateCache(newState)
+  
   return {
     waterLevel: newWaterLevel,
     isOverflowing: isOverflowing,
@@ -271,5 +308,7 @@ export async function resetWell() {
     lastOverflowDate: null
   }
   await saveWellState(newState)
+  // 캐시 업데이트
+  updateWellStateCache(newState)
   return newState
 }

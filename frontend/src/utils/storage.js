@@ -114,6 +114,7 @@ export async function replaceDiary(date, oldEmotionScores, newDiary) {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({
         date,
         old_emotion_scores: oldEmotionScores,
@@ -165,6 +166,7 @@ export async function deleteDiary(id) {
   try {
     const response = await fetch(`${API_BASE_URL}/api/diaries/${id}`, {
       method: 'DELETE',
+      credentials: 'include',
     })
     
     if (!response.ok) {
@@ -438,14 +440,15 @@ export async function getDiaryStreak() {
   
   // 오늘부터 역순으로 연속된 날짜 계산
   const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  // 시간대 문제를 피하기 위해 문자열로 직접 비교
+  const todayStr = today.toISOString().split('T')[0]
   
   let streak = 0
   let checkDate = new Date(today)
+  checkDate.setHours(0, 0, 0, 0)
   let lastWrittenDate = sortedDates[0] || null
   
   // 오늘이 포함되어 있으면 스트릭 시작
-  const todayStr = today.toISOString().split('T')[0]
   if (sortedDates.includes(todayStr)) {
     streak = 1
     checkDate.setDate(checkDate.getDate() - 1)
@@ -463,6 +466,11 @@ export async function getDiaryStreak() {
     } else {
       break
     }
+  }
+  
+  // 최소 1일은 보장 (오늘 일기가 있으면)
+  if (sortedDates.includes(todayStr) && streak === 0) {
+    streak = 1
   }
   
   return { streak, lastWrittenDate }

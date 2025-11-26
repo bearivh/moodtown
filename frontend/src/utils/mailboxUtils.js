@@ -9,7 +9,9 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
  */
 export async function getAllLetters() {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/letters`)
+    const response = await fetch(`${API_BASE_URL}/api/letters`, {
+      credentials: 'include'
+    })
     if (!response.ok) {
       throw new Error(`API 오류: ${response.status}`)
     }
@@ -44,6 +46,7 @@ export async function addLetter(letter) {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify(newLetter),
     })
     
@@ -71,6 +74,7 @@ async function generateLetter(letterType, options = {}) {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({
         type: letterType,
         emotion_scores: options.emotion_scores || {},
@@ -122,6 +126,7 @@ export async function markLetterAsRead(id) {
   try {
     const response = await fetch(`${API_BASE_URL}/api/letters/${id}/read`, {
       method: 'POST',
+      credentials: 'include',
     })
     
     if (!response.ok) {
@@ -144,6 +149,7 @@ export async function deleteLetter(id) {
   try {
     const response = await fetch(`${API_BASE_URL}/api/letters/${id}`, {
       method: 'DELETE',
+      credentials: 'include',
     })
     
     if (!response.ok) {
@@ -163,7 +169,9 @@ export async function deleteLetter(id) {
  */
 export async function getUnreadLetterCount() {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/letters/unread/count`)
+    const response = await fetch(`${API_BASE_URL}/api/letters/unread/count`, {
+      credentials: 'include'
+    })
     if (!response.ok) {
       throw new Error(`API 오류: ${response.status}`)
     }
