@@ -1,88 +1,193 @@
 """
-SQLite 데이터베이스 모델 및 초기화
+SQLite 및 PostgreSQL 데이터베이스 모델 및 초기화
 """
-import sqlite3
 import json
 import os
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
+import sqlite3
+
+# PostgreSQL 지원
+try:
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
+    import psycopg2.errors
+    PSYCOPG2_AVAILABLE = True
+except ImportError:
+    PSYCOPG2_AVAILABLE = False
+    # psycopg2가 없을 때를 위한 더미 클래스
+    class DummyErrors:
+        class DuplicateColumn(Exception):
+            pass
+    psycopg2 = type('module', (), {'errors': DummyErrors()})()
+
+# 데이터베이스 타입 감지
+USE_POSTGRESQL = os.environ.get('USE_POSTGRESQL', '').lower() == 'true'
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+# PostgreSQL 자동 감지 (DATABASE_URL이 있으면 PostgreSQL로 간주)
+if DATABASE_URL and 'postgres' in DATABASE_URL.lower():
+    USE_POSTGRESQL = True
 
 DB_PATH = os.path.join(os.path.dirname(__file__), 'moodtown.db')
 
 def get_db_connection():
-    """데이터베이스 연결 반환"""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row  # 딕셔너리처럼 접근 가능하게
-    return conn
+    """데이터베이스 연결 반환 (SQLite 또는 PostgreSQL)"""
+    if USE_POSTGRESQL:
+        if not PSYCOPG2_AVAILABLE:
+            raise ImportError("psycopg2-binary가 설치되지 않았습니다. pip install psycopg2-binary를 실행하세요.")
+        
+        # DATABASE_URL에서 연결 정보 파싱
+        if DATABASE_URL:
+            conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+        else:
+            # 개별 환경 변수 사용
+            conn = psycopg2.connect(
+                host=os.environ.get('PGHOST', 'localhost'),
+                port=os.environ.get('PGPORT', '5432'),
+                database=os.environ.get('PGDATABASE', 'moodtown'),
+                user=os.environ.get('PGUSER', 'postgres'),
+                password=os.environ.get('PGPASSWORD', ''),
+                cursor_factory=RealDictCursor
+            )
+        return conn
+    else:
+        # SQLite 사용
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        return conn
+
+def execute_query(cursor, query: str, params: tuple = ()):
+    """데이터베이스 타입에 따라 쿼리 실행 (플레이스홀더 변환)"""
+    # PostgreSQL은 %s, SQLite는 ? 사용
+    if USE_POSTGRESQL:
+        # ? 를 %s로 변환 (단순 변환, 복잡한 쿼리는 주의 필요)
+        query = query.replace('?', '%s')
+        # INSERT OR REPLACE를 PostgreSQL 문법으로 변환
+        if 'INSERT OR REPLACE' in query.upper():
+            # PostgreSQL에서는 ON CONFLICT ... DO UPDATE 사용
+            # 이는 각 쿼리에 따라 다르므로 복잡함
+            # 일단 기본 쿼리 실행 (나중에 개별 함수에서 처리)
+            query = query.replace('INSERT OR REPLACE', 'INSERT')
+        cursor.execute(query, params)
+    else:
+        cursor.execute(query, params)
 
 def init_db():
     """데이터베이스 초기화 및 테이블 생성"""
     conn = get_db_connection()
     cursor = conn.cursor()
     
+    db_type = "PostgreSQL" if USE_POSTGRESQL else "SQLite"
+    print(f"🔌 {db_type} 데이터베이스 연결 중...")
+    
     # 사용자 테이블
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            name TEXT,
-            created_at TEXT NOT NULL
-        )
-    ''')
+    if USE_POSTGRESQL:
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(255) UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                name VARCHAR(255),
+                created_at TEXT NOT NULL
+            )
+        ''')
+    else:
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                name TEXT,
+                created_at TEXT NOT NULL
+            )
+        ''')
     
     # 마이그레이션: 기존 email 컬럼을 username으로 변경 (있으면)
     try:
-        cursor.execute("ALTER TABLE users ADD COLUMN username TEXT")
-        # 기존 email 값을 username으로 복사
+        if USE_POSTGRESQL:
+            cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(255)")
+        else:
+            cursor.execute("ALTER TABLE users ADD COLUMN username TEXT")
         cursor.execute("UPDATE users SET username = email WHERE username IS NULL AND email IS NOT NULL")
-        # email 컬럼 제거는 SQLite에서 직접 지원하지 않으므로 유지하되, username을 우선 사용
-        # 기존 데이터가 있으면 username이 설정되고, 없으면 NULL이 됨
-    except sqlite3.OperationalError:
+    except (sqlite3.OperationalError if not USE_POSTGRESQL else psycopg2.errors.DuplicateColumn):
         pass  # 이미 username 컬럼이 있거나 마이그레이션이 완료된 경우
     
     # 일기 테이블
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS diaries (
-            id TEXT PRIMARY KEY,
-            user_id INTEGER NOT NULL,
-            date TEXT NOT NULL,
-            title TEXT NOT NULL,
-            content TEXT NOT NULL,
-            emotion_scores TEXT,  -- JSON 문자열
-            created_at TEXT NOT NULL,
-            updated_at TEXT,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-    ''')
+    if USE_POSTGRESQL:
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS diaries (
+                id TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                date TEXT NOT NULL,
+                title TEXT NOT NULL,
+                content TEXT NOT NULL,
+                emotion_scores TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        ''')
+    else:
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS diaries (
+                id TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                date TEXT NOT NULL,
+                title TEXT NOT NULL,
+                content TEXT NOT NULL,
+                emotion_scores TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        ''')
     
     # 기존 테이블에 user_id 컬럼 추가 (마이그레이션)
     try:
-        cursor.execute("ALTER TABLE diaries ADD COLUMN user_id INTEGER")
-        # 기존 데이터는 NULL이 될 수 있으므로 임시로 0으로 설정
+        if USE_POSTGRESQL:
+            cursor.execute("ALTER TABLE diaries ADD COLUMN IF NOT EXISTS user_id INTEGER")
+        else:
+            cursor.execute("ALTER TABLE diaries ADD COLUMN user_id INTEGER")
         cursor.execute("UPDATE diaries SET user_id = 0 WHERE user_id IS NULL")
-    except sqlite3.OperationalError:
-        pass  # 컬럼이 이미 존재하는 경우
+    except (sqlite3.OperationalError if not USE_POSTGRESQL else psycopg2.errors.DuplicateColumn):
+        pass
     
     # 광장 대화 테이블
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS plaza_conversations (
-            date TEXT NOT NULL,
-            user_id INTEGER NOT NULL,
-            conversation TEXT NOT NULL,  -- JSON 문자열
-            emotion_scores TEXT,  -- JSON 문자열
-            saved_at TEXT NOT NULL,
-            PRIMARY KEY (date, user_id),
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-    ''')
+    if USE_POSTGRESQL:
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS plaza_conversations (
+                date TEXT NOT NULL,
+                user_id INTEGER NOT NULL,
+                conversation TEXT NOT NULL,
+                emotion_scores TEXT,
+                saved_at TEXT NOT NULL,
+                PRIMARY KEY (date, user_id),
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        ''')
+    else:
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS plaza_conversations (
+                date TEXT NOT NULL,
+                user_id INTEGER NOT NULL,
+                conversation TEXT NOT NULL,
+                emotion_scores TEXT,
+                saved_at TEXT NOT NULL,
+                PRIMARY KEY (date, user_id),
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        ''')
     
-    # 마이그레이션: 기존 plaza_conversations에 user_id 추가 (간단하게 처리)
+    # 마이그레이션: 기존 plaza_conversations에 user_id 추가
     try:
-        cursor.execute("ALTER TABLE plaza_conversations ADD COLUMN user_id INTEGER")
+        if USE_POSTGRESQL:
+            cursor.execute("ALTER TABLE plaza_conversations ADD COLUMN IF NOT EXISTS user_id INTEGER")
+        else:
+            cursor.execute("ALTER TABLE plaza_conversations ADD COLUMN user_id INTEGER")
         cursor.execute("UPDATE plaza_conversations SET user_id = 0 WHERE user_id IS NULL")
-    except sqlite3.OperationalError:
-        pass  # 컬럼이 이미 존재하거나 테이블이 없는 경우
+    except (sqlite3.OperationalError if not USE_POSTGRESQL else psycopg2.errors.DuplicateColumn):
+        pass
     
     # 행복 나무 상태 테이블
     cursor.execute('''
@@ -100,7 +205,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS well_state (
             user_id INTEGER PRIMARY KEY,
             water_level INTEGER NOT NULL DEFAULT 0,
-            is_overflowing INTEGER NOT NULL DEFAULT 0,  -- 0 or 1 (boolean)
+            is_overflowing INTEGER NOT NULL DEFAULT 0,
             last_overflow_date TEXT,
             last_updated TEXT NOT NULL,
             FOREIGN KEY (user_id) REFERENCES users(id)
@@ -117,7 +222,7 @@ def init_db():
             from_character TEXT NOT NULL,
             type TEXT NOT NULL,
             date TEXT NOT NULL,
-            is_read INTEGER NOT NULL DEFAULT 0,  -- 0 or 1 (boolean)
+            is_read INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL,
             FOREIGN KEY (user_id) REFERENCES users(id)
         )
@@ -125,9 +230,12 @@ def init_db():
     
     # 마이그레이션: letters에 user_id 추가
     try:
-        cursor.execute("ALTER TABLE letters ADD COLUMN user_id INTEGER")
+        if USE_POSTGRESQL:
+            cursor.execute("ALTER TABLE letters ADD COLUMN IF NOT EXISTS user_id INTEGER")
+        else:
+            cursor.execute("ALTER TABLE letters ADD COLUMN user_id INTEGER")
         cursor.execute("UPDATE letters SET user_id = 0 WHERE user_id IS NULL")
-    except sqlite3.OperationalError:
+    except (sqlite3.OperationalError if not USE_POSTGRESQL else psycopg2.errors.DuplicateColumn):
         pass
     
     # 행복 열매 개수 테이블
@@ -142,7 +250,9 @@ def init_db():
     
     conn.commit()
     conn.close()
-    print(f"✅ 데이터베이스 초기화 완료: {DB_PATH}")
+    
+    db_info = DATABASE_URL if USE_POSTGRESQL else DB_PATH
+    print(f"✅ {db_type} 데이터베이스 초기화 완료: {db_info}")
 
 # ===============================
 # 사용자 관련 함수
@@ -154,22 +264,30 @@ def create_user(username: str, password: str, name: str = None) -> Optional[int]
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # 비밀번호 해싱 (간단한 SHA-256 사용)
+        # 비밀번호 해싱
         import hashlib
         hashed_password = hashlib.sha256(password.encode()).hexdigest()
         
         created_at = datetime.now().isoformat()
-        cursor.execute('''
-            INSERT INTO users (username, password, name, created_at)
-            VALUES (?, ?, ?, ?)
-        ''', (username, hashed_password, name, created_at))
         
-        user_id = cursor.lastrowid
+        if USE_POSTGRESQL:
+            cursor.execute('''
+                INSERT INTO users (username, password, name, created_at)
+                VALUES (%s, %s, %s, %s)
+                RETURNING id
+            ''', (username, hashed_password, name, created_at))
+            user_id = cursor.fetchone()['id']
+        else:
+            cursor.execute('''
+                INSERT INTO users (username, password, name, created_at)
+                VALUES (?, ?, ?, ?)
+            ''', (username, hashed_password, name, created_at))
+            user_id = cursor.lastrowid
+        
         conn.commit()
         conn.close()
         return user_id
-    except sqlite3.IntegrityError:
-        # 아이디 중복
+    except (sqlite3.IntegrityError if not USE_POSTGRESQL else psycopg2.IntegrityError):
         return None
     except Exception as e:
         print(f"사용자 생성 실패: {e}")
@@ -180,18 +298,21 @@ def get_user_by_username(username: str) -> Optional[Dict[str, Any]]:
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        # username 컬럼이 있으면 우선 사용, 없으면 email 컬럼 확인 (마이그레이션 호환성)
-        try:
-            cursor.execute('SELECT * FROM users WHERE username = ?', (username,))
-        except sqlite3.OperationalError:
-            # username 컬럼이 없으면 email로 시도 (구버전 호환)
-            cursor.execute('SELECT * FROM users WHERE email = ?', (username,))
+        
+        if USE_POSTGRESQL:
+            cursor.execute('SELECT * FROM users WHERE username = %s', (username,))
+        else:
+            try:
+                cursor.execute('SELECT * FROM users WHERE username = ?', (username,))
+            except sqlite3.OperationalError:
+                cursor.execute('SELECT * FROM users WHERE email = ?', (username,))
+        
         row = cursor.fetchone()
         conn.close()
         
         if row:
             user = dict(row)
-            user['id'] = user['id']  # 정수로 유지
+            user['id'] = user['id']
             return user
         return None
     except Exception as e:
@@ -207,7 +328,6 @@ def verify_user_password(username: str, password: str) -> Optional[Dict[str, Any
     
     hashed_password = hashlib.sha256(password.encode()).hexdigest()
     if user['password'] == hashed_password:
-        # 비밀번호는 반환하지 않음
         user.pop('password', None)
         return user
     return None
@@ -217,14 +337,17 @@ def get_user_by_id(user_id: int) -> Optional[Dict[str, Any]]:
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        # 모든 컬럼 조회 (username, email 모두 확인 가능하도록)
-        cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))
+        
+        if USE_POSTGRESQL:
+            cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))
+        else:
+            cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))
+        
         row = cursor.fetchone()
         conn.close()
         
         if row:
             user = dict(row)
-            # username이 없으면 email을 username으로 사용 (마이그레이션 호환성)
             if 'username' not in user or not user.get('username'):
                 if 'email' in user:
                     user['username'] = user['email']
@@ -242,7 +365,6 @@ def save_diary(diary: Dict[str, Any], user_id: int = None) -> bool:
     """일기 저장"""
     try:
         if user_id is None:
-            # 호환성을 위해 기본값 0 사용 (로그인하지 않은 경우)
             user_id = 0
         
         conn = get_db_connection()
@@ -252,7 +374,6 @@ def save_diary(diary: Dict[str, Any], user_id: int = None) -> bool:
         date = diary.get('date') or datetime.now().strftime('%Y-%m-%d')
         title = diary.get('title', '')
         content = diary.get('content', '')
-        # emotion_scores와 emotion_polarity를 함께 저장 (호환성을 위해)
         emotion_data = {
             'emotion_scores': diary.get('emotion_scores', {}),
             'emotion_polarity': diary.get('emotion_polarity', {})
@@ -261,11 +382,25 @@ def save_diary(diary: Dict[str, Any], user_id: int = None) -> bool:
         created_at = diary.get('createdAt') or datetime.now().isoformat()
         updated_at = datetime.now().isoformat()
         
-        cursor.execute('''
-            INSERT OR REPLACE INTO diaries 
-            (id, user_id, date, title, content, emotion_scores, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (diary_id, user_id, date, title, content, emotion_scores, created_at, updated_at))
+        if USE_POSTGRESQL:
+            cursor.execute('''
+                INSERT INTO diaries 
+                (id, user_id, date, title, content, emotion_scores, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (id) DO UPDATE SET
+                    user_id = EXCLUDED.user_id,
+                    date = EXCLUDED.date,
+                    title = EXCLUDED.title,
+                    content = EXCLUDED.content,
+                    emotion_scores = EXCLUDED.emotion_scores,
+                    updated_at = EXCLUDED.updated_at
+            ''', (diary_id, user_id, date, title, content, emotion_scores, created_at, updated_at))
+        else:
+            cursor.execute('''
+                INSERT OR REPLACE INTO diaries 
+                (id, user_id, date, title, content, emotion_scores, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (diary_id, user_id, date, title, content, emotion_scores, created_at, updated_at))
         
         conn.commit()
         conn.close()
@@ -280,10 +415,16 @@ def get_all_diaries(user_id: int = None) -> List[Dict[str, Any]]:
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        if user_id is not None:
-            cursor.execute('SELECT * FROM diaries WHERE user_id = ? ORDER BY created_at DESC', (user_id,))
+        if USE_POSTGRESQL:
+            if user_id is not None:
+                cursor.execute('SELECT * FROM diaries WHERE user_id = %s ORDER BY created_at DESC', (user_id,))
+            else:
+                cursor.execute('SELECT * FROM diaries ORDER BY created_at DESC')
         else:
-            cursor.execute('SELECT * FROM diaries ORDER BY created_at DESC')
+            if user_id is not None:
+                cursor.execute('SELECT * FROM diaries WHERE user_id = ? ORDER BY created_at DESC', (user_id,))
+            else:
+                cursor.execute('SELECT * FROM diaries ORDER BY created_at DESC')
         
         rows = cursor.fetchall()
         conn.close()
@@ -292,12 +433,10 @@ def get_all_diaries(user_id: int = None) -> List[Dict[str, Any]]:
         for row in rows:
             diary = dict(row)
             emotion_data = json.loads(diary['emotion_scores'] or '{}')
-            # 호환성: emotion_scores가 직접 객체인 경우와 emotion_data 안에 있는 경우 모두 처리
             if isinstance(emotion_data, dict) and 'emotion_scores' in emotion_data:
                 diary['emotion_scores'] = emotion_data.get('emotion_scores', {})
                 diary['emotion_polarity'] = emotion_data.get('emotion_polarity', {})
             else:
-                # 기존 형식 (emotion_scores만 있는 경우)
                 diary['emotion_scores'] = emotion_data
                 diary['emotion_polarity'] = {}
             diaries.append(diary)
@@ -312,10 +451,16 @@ def get_diaries_by_date(date: str, user_id: int = None) -> List[Dict[str, Any]]:
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        if user_id is not None:
-            cursor.execute('SELECT * FROM diaries WHERE date = ? AND user_id = ? ORDER BY created_at DESC', (date, user_id))
+        if USE_POSTGRESQL:
+            if user_id is not None:
+                cursor.execute('SELECT * FROM diaries WHERE date = %s AND user_id = %s ORDER BY created_at DESC', (date, user_id))
+            else:
+                cursor.execute('SELECT * FROM diaries WHERE date = %s ORDER BY created_at DESC', (date,))
         else:
-            cursor.execute('SELECT * FROM diaries WHERE date = ? ORDER BY created_at DESC', (date,))
+            if user_id is not None:
+                cursor.execute('SELECT * FROM diaries WHERE date = ? AND user_id = ? ORDER BY created_at DESC', (date, user_id))
+            else:
+                cursor.execute('SELECT * FROM diaries WHERE date = ? ORDER BY created_at DESC', (date,))
         
         rows = cursor.fetchall()
         conn.close()
@@ -324,12 +469,10 @@ def get_diaries_by_date(date: str, user_id: int = None) -> List[Dict[str, Any]]:
         for row in rows:
             diary = dict(row)
             emotion_data = json.loads(diary['emotion_scores'] or '{}')
-            # 호환성: emotion_scores가 직접 객체인 경우와 emotion_data 안에 있는 경우 모두 처리
             if isinstance(emotion_data, dict) and 'emotion_scores' in emotion_data:
                 diary['emotion_scores'] = emotion_data.get('emotion_scores', {})
                 diary['emotion_polarity'] = emotion_data.get('emotion_polarity', {})
             else:
-                # 기존 형식 (emotion_scores만 있는 경우)
                 diary['emotion_scores'] = emotion_data
                 diary['emotion_polarity'] = {}
             diaries.append(diary)
@@ -343,19 +486,22 @@ def get_diary_by_id(diary_id: str) -> Optional[Dict[str, Any]]:
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM diaries WHERE id = ?', (diary_id,))
+        
+        if USE_POSTGRESQL:
+            cursor.execute('SELECT * FROM diaries WHERE id = %s', (diary_id,))
+        else:
+            cursor.execute('SELECT * FROM diaries WHERE id = ?', (diary_id,))
+        
         row = cursor.fetchone()
         conn.close()
         
         if row:
             diary = dict(row)
             emotion_data = json.loads(diary['emotion_scores'] or '{}')
-            # 호환성: emotion_scores가 직접 객체인 경우와 emotion_data 안에 있는 경우 모두 처리
             if isinstance(emotion_data, dict) and 'emotion_scores' in emotion_data:
                 diary['emotion_scores'] = emotion_data.get('emotion_scores', {})
                 diary['emotion_polarity'] = emotion_data.get('emotion_polarity', {})
             else:
-                # 기존 형식 (emotion_scores만 있는 경우)
                 diary['emotion_scores'] = emotion_data
                 diary['emotion_polarity'] = {}
             return diary
@@ -369,7 +515,12 @@ def delete_diary(diary_id: str) -> bool:
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('DELETE FROM diaries WHERE id = ?', (diary_id,))
+        
+        if USE_POSTGRESQL:
+            cursor.execute('DELETE FROM diaries WHERE id = %s', (diary_id,))
+        else:
+            cursor.execute('DELETE FROM diaries WHERE id = ?', (diary_id,))
+        
         conn.commit()
         conn.close()
         return True
@@ -394,11 +545,22 @@ def save_plaza_conversation(date: str, conversation: List[Dict], emotion_scores:
         emotion_scores_json = json.dumps(emotion_scores, ensure_ascii=False)
         saved_at = datetime.now().isoformat()
         
-        cursor.execute('''
-            INSERT OR REPLACE INTO plaza_conversations 
-            (date, user_id, conversation, emotion_scores, saved_at)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (date, user_id, conversation_json, emotion_scores_json, saved_at))
+        if USE_POSTGRESQL:
+            cursor.execute('''
+                INSERT INTO plaza_conversations 
+                (date, user_id, conversation, emotion_scores, saved_at)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (date, user_id) DO UPDATE SET
+                    conversation = EXCLUDED.conversation,
+                    emotion_scores = EXCLUDED.emotion_scores,
+                    saved_at = EXCLUDED.saved_at
+            ''', (date, user_id, conversation_json, emotion_scores_json, saved_at))
+        else:
+            cursor.execute('''
+                INSERT OR REPLACE INTO plaza_conversations 
+                (date, user_id, conversation, emotion_scores, saved_at)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (date, user_id, conversation_json, emotion_scores_json, saved_at))
         
         conn.commit()
         conn.close()
@@ -417,13 +579,17 @@ def get_plaza_conversation_by_date(date: str, user_id: int = None) -> Optional[D
         
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM plaza_conversations WHERE date = ? AND user_id = ?', (date, user_id))
+        
+        if USE_POSTGRESQL:
+            cursor.execute('SELECT * FROM plaza_conversations WHERE date = %s AND user_id = %s', (date, user_id))
+        else:
+            cursor.execute('SELECT * FROM plaza_conversations WHERE date = ? AND user_id = ?', (date, user_id))
+        
         row = cursor.fetchone()
         conn.close()
         
         if row:
             result = dict(row)
-            # JSON 파싱 시 안전하게 처리
             try:
                 result['conversation'] = json.loads(result.get('conversation') or '[]')
             except (json.JSONDecodeError, TypeError):
@@ -447,7 +613,12 @@ def delete_plaza_conversation_by_date(date: str) -> bool:
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('DELETE FROM plaza_conversations WHERE date = ?', (date,))
+        
+        if USE_POSTGRESQL:
+            cursor.execute('DELETE FROM plaza_conversations WHERE date = %s', (date,))
+        else:
+            cursor.execute('DELETE FROM plaza_conversations WHERE date = ?', (date,))
+        
         conn.commit()
         conn.close()
         return True
@@ -460,7 +631,12 @@ def delete_diary_by_date(date: str) -> bool:
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('DELETE FROM diaries WHERE date = ?', (date,))
+        
+        if USE_POSTGRESQL:
+            cursor.execute('DELETE FROM diaries WHERE date = %s', (date,))
+        else:
+            cursor.execute('DELETE FROM diaries WHERE date = ?', (date,))
+        
         conn.commit()
         conn.close()
         return True
@@ -480,26 +656,27 @@ def get_tree_state(user_id: int = None) -> Dict[str, Any]:
         
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM tree_state WHERE user_id = ?', (user_id,))
+        
+        if USE_POSTGRESQL:
+            cursor.execute('SELECT * FROM tree_state WHERE user_id = %s', (user_id,))
+        else:
+            cursor.execute('SELECT * FROM tree_state WHERE user_id = ?', (user_id,))
+        
         row = cursor.fetchone()
         conn.close()
         
-        # 단계 임계값 정의 (씨앗, 새싹, 묘목, 중간 나무, 큰 나무, 열매)
         stage_thresholds = [0, 40, 100, 220, 380, 600]
         
         if row:
             state = dict(row)
-            # growth를 숫자로 보장
             growth = int(state.get('growth', 0))
             
-            # 성장도에 맞는 단계 계산
             calculated_stage = 0
             for i in range(len(stage_thresholds) - 1, -1, -1):
                 if growth >= stage_thresholds[i]:
                     calculated_stage = i
                     break
             
-            # 저장된 단계와 계산된 단계가 다르면 업데이트
             stored_stage = state.get('stage', 0)
             if isinstance(stored_stage, str):
                 stage_map = {
@@ -510,7 +687,6 @@ def get_tree_state(user_id: int = None) -> Dict[str, Any]:
             stored_stage = int(stored_stage)
             
             if stored_stage != calculated_stage:
-                # 단계 불일치 수정 및 저장
                 state['stage'] = calculated_stage
                 state['growth'] = growth
                 save_tree_state(state, user_id)
@@ -520,11 +696,10 @@ def get_tree_state(user_id: int = None) -> Dict[str, Any]:
             state['growth'] = growth
             return state
         else:
-            # 초기 상태 생성
             now = datetime.now().isoformat()
             default_state = {
                 'growth': 0,
-                'stage': 0,  # 숫자로 저장
+                'stage': 0,
                 'last_updated': now
             }
             save_tree_state(default_state, user_id)
@@ -546,7 +721,6 @@ def save_tree_state(state: Dict[str, Any], user_id: int = None) -> bool:
         
         state['last_updated'] = datetime.now().isoformat()
         
-        # stage를 숫자로 변환
         stage = state.get('stage', 0)
         if isinstance(stage, str):
             stage_map = {
@@ -555,15 +729,23 @@ def save_tree_state(state: Dict[str, Any], user_id: int = None) -> bool:
             }
             stage = stage_map.get(stage.lower(), 0)
         stage = int(stage)
-        
-        # growth를 숫자로 보장
         growth = int(state.get('growth', 0))
         
-        cursor.execute('''
-            INSERT OR REPLACE INTO tree_state 
-            (user_id, growth, stage, last_updated)
-            VALUES (?, ?, ?, ?)
-        ''', (user_id, growth, stage, state['last_updated']))
+        if USE_POSTGRESQL:
+            cursor.execute('''
+                INSERT INTO tree_state (user_id, growth, stage, last_updated)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (user_id) DO UPDATE SET
+                    growth = EXCLUDED.growth,
+                    stage = EXCLUDED.stage,
+                    last_updated = EXCLUDED.last_updated
+            ''', (user_id, growth, stage, state['last_updated']))
+        else:
+            cursor.execute('''
+                INSERT OR REPLACE INTO tree_state 
+                (user_id, growth, stage, last_updated)
+                VALUES (?, ?, ?, ?)
+            ''', (user_id, growth, stage, state['last_updated']))
         
         conn.commit()
         conn.close()
@@ -580,14 +762,18 @@ def get_happy_fruit_count(user_id: int = None) -> int:
         
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT count FROM happy_fruits WHERE user_id = ?', (user_id,))
+        
+        if USE_POSTGRESQL:
+            cursor.execute('SELECT count FROM happy_fruits WHERE user_id = %s', (user_id,))
+        else:
+            cursor.execute('SELECT count FROM happy_fruits WHERE user_id = ?', (user_id,))
+        
         row = cursor.fetchone()
         conn.close()
         
         if row:
             return dict(row)['count']
         else:
-            # 초기화
             save_happy_fruit_count(0, user_id)
             return 0
     except Exception as e:
@@ -604,11 +790,20 @@ def save_happy_fruit_count(count: int, user_id: int = None) -> bool:
         cursor = conn.cursor()
         now = datetime.now().isoformat()
         
-        cursor.execute('''
-            INSERT OR REPLACE INTO happy_fruits 
-            (user_id, count, last_updated)
-            VALUES (?, ?, ?)
-        ''', (user_id, count, now))
+        if USE_POSTGRESQL:
+            cursor.execute('''
+                INSERT INTO happy_fruits (user_id, count, last_updated)
+                VALUES (%s, %s, %s)
+                ON CONFLICT (user_id) DO UPDATE SET
+                    count = EXCLUDED.count,
+                    last_updated = EXCLUDED.last_updated
+            ''', (user_id, count, now))
+        else:
+            cursor.execute('''
+                INSERT OR REPLACE INTO happy_fruits 
+                (user_id, count, last_updated)
+                VALUES (?, ?, ?)
+            ''', (user_id, count, now))
         
         conn.commit()
         conn.close()
@@ -629,7 +824,12 @@ def get_well_state(user_id: int = None) -> Dict[str, Any]:
         
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM well_state WHERE user_id = ?', (user_id,))
+        
+        if USE_POSTGRESQL:
+            cursor.execute('SELECT * FROM well_state WHERE user_id = %s', (user_id,))
+        else:
+            cursor.execute('SELECT * FROM well_state WHERE user_id = ?', (user_id,))
+        
         row = cursor.fetchone()
         conn.close()
         
@@ -638,7 +838,6 @@ def get_well_state(user_id: int = None) -> Dict[str, Any]:
             state['isOverflowing'] = bool(state['is_overflowing'])
             return state
         else:
-            # 초기 상태 생성
             now = datetime.now().isoformat()
             default_state = {
                 'waterLevel': 0,
@@ -671,17 +870,35 @@ def save_well_state(state: Dict[str, Any], user_id: int = None) -> bool:
         state['last_updated'] = datetime.now().isoformat()
         is_overflowing = 1 if state.get('isOverflowing', False) else 0
         
-        cursor.execute('''
-            INSERT OR REPLACE INTO well_state 
-            (user_id, water_level, is_overflowing, last_overflow_date, last_updated)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (
-            user_id,
-            state.get('waterLevel', 0),
-            is_overflowing,
-            state.get('lastOverflowDate'),
-            state['last_updated']
-        ))
+        if USE_POSTGRESQL:
+            cursor.execute('''
+                INSERT INTO well_state 
+                (user_id, water_level, is_overflowing, last_overflow_date, last_updated)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (user_id) DO UPDATE SET
+                    water_level = EXCLUDED.water_level,
+                    is_overflowing = EXCLUDED.is_overflowing,
+                    last_overflow_date = EXCLUDED.last_overflow_date,
+                    last_updated = EXCLUDED.last_updated
+            ''', (
+                user_id,
+                state.get('waterLevel', 0),
+                is_overflowing,
+                state.get('lastOverflowDate'),
+                state['last_updated']
+            ))
+        else:
+            cursor.execute('''
+                INSERT OR REPLACE INTO well_state 
+                (user_id, water_level, is_overflowing, last_overflow_date, last_updated)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (
+                user_id,
+                state.get('waterLevel', 0),
+                is_overflowing,
+                state.get('lastOverflowDate'),
+                state['last_updated']
+            ))
         
         conn.commit()
         conn.close()
@@ -712,11 +929,18 @@ def save_letter(letter: Dict[str, Any], user_id: int = None) -> bool:
         is_read = 1 if letter.get('isRead', False) else 0
         created_at = letter.get('createdAt') or datetime.now().isoformat()
         
-        cursor.execute('''
-            INSERT INTO letters 
-            (id, user_id, title, content, from_character, type, date, is_read, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (letter_id, user_id, title, content, from_character, letter_type, date, is_read, created_at))
+        if USE_POSTGRESQL:
+            cursor.execute('''
+                INSERT INTO letters 
+                (id, user_id, title, content, from_character, type, date, is_read, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ''', (letter_id, user_id, title, content, from_character, letter_type, date, is_read, created_at))
+        else:
+            cursor.execute('''
+                INSERT INTO letters 
+                (id, user_id, title, content, from_character, type, date, is_read, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (letter_id, user_id, title, content, from_character, letter_type, date, is_read, created_at))
         
         conn.commit()
         conn.close()
@@ -731,10 +955,16 @@ def get_all_letters(user_id: int = None) -> List[Dict[str, Any]]:
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        if user_id is not None:
-            cursor.execute('SELECT * FROM letters WHERE user_id = ? ORDER BY created_at DESC', (user_id,))
+        if USE_POSTGRESQL:
+            if user_id is not None:
+                cursor.execute('SELECT * FROM letters WHERE user_id = %s ORDER BY created_at DESC', (user_id,))
+            else:
+                cursor.execute('SELECT * FROM letters ORDER BY created_at DESC')
         else:
-            cursor.execute('SELECT * FROM letters ORDER BY created_at DESC')
+            if user_id is not None:
+                cursor.execute('SELECT * FROM letters WHERE user_id = ? ORDER BY created_at DESC', (user_id,))
+            else:
+                cursor.execute('SELECT * FROM letters ORDER BY created_at DESC')
         
         rows = cursor.fetchall()
         conn.close()
@@ -756,10 +986,18 @@ def mark_letter_as_read(letter_id: str, user_id: int = None) -> bool:
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        if user_id is not None:
-            cursor.execute('UPDATE letters SET is_read = 1 WHERE id = ? AND user_id = ?', (letter_id, user_id))
+        
+        if USE_POSTGRESQL:
+            if user_id is not None:
+                cursor.execute('UPDATE letters SET is_read = 1 WHERE id = %s AND user_id = %s', (letter_id, user_id))
+            else:
+                cursor.execute('UPDATE letters SET is_read = 1 WHERE id = %s', (letter_id,))
         else:
-            cursor.execute('UPDATE letters SET is_read = 1 WHERE id = ?', (letter_id,))
+            if user_id is not None:
+                cursor.execute('UPDATE letters SET is_read = 1 WHERE id = ? AND user_id = ?', (letter_id, user_id))
+            else:
+                cursor.execute('UPDATE letters SET is_read = 1 WHERE id = ?', (letter_id,))
+        
         conn.commit()
         conn.close()
         return True
@@ -772,10 +1010,18 @@ def delete_letter(letter_id: str, user_id: int = None) -> bool:
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        if user_id is not None:
-            cursor.execute('DELETE FROM letters WHERE id = ? AND user_id = ?', (letter_id, user_id))
+        
+        if USE_POSTGRESQL:
+            if user_id is not None:
+                cursor.execute('DELETE FROM letters WHERE id = %s AND user_id = %s', (letter_id, user_id))
+            else:
+                cursor.execute('DELETE FROM letters WHERE id = %s', (letter_id,))
         else:
-            cursor.execute('DELETE FROM letters WHERE id = ?', (letter_id,))
+            if user_id is not None:
+                cursor.execute('DELETE FROM letters WHERE id = ? AND user_id = ?', (letter_id, user_id))
+            else:
+                cursor.execute('DELETE FROM letters WHERE id = ?', (letter_id,))
+        
         conn.commit()
         conn.close()
         return True
@@ -788,14 +1034,21 @@ def get_unread_letter_count(user_id: int = None) -> int:
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        if user_id is not None:
-            cursor.execute('SELECT COUNT(*) as count FROM letters WHERE is_read = 0 AND user_id = ?', (user_id,))
+        
+        if USE_POSTGRESQL:
+            if user_id is not None:
+                cursor.execute('SELECT COUNT(*) as count FROM letters WHERE is_read = 0 AND user_id = %s', (user_id,))
+            else:
+                cursor.execute('SELECT COUNT(*) as count FROM letters WHERE is_read = 0')
         else:
-            cursor.execute('SELECT COUNT(*) as count FROM letters WHERE is_read = 0')
+            if user_id is not None:
+                cursor.execute('SELECT COUNT(*) as count FROM letters WHERE is_read = 0 AND user_id = ?', (user_id,))
+            else:
+                cursor.execute('SELECT COUNT(*) as count FROM letters WHERE is_read = 0')
+        
         row = cursor.fetchone()
         conn.close()
         return dict(row)['count'] if row else 0
     except Exception as e:
         print(f"읽지 않은 편지 개수 불러오기 실패: {e}")
         return 0
-
