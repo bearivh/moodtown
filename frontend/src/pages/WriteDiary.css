@@ -53,6 +53,7 @@
   border: none;
   flex-shrink: 0;
   justify-self: start;
+  font-family: 'Dongle', sans-serif;
 }
 
 .back-button:hover {

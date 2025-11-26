@@ -89,7 +89,7 @@ function Login({ onLoginSuccess }) {
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="login-form">
+          <form onSubmit={handleSubmit} className="login-form" autoComplete="on">
             {!isLogin && (
               <div className="login-form-group">
                 <label className="login-label">이름</label>
@@ -99,6 +99,7 @@ function Login({ onLoginSuccess }) {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="이름을 입력하세요"
+                  autoComplete="name"
                   required
                 />
               </div>
@@ -112,6 +113,7 @@ function Login({ onLoginSuccess }) {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="아이디를 입력하세요"
+                autoComplete="username"
                 required
               />
             </div>
@@ -124,6 +126,7 @@ function Login({ onLoginSuccess }) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="비밀번호를 입력하세요"
+                autoComplete={isLogin ? "current-password" : "new-password"}
                 required
               />
             </div>

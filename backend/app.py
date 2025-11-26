@@ -1,6 +1,6 @@
 import os, sys
 from flask import Flask
-from flask_cors import CORS
+from flask_cors import CORS  # type: ignore
 from db import init_db
 
 # Ensure backend path for api package imports

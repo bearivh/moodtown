@@ -52,6 +52,7 @@
   transition: all 0.3s ease;
   border: none;
   flex-shrink: 0;
+  font-family: 'Dongle', sans-serif;
 }
 
 .plaza-back-button:hover {

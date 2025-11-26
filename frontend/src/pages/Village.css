@@ -81,6 +81,7 @@
   flex-shrink: 0;
   position: relative;
   z-index: 1; /* 날짜 표시 위에 오도록 */
+  font-family: 'Dongle', sans-serif;
 }
 
 .village-back-button:hover {
