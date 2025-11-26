@@ -21,6 +21,15 @@ api_bp = Blueprint("api", __name__)
 def home():
     return {"message": "EmotionTown Chatbot API running 🚀"}
 
+@api_bp.route("/health")
+def health():
+    """Railway 헬스체크 엔드포인트"""
+    return jsonify({
+        "status": "healthy",
+        "message": "API is running",
+        "environment": os.environ.get("ENVIRONMENT", "development")
+    }), 200
+
 @api_bp.route("/analyze", methods=["POST"])
 def analyze():
     data = request.get_json() or {}

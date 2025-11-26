@@ -1,0 +1,23 @@
+# Railway 배포 시 제외할 파일들
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.db
+.env
+*.log
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+*.so
+.DS_Store
+*.egg-info/
+dist/
+build/
