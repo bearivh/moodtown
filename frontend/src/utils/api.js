@@ -2,6 +2,16 @@
 // 환경 변수에서 API URL을 가져오고, 없으면 빈 문자열(프록시 사용)
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
+// 디버깅: 환경 변수 확인
+if (typeof window !== 'undefined') {
+  console.log('🔍 API_BASE_URL:', API_BASE_URL || '(설정되지 않음)')
+  console.log('🔍 VITE_API_BASE_URL 환경 변수:', import.meta.env.VITE_API_BASE_URL || '(설정되지 않음)')
+  
+  if (!API_BASE_URL) {
+    console.error('⚠️  VITE_API_BASE_URL이 설정되지 않았습니다! Vercel 환경 변수를 확인하세요.')
+  }
+}
+
 // fetch 옵션에 credentials 추가 (세션 쿠키 전송)
 const fetchOptions = {
   credentials: 'include'

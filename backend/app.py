@@ -27,7 +27,15 @@ app.config['SESSION_COOKIE_PATH'] = '/'         # 쿠키 경로
 
 # CORS 설정 (세션 쿠키를 위한 설정)
 # 프로덕션 환경에서는 FRONTEND_URL 환경 변수에서 허용된 origin 목록을 가져옴
-allowed_origins = os.environ.get('FRONTEND_URL', '').split(',') if os.environ.get('FRONTEND_URL') else []
+FRONTEND_URL_ENV = os.environ.get('FRONTEND_URL', '')
+print(f"🔍 FRONTEND_URL 환경 변수: {FRONTEND_URL_ENV}")
+print(f"🔍 프로덕션 환경: {is_production}")
+
+allowed_origins = []
+if FRONTEND_URL_ENV:
+    # 쉼표로 구분된 여러 URL 지원
+    allowed_origins = [origin.strip() for origin in FRONTEND_URL_ENV.split(',') if origin.strip()]
+
 # 개발 환경 origin도 추가
 allowed_origins.extend([
     'http://localhost:5173', 
@@ -36,13 +44,18 @@ allowed_origins.extend([
     'http://127.0.0.1:3000'
 ])
 # 중복 제거
-allowed_origins = list(set([origin.strip() for origin in allowed_origins if origin.strip()]))
+allowed_origins = list(set(allowed_origins))
 
+print(f"🔍 허용된 CORS origins: {allowed_origins}")
+
+# CORS 설정
 CORS(app, 
      supports_credentials=True, 
-     origins=allowed_origins,
-     allow_headers=['Content-Type', 'Authorization'],
-     expose_headers=['Set-Cookie'])
+     origins=allowed_origins if allowed_origins else '*',  # 디버깅: origins가 비어있으면 모든 origin 허용
+     allow_headers=['Content-Type', 'Authorization', 'X-Requested-With'],
+     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+     expose_headers=['Set-Cookie'],
+     max_age=3600)
 
 # DB 초기화 및 라우트 등록
 init_db()
