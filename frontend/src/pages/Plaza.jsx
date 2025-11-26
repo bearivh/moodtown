@@ -259,13 +259,6 @@ function Plaza({ onNavigate, selectedDate }) {
         })
         // 대화 생성 완료 후 챗봇 활성화
         setShowChat(true)
-        
-        // 캐시에 저장 (다음에 재진입 시 즉시 표시)
-        savedDataRef.current[selectedDate] = {
-          conversation: dialogue,
-          emotionScores: scores,
-          diaries: dateDiaries
-        }
       }
       
     } catch (err) {
