@@ -194,7 +194,7 @@ function Village({ onNavigate, selectedDate, user, onLogout }) {
       id: 'office',
       name: '마을사무소',
       description: '감정 캘린더 및 통계 보기',
-      icon: '🏛️',
+      icon: '🏠',
       link: 'office',
       alwaysAvailable: false,
       disabled: false
