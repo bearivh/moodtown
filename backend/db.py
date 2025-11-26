@@ -19,7 +19,8 @@ import hashlib
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 if not DATABASE_URL:
-    raise RuntimeError("❌ DATABASE_URL 환경변수가 없습니다. Railway/Render에서 반드시 설정하세요.")
+    print("❌ DATABASE_URL 환경변수가 없습니다. Railway/Render에서 반드시 설정하세요.")
+    # 앱 시작을 막지 않고, init_db()에서 처리하도록 함
 
 # sslmode 자동 추가
 if "sslmode" not in DATABASE_URL:
@@ -56,7 +57,15 @@ def parse_datetime(value):
 # =========================================
 
 def init_db():
-    conn = get_db()
+    if not DATABASE_URL:
+        raise RuntimeError("❌ DATABASE_URL 환경변수가 없습니다. Railway/Render에서 반드시 설정하세요.")
+    
+    try:
+        conn = get_db()
+    except Exception as e:
+        print(f"❌ PostgreSQL 연결 실패: {e}")
+        raise RuntimeError(f"PostgreSQL 연결에 실패했습니다: {e}")
+    
     cur = conn.cursor()
     
     print("🔌 PostgreSQL 데이터베이스 연결 중...")

@@ -43,6 +43,16 @@ allowed_origins.extend([
     'http://localhost:3000', 
     'http://127.0.0.1:3000'
 ])
+
+# Vercel 도메인 자동 추가 (vercel.app으로 끝나는 모든 도메인 허용)
+# 프로덕션 환경에서 Vercel 도메인 자동 허용
+if is_production:
+    allowed_origins.extend([
+        'https://moodtown-three.vercel.app',
+        'https://moodtownfront.vercel.app',
+        'https://moodtownfront-moonsihyeons-projects.vercel.app'
+    ])
+
 # 중복 제거
 allowed_origins = list(set(allowed_origins))
 
@@ -58,7 +68,17 @@ CORS(app,
      max_age=3600)
 
 # DB 초기화 및 라우트 등록
-init_db()
+try:
+    print("🔌 데이터베이스 초기화 시작...")
+    init_db()
+    print("✅ 데이터베이스 초기화 완료")
+except Exception as e:
+    print(f"❌ 데이터베이스 초기화 실패: {e}")
+    import traceback
+    traceback.print_exc()
+    # 앱은 계속 실행되도록 하되, DB 연결이 안 될 수 있음을 로그에 기록
+    print("⚠️  데이터베이스 연결 없이 앱을 시작합니다. 일부 기능이 작동하지 않을 수 있습니다.")
+
 register_all(app)
 
 if __name__ == "__main__":
