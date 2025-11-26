@@ -1,6 +1,7 @@
 // 데이터베이스 API 호출 유틸리티 함수들
 
 import { classifyEmotionsWithContext } from './emotionUtils'
+import { getCachedDiariesForDate, setDiariesForDate } from './diaryCache'
 
 // 환경 변수에서 API URL을 가져오고, 없으면 빈 문자열(프록시 사용)
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
@@ -73,6 +74,12 @@ export async function saveDiary(diary) {
  * @returns {Promise<Array>} 해당 날짜의 일기 배열
  */
 export async function getDiariesByDate(date) {
+  // 먼저 캐시 확인
+  const cached = getCachedDiariesForDate(date)
+  if (cached !== null) {
+    return cached
+  }
+  
   try {
     const response = await fetch(`${API_BASE_URL}/api/diaries?date=${date}`, {
       credentials: 'include'
@@ -81,7 +88,12 @@ export async function getDiariesByDate(date) {
       throw new Error(`API 오류: ${response.status}`)
     }
     const diaries = await response.json()
-    return diaries || []
+    const result = diaries || []
+    // 캐시에 저장
+    if (date) {
+      setDiariesForDate(date, result)
+    }
+    return result
   } catch (error) {
     console.error('일기 불러오기 실패:', error)
     return []

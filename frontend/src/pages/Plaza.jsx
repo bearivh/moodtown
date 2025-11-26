@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { getDiariesByDate, getPlazaConversationByDate, savePlazaConversationByDate } from '../utils/storage'
 import { analyzeDiary, parseDialogue, chatWithCharacters } from '../utils/api'
 import { normalizeEmotionScores } from '../utils/emotionUtils'
+import { getCachedDiariesForDate, setDiariesForDate } from '../utils/diaryCache'
 import FloatingResidents from '../components/FloatingResidents'
 import redImage from '../assets/characters/red.png'
 import orangeImage from '../assets/characters/orange.png'
@@ -11,6 +12,9 @@ import blueImage from '../assets/characters/blue.png'
 import navyImage from '../assets/characters/navy.png'
 import purpleImage from '../assets/characters/purple.png'
 import './Plaza.css'
+
+// 모듈 레벨 캐시 - 컴포넌트 언마운트와 무관하게 유지됨
+const plazaDataCache = new Map()
 
 // 캐릭터 정보 (백엔드 characters.json과 동기화)
 const CHARACTER_INFO = {
@@ -24,11 +28,8 @@ const CHARACTER_INFO = {
 }
 
 function Plaza({ onNavigate, selectedDate }) {
-  const [conversation, setConversation] = useState([])
-  const [emotionScores, setEmotionScores] = useState({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [dateDiaries, setDateDiaries] = useState([])
   
   // 챗봇 관련 상태
   const [chatMessages, setChatMessages] = useState([])
@@ -40,34 +41,72 @@ function Plaza({ onNavigate, selectedDate }) {
   
   // 설명서 관련 상태
   const [showInfo, setShowInfo] = useState(false)
+
+  // 초기값을 캐시에서 가져오기 (lazy initialization)
+  const [dateDiaries, setDateDiaries] = useState(() => {
+    if (selectedDate) {
+      // 먼저 모듈 레벨 캐시 확인
+      const cached = plazaDataCache.get(selectedDate)
+      if (cached?.diaries) {
+        return cached.diaries
+      }
+      // 일기 캐시 확인
+      const cachedDiaries = getCachedDiariesForDate(selectedDate)
+      if (cachedDiaries) {
+        return cachedDiaries
+      }
+    }
+    return []
+  })
   
-  // 이전 날짜와 대화를 저장 (페이지 재진입 시 즉시 표시)
-  const savedDataRef = useRef({})
+  const [conversation, setConversation] = useState(() => {
+    if (selectedDate) {
+      const cached = plazaDataCache.get(selectedDate)
+      return cached?.conversation || []
+    }
+    return []
+  })
+  
+  const [emotionScores, setEmotionScores] = useState(() => {
+    if (selectedDate) {
+      const cached = plazaDataCache.get(selectedDate)
+      return cached?.emotionScores || {}
+    }
+    return {}
+  })
 
   useEffect(() => {
     if (!selectedDate) return
 
     let isMounted = true // 컴포넌트가 마운트되어 있는지 추적
 
-    const loadData = async () => {
-      // 먼저 저장된 대화를 확인 (캐시된 데이터 확인)
-      if (savedDataRef.current[selectedDate]) {
-        const cached = savedDataRef.current[selectedDate]
-        setConversation(cached.conversation)
-        setEmotionScores(cached.emotionScores || {})
-        setDateDiaries(cached.diaries || [])
-        setLoading(false)
-        if (cached.conversation && cached.conversation.length > 0) {
-          setShowChat(true)
-        }
-      }
-      
-      // 로딩 상태를 먼저 false로 설정 (이미 저장된 대화가 있을 경우를 대비)
+    // 캐시에서 즉시 복원
+    const cached = plazaDataCache.get(selectedDate)
+    if (cached) {
+      setConversation(cached.conversation || [])
+      setEmotionScores(cached.emotionScores || {})
+      setDateDiaries(cached.diaries || [])
       setLoading(false)
-      
-      // 선택한 날짜의 일기 가져오기
-      const diaries = await getDiariesByDate(selectedDate)
-      if (!isMounted) return
+      if (cached.conversation && cached.conversation.length > 0) {
+        setShowChat(true)
+      }
+    } else {
+      // 일기 캐시 확인
+      const cachedDiaries = getCachedDiariesForDate(selectedDate)
+      if (cachedDiaries) {
+        setDateDiaries(cachedDiaries)
+      }
+    }
+
+    const loadData = async () => {
+      // 선택한 날짜의 일기 가져오기 (캐시 확인 후)
+      let diaries = getCachedDiariesForDate(selectedDate)
+      if (!diaries) {
+        diaries = await getDiariesByDate(selectedDate)
+        if (!isMounted) return
+        // 캐시에 저장
+        setDiariesForDate(selectedDate, diaries)
+      }
       
       setDateDiaries(diaries)
 
@@ -85,12 +124,12 @@ function Plaza({ onNavigate, selectedDate }) {
           // 대화가 있으면 챗봇 활성화
           setShowChat(true)
           
-          // 캐시에 저장
-          savedDataRef.current[selectedDate] = {
+          // 모듈 레벨 캐시에 저장
+          plazaDataCache.set(selectedDate, {
             conversation: savedConversation.conversation,
             emotionScores: savedConversation.emotionScores || {},
             diaries: diaries
-          }
+          })
           return // 저장된 대화가 있으면 여기서 종료
         } else {
           // 저장된 대화가 없으면 새로 생성 (이 경우에만 로딩 표시)
@@ -103,12 +142,12 @@ function Plaza({ onNavigate, selectedDate }) {
         setEmotionScores({})
         setLoading(false)
         
-        // 캐시에도 저장
-        savedDataRef.current[selectedDate] = {
+        // 모듈 레벨 캐시에도 저장
+        plazaDataCache.set(selectedDate, {
           conversation: [],
           emotionScores: {},
           diaries: diaries
-        }
+        })
       }
     }
     
@@ -130,6 +169,12 @@ function Plaza({ onNavigate, selectedDate }) {
       setConversation(existingConversation.conversation)
       setEmotionScores(existingConversation.emotionScores || {})
       setLoading(false)
+      // 캐시 업데이트
+      plazaDataCache.set(selectedDate, {
+        conversation: existingConversation.conversation,
+        emotionScores: existingConversation.emotionScores || {},
+        diaries: dateDiaries
+      })
       return
     }
 
@@ -195,6 +240,12 @@ function Plaza({ onNavigate, selectedDate }) {
       // 대화 저장
       if (selectedDate && dialogue.length > 0) {
         await savePlazaConversationByDate(selectedDate, dialogue, scores)
+        // 모듈 레벨 캐시 업데이트
+        plazaDataCache.set(selectedDate, {
+          conversation: dialogue,
+          emotionScores: scores,
+          diaries: dateDiaries
+        })
         // 대화 생성 완료 후 챗봇 활성화
         setShowChat(true)
         
