@@ -4,10 +4,20 @@ from core.common import client, CHARACTERS, EMOTION_KEYS
 
 def generate_dialogue_with_gpt(diary_text: str, top_emotions: List[str]) -> str:
     try:
-        # 가장 높은 감정 추출
+        # 모든 참여할 감정들의 주민 이름과 감정 정보 수집
+        participating_characters = []
+        for emotion in top_emotions:
+            if emotion in CHARACTERS:
+                participating_characters.append({
+                    "name": CHARACTERS[emotion]["name"],
+                    "emotion": emotion
+                })
+        
+        # 참여할 주민 목록 문자열 생성
+        characters_list = ", ".join([f"{char['name']}({char['emotion']})" for char in participating_characters])
+        
+        # 가장 높은 감정 추출 (예시에 사용)
         highest_emotion = top_emotions[0] if top_emotions else None
-
-        # 가장 높은 감정의 주민 이름
         highest_emotion_name = None
         if highest_emotion and highest_emotion in CHARACTERS:
             highest_emotion_name = CHARACTERS[highest_emotion]["name"]
@@ -22,29 +32,32 @@ def generate_dialogue_with_gpt(diary_text: str, top_emotions: List[str]) -> str:
             "5) 총 5~8개의 대사.\n"
             "6) JSON 형식만 출력.\n"
             "7) 캐릭터 이름은 반드시 주민 이름(노랑이, 빨강이, 주황이, 보라, 파랑이, 초록이, 남색이)만 사용.\n"
-            "8) 감정 주민들은 개별 인격이 아니라 ‘사용자의 감정 자체’이며, 현재 느껴지는 감정만 표현합니다.\n"
-            "9) 각 주민은 “나도 예전에 그런 적 있어”, “전에 겪어봤지”, “옛날에” 등의 표현을 해서는 안 됩니다.\n\n"
+            "8) 감정 주민들은 개별 인격이 아니라 '사용자의 감정 자체'이며, 현재 느껴지는 감정만 표현합니다.\n"
+            "9) 각 주민은 \"나도 예전에 그런 적 있어\", \"전에 겪어봤지\", \"옛날에\" 등의 표현을 해서는 안 됩니다.\n\n"
+            f"🎭 참여할 주민 목록 (반드시 모두 참여): {characters_list}\n\n"
             "🧩 역할 규칙\n\n"
-            "- 주요 감정(top emotions):\n"
-            "  - 자기 감정을 1인칭(‘나’)으로 구체적으로 표현합니다.\n"
-            "- 보조 감정:\n"
-            "  - 감정을 직접 말하지 않고, 짧은 반응만 합니다.\n"
-            "  - (공감/걱정/놀람/말리기 등)\n"
-            "  - *감정 단어 사용 금지:* “속상해”, “걱정돼”, “기뻐” 등 금지.\n\n"
+            "- **중요:** 위 목록에 있는 모든 주민이 대화에 참여해야 합니다.\n"
+            "- 각 주민은 자신의 감정을 1인칭('나')으로 구체적으로 표현합니다.\n"
+            "- 모든 주민이 최소 한 번씩은 대화에 참여해야 합니다.\n"
+            "- 주민들은 서로에게 반응하며 (공감/걱정/놀람/말리기 등) 자연스럽게 대화를 이어갑니다.\n"
+            "- *감정 단어 사용 금지:* \"속상해\", \"걱정돼\", \"기뻐\" 등 직접적인 감정 단어 사용을 피하세요.\n\n"
             "📝 대화 예시\n"
             "일기: 친구가 무례한 행동을 해서 화가 났다.\n"
+            "참여 주민: 빨강이(분노), 노랑이(기쁨), 파랑이(슬픔)\n"
             "대화:\n"
             "- 빨강이(분노): \"으휴! 그 상황에서 너무 짜증났어! 왜 이렇게 무례한 거야?\"\n"
             "- 노랑이(기쁨): \"그래도 너무 화내지는 말자. 기분만 더 안 좋아지잖아.\"\n"
-            "- 파랑이(슬픔): \"그래도 나를 너무 막 대하는 것 같아서 속상해.\"\n\n"
+            "- 파랑이(슬픔): \"그래도 나를 너무 막 대하는 것 같아서 속상해.\"\n"
+            "- 빨강이(분노): \"맞아, 이건 참을 수가 없어!\"\n\n"
             "📘 일기:\n\n"
             f"{diary_text}\n\n"
+            "⚠️ **중요**: 위 목록에 명시된 모든 주민이 대화에 참여해야 합니다!\n\n"
             "<BEGIN_JSON>\n"
             "{\n"
             "  \"dialogue\": [\n"
             f"    {{\"캐릭터\": \"{highest_emotion_name}\", \"감정\": \"{highest_emotion}\", \"대사\": \"내용\"}},\n"
-            "    {\"캐릭터\": \"주민 이름\", \"감정\": null, \"대사\": \"반응\"},\n"
-            "    {\"캐릭터\": \"주민 이름\", \"감정\": null, \"대사\": \"반응\"}\n"
+            "    {\"캐릭터\": \"주민 이름\", \"감정\": \"감정명\", \"대사\": \"내용\"},\n"
+            "    ... (모든 참여 주민이 대화에 포함되어야 함)\n"
             "  ]\n"
             "}\n"
             "<END_JSON>\n"

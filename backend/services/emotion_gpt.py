@@ -228,8 +228,9 @@ JSON만 출력하세요.
     )
 
     # ---------------- Top emotions ----------------
+    # 0%가 아닌 모든 감정을 포함 (와글와글 광장에서 모든 감정이 대화에 참여하도록)
     sorted_emotions = sorted(norm.items(), key=lambda x: x[1], reverse=True)
-    top_emotions = [emo for emo, score in sorted_emotions[:4] if score > 0]
+    top_emotions = [emo for emo, score in sorted_emotions if score > 0]
 
     if not top_emotions:
         top_emotions = default_top
