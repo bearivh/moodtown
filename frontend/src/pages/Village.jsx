@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import EmotionSky from '../components/EmotionSky'
 import { getDiariesByDate, getDominantEmotionByDate } from '../utils/storage'
 import { getUnreadLetterCount } from '../utils/mailboxUtils'
@@ -10,18 +10,28 @@ function Village({ onNavigate, selectedDate, user, onLogout }) {
   const [dominantEmotion, setDominantEmotion] = useState('joy')
   const [dateDiaries, setDateDiaries] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
+  const dateStateCacheRef = useRef(new Map()) // 날짜별 상태 캐시
   
   useEffect(() => {
     if (!selectedDate) return
 
+    // 같은 날짜로 다시 돌아올 때는 캐시된 상태를 즉시 복원
+    const cachedState = dateStateCacheRef.current.get(selectedDate)
+    if (cachedState) {
+      setHasDiary(cachedState.hasDiary)
+      setDominantEmotion(cachedState.dominantEmotion)
+    }
+
     const loadData = async () => {
       // 선택한 날짜의 일기 확인
       const diaries = await getDiariesByDate(selectedDate)
+      const newHasDiary = diaries.length > 0
+      
       setDateDiaries(diaries)
-      setHasDiary(diaries.length > 0)
       
       // 가장 강한 감정 찾기
-      if (diaries.length > 0) {
+      let newDominantEmotion = 'joy'
+      if (newHasDiary) {
         const dominant = await getDominantEmotionByDate(selectedDate)
         if (dominant) {
           // 한글 감정명을 영어로 변환 (간단한 매핑)
@@ -34,18 +44,26 @@ function Village({ onNavigate, selectedDate, user, onLogout }) {
             '부끄러움': 'shame',
             '슬픔': 'sadness'
           }
-          setDominantEmotion(emotionMap[dominant.emotion] || 'joy')
-        } else {
-          setDominantEmotion('joy')
+          newDominantEmotion = emotionMap[dominant.emotion] || 'joy'
         }
       } else {
         // 일기가 없으면 구름이 낀 하늘 (하얀색)
-        setDominantEmotion(null)
+        newDominantEmotion = null
       }
       
       // 읽지 않은 편지 개수 확인
       const count = await getUnreadLetterCount()
+      
+      // 모든 상태를 한 번에 업데이트하여 깜빡임 방지
+      setHasDiary(newHasDiary)
+      setDominantEmotion(newDominantEmotion)
       setUnreadCount(count)
+      
+      // 날짜별 상태 캐시 저장
+      dateStateCacheRef.current.set(selectedDate, {
+        hasDiary: newHasDiary,
+        dominantEmotion: newDominantEmotion
+      })
     }
     
     loadData()
