@@ -18,23 +18,59 @@ import hashlib
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
+# 개별 환경 변수로부터 DATABASE_URL 구성 (DATABASE_URL이 없고 개별 변수가 있는 경우)
 if not DATABASE_URL:
-    print("❌ DATABASE_URL 환경변수가 없습니다. Railway/Render에서 반드시 설정하세요.")
-    # 앱 시작을 막지 않고, init_db()에서 처리하도록 함
+    PGHOST = os.environ.get("PGHOST")
+    PGPORT = os.environ.get("PGPORT", "5432")
+    PGDATABASE = os.environ.get("PGDATABASE")
+    PGUSER = os.environ.get("PGUSER")
+    PGPASSWORD = os.environ.get("PGPASSWORD")
+    
+    if all([PGHOST, PGDATABASE, PGUSER, PGPASSWORD]):
+        # 공개 호스트명 사용 (railway.internal이 아닌)
+        DATABASE_URL = f"postgresql://{PGUSER}:{PGPASSWORD}@{PGHOST}:{PGPORT}/{PGDATABASE}"
+        print(f"🔍 개별 환경 변수로부터 DATABASE_URL 구성: {PGUSER}@{PGHOST}:{PGPORT}/{PGDATABASE}")
+    else:
+        print("❌ DATABASE_URL 환경변수가 없습니다. Railway/Render에서 반드시 설정하세요.")
+        print(f"   개별 변수 상태: PGHOST={bool(PGHOST)}, PGDATABASE={bool(PGDATABASE)}, PGUSER={bool(PGUSER)}, PGPASSWORD={bool(PGPASSWORD)}")
+
+# DATABASE_URL이 railway.internal을 포함하는 경우, 개별 환경 변수 사용 시도
+if DATABASE_URL and "railway.internal" in DATABASE_URL:
+    print("⚠️  railway.internal 호스트명 감지됨. 공개 호스트명으로 전환 시도...")
+    PGHOST = os.environ.get("PGHOST")
+    PGPORT = os.environ.get("PGPORT", "5432")
+    PGDATABASE = os.environ.get("PGDATABASE")
+    PGUSER = os.environ.get("PGUSER")
+    PGPASSWORD = os.environ.get("PGPASSWORD")
+    
+    if all([PGHOST, PGDATABASE, PGUSER, PGPASSWORD]) and "railway.internal" not in PGHOST:
+        # 공개 호스트명으로 재구성
+        DATABASE_URL = f"postgresql://{PGUSER}:{PGPASSWORD}@{PGHOST}:{PGPORT}/{PGDATABASE}"
+        print(f"✅ 공개 호스트명으로 전환: {PGUSER}@{PGHOST}:{PGPORT}/{PGDATABASE}")
+    else:
+        print("⚠️  공개 호스트명을 찾을 수 없습니다. railway.internal 사용을 계속 시도합니다.")
 
 # sslmode 자동 추가
-if "sslmode" not in DATABASE_URL:
+if DATABASE_URL and "sslmode" not in DATABASE_URL:
     DATABASE_URL += ("&sslmode=require" if "?" in DATABASE_URL else "?sslmode=require")
 
-print(f"🔍 DATABASE_URL 설정됨: {DATABASE_URL.split('@')[0]}@***:{DATABASE_URL.split(':')[-1].split('/')[0] if ':' in DATABASE_URL else '5432'}")
+if DATABASE_URL:
+    # 민감한 정보 숨기기
+    url_preview = DATABASE_URL.split('@')[0] if '@' in DATABASE_URL else DATABASE_URL
+    host_info = DATABASE_URL.split('@')[1].split('/')[0] if '@' in DATABASE_URL else '***'
+    print(f"🔍 DATABASE_URL 설정됨: {url_preview}@{host_info.split(':')[0] if ':' in host_info else '***'}:{host_info.split(':')[1] if ':' in host_info else '***'}")
 
 def get_db():
     """PostgreSQL 연결 객체 반환"""
+    if not DATABASE_URL:
+        raise RuntimeError("DATABASE_URL이 설정되지 않았습니다.")
+    
     try:
         conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
         return conn
     except Exception as e:
         print(f"⚠️  PostgreSQL 연결 실패: {e}")
+        print(f"🔍 연결 시도한 DATABASE_URL: {DATABASE_URL.split('@')[0] if '@' in DATABASE_URL else 'N/A'}@***")
         raise
 
 # =========================================

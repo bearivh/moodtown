@@ -82,14 +82,31 @@ SQLite를 사용하는 경우:
 ### Railway 내부 네트워크 문제
 `postgres.railway.internal` 연결이 실패하는 경우:
 
-1. **개별 환경 변수 사용**:
-   - PostgreSQL 서비스 → Variables 탭에서 `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` 복사
-   - 백엔드 서비스 → Variables 탭에 이 변수들을 모두 추가
-   - `DATABASE_URL` 대신 개별 변수를 사용하면 공개 호스트를 사용할 수 있습니다
+**해결 방법: 개별 환경 변수 추가**
 
-2. **공개 연결 정보 확인**:
-   - PostgreSQL 서비스 → Connect 탭 → "Public Networking" 섹션 확인
-   - 공개 호스트명이나 IP 사용
+1. **PostgreSQL 서비스에서 환경 변수 복사**:
+   - Railway 대시보드 → PostgreSQL 서비스 선택
+   - **"Variables"** 탭으로 이동
+   - 다음 환경 변수들을 복사:
+     - `PGHOST` (공개 호스트명, 예: `containers-us-west-100.railway.app`)
+     - `PGPORT` (보통 `5432`)
+     - `PGDATABASE` (보통 `railway`)
+     - `PGUSER` (보통 `postgres`)
+     - `PGPASSWORD` (비밀번호)
+
+2. **백엔드 서비스에 환경 변수 추가**:
+   - Railway 대시보드 → 백엔드 서비스(Flask 앱) 선택
+   - **"Variables"** 탭으로 이동
+   - **"+ New Variable"** 클릭하여 위의 5개 변수를 모두 추가
+   - `PGHOST`가 `railway.internal`이 아닌 공개 호스트명인지 확인
+
+3. **자동 전환**:
+   - 코드가 자동으로 `railway.internal` 호스트명을 감지하면
+   - 개별 환경 변수를 사용하여 공개 호스트명으로 연결을 시도합니다
+
+**참고**: 
+- `DATABASE_URL`은 그대로 두고, 개별 환경 변수만 추가하면 됩니다
+- 개별 환경 변수가 있으면 자동으로 공개 호스트명을 사용합니다
 
 ## 참고
 
