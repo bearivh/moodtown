@@ -522,24 +522,15 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
                   {selectedDateAllEmotions && (
                     <div className="selected-date-emotion-graph">
                       <h5 className="emotion-graph-title">전체 감정 분석 결과</h5>
-                      <div className="emotion-bar-chart">
+                      <div className="emotion-list">
                         {Object.entries(selectedDateAllEmotions)
                           .sort(([, a], [, b]) => b - a)
                           .map(([emotion, score]) => {
                             const normalizedScore = Math.round(score)
                             return (
-                              <div key={emotion} className="emotion-bar-item">
-                                <span className="emotion-bar-name">{emotion}</span>
-                                <div className="emotion-bar-container">
-                                  <div
-                                    className="emotion-bar-fill"
-                                    style={{
-                                      width: `${normalizedScore}%`,
-                                      backgroundColor: getEmotionColorByName(emotion)
-                                    }}
-                                  ></div>
-                                </div>
-                                <span className="emotion-bar-value">{normalizedScore}%</span>
+                              <div key={emotion} className="emotion-list-item">
+                                <span className="emotion-list-name">{emotion}:</span>
+                                <span className="emotion-list-value">{normalizedScore}%</span>
                               </div>
                             )
                           })}

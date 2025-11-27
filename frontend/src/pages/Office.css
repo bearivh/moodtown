@@ -707,50 +707,28 @@
   margin-top: 0;
 }
 
-.emotion-bar-chart {
+.emotion-list {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.5rem;
 }
 
-.emotion-bar-item {
+.emotion-list-item {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  width: 100%;
+  gap: 0.5rem;
+  font-size: 1.2rem;
+  color: #2d3748;
 }
 
-.emotion-bar-name {
-  width: 80px;
-  flex-shrink: 0;
-  font-size: 1.1rem;
+.emotion-list-name {
   font-weight: 600;
-  color: #1f2937;
-  white-space: nowrap;
+  min-width: 80px;
 }
 
-.emotion-bar-container {
-  flex: 1;
-  height: 8px;
-  background-color: #f3f4f6;
-  border-radius: 4px;
-  overflow: hidden;
-  position: relative;
-}
-
-.emotion-bar-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.3s ease;
-  min-width: 0;
-}
-
-.emotion-bar-value {
-  min-width: 38px;
-  text-align: right;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #6b7280;
+.emotion-list-value {
+  font-weight: 500;
+  color: #4a5568;
 }
 
 /* 통계 스타일 */
@@ -1213,7 +1191,7 @@
 .streak-label {
   font-size: 1.3rem;
   color: #6b7280;
-  margin-top: 0.25rem;
+  margin-top: 0.5rem;
   font-family: 'Dongle', sans-serif;
 }
 
