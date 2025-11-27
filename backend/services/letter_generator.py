@@ -58,7 +58,28 @@ def generate_letter_with_gpt(
 }}"""
     
     elif letter_type == 'celebration':
-        prompt = f"""감정 마을의 주민들이 사용자를 축하하는 편지를 작성해주세요.
+        # 행복 열매 개수에 따른 표현
+        if fruit_count and fruit_count > 0:
+            if fruit_count == 1:
+                fruit_mention = "첫 번째 행복 열매"
+            elif fruit_count == 2:
+                fruit_mention = "두 번째 행복 열매"
+            elif fruit_count == 3:
+                fruit_mention = "세 번째 행복 열매"
+            elif fruit_count == 4:
+                fruit_mention = "네 번째 행복 열매"
+            elif fruit_count == 5:
+                fruit_mention = "다섯 번째 행복 열매"
+            else:
+                fruit_mention = f"{fruit_count}번째 행복 열매"
+            celebration_message = f"{fruit_mention}가 열렸어요!"
+            example_mention = f"'{fruit_mention}가 열렸어! 축하해!'"
+        else:
+            celebration_message = "행복 열매가 열렸어요!"
+            fruit_mention = "행복 열매"
+            example_mention = "'행복 열매가 열렸어! 축하해!'"
+        
+        prompt = f"""감정 마을의 행복 나무에서 {celebration_message} 주민들이 사용자를 축하하는 편지를 작성해주세요.
 
 일기 내용:
 {diary_text[:500]}
@@ -66,8 +87,11 @@ def generate_letter_with_gpt(
 편지 작성 규칙:
 1. 긍정적이고 축하하는 톤으로 작성하세요.
 2. 반말로 작성하세요.
-3. 사용자의 성취나 긍정적인 변화를 인정해주세요.
-4. 편지 제목과 내용을 JSON 형식으로 출력하세요.
+3. 반드시 "{fruit_mention}"가 열렸다는 것을 편지 내용에 명시적으로 언급하세요.
+   - 예시: {example_mention}
+   - 행복 열매에 대한 언급이 편지 내용에 자연스럽게 포함되어야 합니다.
+4. 사용자의 긍정적인 변화를 인정해 주세요.
+5. 편지 제목과 내용을 JSON 형식으로 출력하세요.
 
 출력 형식:
 {{

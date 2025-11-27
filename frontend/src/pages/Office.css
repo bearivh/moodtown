@@ -972,6 +972,131 @@
   cursor: not-allowed;
 }
 
+.diary-action-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.diary-delete-button {
+  padding: 0.35rem 0.9rem;
+  background: linear-gradient(135deg, rgba(254, 226, 226, 0.8) 0%, rgba(252, 165, 165, 0.6) 100%);
+  border: 1.5px solid rgba(252, 165, 165, 0.7);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #991b1b;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Dongle', sans-serif;
+}
+
+.diary-delete-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(252, 165, 165, 0.9) 0%, rgba(248, 113, 113, 0.7) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(252, 165, 165, 0.4);
+}
+
+.diary-delete-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.delete-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.delete-dialog-content {
+  background-color: white;
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.delete-dialog-title {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #2d3748;
+  margin-bottom: 1rem;
+  font-family: 'Dongle', sans-serif;
+}
+
+.delete-dialog-message {
+  font-size: 1.3rem;
+  color: #4a5568;
+  margin-bottom: 2rem;
+  line-height: 1.6;
+  font-family: 'Dongle', sans-serif;
+}
+
+.delete-dialog-buttons {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.delete-dialog-cancel-button,
+.delete-dialog-confirm-button {
+  padding: 0.6rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1.3rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Dongle', sans-serif;
+  border: none;
+}
+
+.delete-dialog-cancel-button {
+  background-color: #e2e8f0;
+  color: #4a5568;
+}
+
+.delete-dialog-cancel-button:hover:not(:disabled) {
+  background-color: #cbd5e0;
+}
+
+.delete-dialog-confirm-button {
+  background: linear-gradient(135deg, rgba(252, 165, 165, 0.9) 0%, rgba(248, 113, 113, 0.7) 100%);
+  color: white;
+}
+
+.delete-dialog-confirm-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.9) 0%, rgba(239, 68, 68, 0.8) 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(248, 113, 113, 0.4);
+}
+
+.delete-dialog-cancel-button:disabled,
+.delete-dialog-confirm-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .similar-diaries-section {
   margin-top: 2rem;
   padding: 1.5rem;

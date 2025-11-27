@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
-import { getAllDiaries, getDiariesByDate, getDominantEmotionByDate, getWeeklyEmotionStats, getMonthlyEmotionStats, getDiaryStreak, getEmotionAverages, getWeekdayPattern, getWritingActivity } from '../utils/storage'
+import { getAllDiaries, getDiariesByDate, getDominantEmotionByDate, getWeeklyEmotionStats, getMonthlyEmotionStats, getDiaryStreak, getEmotionAverages, getWeekdayPattern, getWritingActivity, deleteDiary } from '../utils/storage'
 import { getEmotionColorByName } from '../utils/emotionColorMap'
 import { getTodayDateString } from '../utils/dateUtils'
 import { getOfficeStats, getSimilarDiaries } from '../utils/api'
 import { normalizeEmotionScores } from '../utils/emotionUtils'
+import { clearDiaryCacheForDate } from '../utils/diaryCache'
+import { clearVillageCacheForDate } from './Village'
 import FloatingResidents from '../components/FloatingResidents'
 import './Office.css'
 
@@ -28,6 +30,8 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
   const [similarError, setSimilarError] = useState(null)
   const [donutTooltip, setDonutTooltip] = useState(null)
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
+  const [diaryToDelete, setDiaryToDelete] = useState(null)
+  const [deleting, setDeleting] = useState(false)
   const today = getTodayDateString()
   const isPastDate = selectedDateFromVillage && selectedDateFromVillage < today
 
@@ -192,6 +196,90 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
     } finally {
       setLoadingSimilar(false)
     }
+  }
+
+  const handleDeleteDiary = async (diary) => {
+    setDiaryToDelete(diary)
+  }
+
+  const confirmDeleteDiary = async () => {
+    if (!diaryToDelete) return
+
+    setDeleting(true)
+    try {
+      const success = await deleteDiary(diaryToDelete.id)
+      if (success) {
+        // 캐시 무효화
+        clearDiaryCacheForDate(diaryToDelete.date)
+        clearVillageCacheForDate(diaryToDelete.date)
+        
+        // 선택된 날짜의 일기 목록 새로고침
+        if (selectedDate === diaryToDelete.date) {
+          const updatedDiaries = await getDiariesByDate(selectedDate)
+          setSelectedDiaries(updatedDiaries)
+          
+          // 일기가 하나도 없으면 감정 분석 결과도 초기화
+          if (updatedDiaries.length === 0) {
+            setSelectedDateAllEmotions(null)
+            setSelectedDateEmotionStats(null)
+          } else {
+            // 감정 분석 결과 재계산
+            const allEmotionStats = {
+              '기쁨': 0,
+              '사랑': 0,
+              '놀람': 0,
+              '두려움': 0,
+              '분노': 0,
+              '부끄러움': 0,
+              '슬픔': 0
+            }
+            for (const diary of updatedDiaries) {
+              const scores = diary.emotion_scores || {}
+              Object.keys(allEmotionStats).forEach(emotion => {
+                allEmotionStats[emotion] += scores[emotion] || 0
+              })
+            }
+            const normalizedScores = normalizeEmotionScores(allEmotionStats)
+            setSelectedDateAllEmotions(normalizedScores)
+          }
+        }
+        
+        // 캘린더 데이터 새로고침
+        await loadCalendarData()
+        await loadWeeklyStats()
+        await loadMonthlyStats()
+        await loadAdditionalStats()
+        
+        // 마을 입구에서 선택된 날짜가 있으면 해당 날짜 통계도 새로고침
+        if (selectedDateFromVillage) {
+          await loadSelectedDateEmotionStats()
+        }
+        
+        // 현재 선택된 날짜가 있으면 다시 클릭하여 새로고침
+        if (selectedDate) {
+          await handleDateClick(selectedDate)
+        }
+        
+        // 유사 일기 검색 중인 일기면 초기화
+        if (selectedDiaryForSimilarity?.id === diaryToDelete.id) {
+          setSelectedDiaryForSimilarity(null)
+          setSimilarDiaries([])
+        }
+        
+        setDiaryToDelete(null)
+      } else {
+        alert('일기 삭제에 실패했어요. 다시 시도해주세요.')
+      }
+    } catch (error) {
+      console.error('일기 삭제 오류:', error)
+      alert('일기 삭제 중 오류가 발생했어요.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const cancelDeleteDiary = () => {
+    setDiaryToDelete(null)
   }
 
   const handlePrevMonth = () => {
@@ -569,13 +657,22 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
                           )}
                         </div>
                         <p className="diary-detail-content">{diary.content}</p>
-                        <button
-                          className="diary-similar-button"
-                          onClick={() => handleFindSimilar(diary)}
-                          disabled={loadingSimilar}
-                        >
-                          🔍 비슷한 일기 찾기
-                        </button>
+                        <div className="diary-action-buttons">
+                          <button
+                            className="diary-similar-button"
+                            onClick={() => handleFindSimilar(diary)}
+                            disabled={loadingSimilar}
+                          >
+                            🔍 비슷한 일기 찾기
+                          </button>
+                          <button
+                            className="diary-delete-button"
+                            onClick={() => handleDeleteDiary(diary)}
+                            disabled={deleting}
+                          >
+                            🗑️ 삭제
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1007,6 +1104,35 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
           </div>
         </div>
       </div>
+
+      {/* 삭제 확인 다이얼로그 */}
+      {diaryToDelete && (
+        <div className="delete-dialog-overlay" onClick={cancelDeleteDiary}>
+          <div className="delete-dialog-content" onClick={(e) => e.stopPropagation()}>
+            <h3 className="delete-dialog-title">일기 삭제</h3>
+            <p className="delete-dialog-message">
+              정말로 이 일기를 삭제하시겠어요?<br />
+              삭제된 일기는 복구할 수 없어요.
+            </p>
+            <div className="delete-dialog-buttons">
+              <button
+                className="delete-dialog-cancel-button"
+                onClick={cancelDeleteDiary}
+                disabled={deleting}
+              >
+                취소
+              </button>
+              <button
+                className="delete-dialog-confirm-button"
+                onClick={confirmDeleteDiary}
+                disabled={deleting}
+              >
+                {deleting ? '삭제 중...' : '삭제'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
