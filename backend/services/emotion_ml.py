@@ -126,9 +126,9 @@ def predict(text: str) -> Dict:
             fear_score = scores.get("불안", 0.0)
             emotion_scores["두려움"] = fear_score * 0.7  # 두려움 점수를 70%로 축소
             
-            # "상처" → "슬픔"에 추가
+            # "상처" → "슬픔"에 추가 (비율 감소로 슬픔 과다 증가 방지)
             hurt_score = scores.get("상처", 0.0)
-            emotion_scores["슬픔"] += hurt_score * 0.8
+            emotion_scores["슬픔"] += hurt_score * 0.5  # 0.8 → 0.5로 감소
             
             # "당황" → "놀람" (50%) + "부끄러움" (50%)으로 분산
             panic_score = scores.get("당황", 0.0)
@@ -248,43 +248,38 @@ def predict(text: str) -> Dict:
             should_reduce_joy = False
             reduction_factor = 1.0
             
-            # 규칙 1: 부정 키워드가 있으면 무조건 기쁨 감소
-            if negative_count >= 1:
+            # 규칙 1: 부정 키워드가 많을 때만 기쁨 감소 (threshold 증가)
+            # 긍정 키워드가 부정 키워드보다 많으면 기쁨 감소 안 함
+            if negative_count >= 3 and strong_positive_count < negative_count:
                 should_reduce_joy = True
-                if negative_count >= 4:
-                    reduction_factor = 0.05 if strong_positive_count < 2 else 0.2
-                elif negative_count >= 3:
-                    reduction_factor = 0.1 if strong_positive_count < 2 else 0.4
-                elif negative_count >= 2:
-                    reduction_factor = 0.2 if strong_positive_count < 2 else 0.5
-                else:
-                    reduction_factor = 0.4 if strong_positive_count < 2 else 0.6
+                if negative_count >= 5:
+                    reduction_factor = 0.1 if strong_positive_count < 2 else 0.3
+                elif negative_count >= 4:
+                    reduction_factor = 0.2 if strong_positive_count < 2 else 0.4
+                else:  # negative_count >= 3
+                    reduction_factor = 0.3 if strong_positive_count < 2 else 0.5
             
-            # 규칙 2: 기쁨 점수가 0.25 이상이면 추가 감소
-            if original_joy >= 0.25:
+            # 규칙 2: 기쁨 점수가 매우 높을 때만 약간 감소 (규칙 완화)
+            if original_joy >= 0.5 and negative_count >= 3:
                 should_reduce_joy = True
-                if original_joy >= 0.4:
-                    reduction_factor = min(reduction_factor, 0.5)
-                elif original_joy >= 0.3:
-                    reduction_factor = min(reduction_factor, 0.6)
-                else:
-                    reduction_factor = min(reduction_factor, 0.7)
+                reduction_factor = min(reduction_factor, 0.8)  # 약간만 감소
             
-            # 규칙 3: 기쁨이 가장 높은 감정인데 부정 키워드가 있으면 강력하게 감소
+            # 규칙 3: 기쁨이 가장 높은 감정인데 부정 키워드가 많으면 감소
             sorted_emotions = sorted(emotion_scores.items(), key=lambda x: x[1], reverse=True)
             top_emotion = sorted_emotions[0][0] if sorted_emotions else None
-            if top_emotion == "기쁨" and negative_count >= 1:
+            if top_emotion == "기쁨" and negative_count >= 3 and strong_positive_count < negative_count:
                 should_reduce_joy = True
-                if negative_count >= 2:
-                    reduction_factor = min(reduction_factor, 0.2)
+                if negative_count >= 4:
+                    reduction_factor = min(reduction_factor, 0.3)
                 else:
-                    reduction_factor = min(reduction_factor, 0.4)
+                    reduction_factor = min(reduction_factor, 0.5)
             
-            # 규칙 4: 긍정 키워드가 많고 부정 키워드가 없으면 기쁨 증가 및 부정 감정 감소
+            # 규칙 4: 긍정 키워드가 많으면 기쁨 증가 (부정 키워드가 있어도 허용)
             should_boost_joy = False
             boost_factor = 1.0
             
-            if negative_count == 0 and strong_positive_count >= 1:
+            # 긍정 키워드가 부정 키워드보다 많거나 같으면 기쁨 증가
+            if strong_positive_count >= 1 and strong_positive_count >= negative_count * 0.7:
                 should_boost_joy = True
                 if strong_positive_count >= 4:
                     boost_factor = 2.5  # 기쁨을 2.5배 증가
@@ -294,6 +289,10 @@ def predict(text: str) -> Dict:
                     boost_factor = 1.7
                 else:
                     boost_factor = 1.4
+                
+                # 부정 키워드가 있으면 증가 폭을 약간 줄임
+                if negative_count > 0:
+                    boost_factor *= 0.85
             
             # 기쁨 점수 조정 적용 (부정 키워드가 있을 때 감소)
             if should_reduce_joy:
@@ -341,6 +340,38 @@ def predict(text: str) -> Dict:
                 if total > 0:
                     emotion_scores = {k: v / total for k, v in emotion_scores.items()}
             
+            # 슬픔 점수가 과도하게 높으면 (0.4 이상) 기쁨으로 일부 재분배
+            sadness_score = emotion_scores.get("슬픔", 0)
+            if sadness_score > 0.4:
+                # 0.35로 제한
+                max_sadness = 0.35
+                if sadness_score > max_sadness:
+                    excess_sadness = sadness_score - max_sadness
+                    emotion_scores["슬픔"] = max_sadness
+                    
+                    # 초과분의 30%를 기쁨으로 재분배 (기쁨 증가)
+                    joy_boost = excess_sadness * 0.3
+                    emotion_scores["기쁨"] = emotion_scores.get("기쁨", 0) + joy_boost
+                    
+                    # 나머지 70%는 다른 감정에 재분배
+                    other_emotions = ["분노", "놀람", "부끄러움", "두려움"]
+                    other_total = sum(emotion_scores.get(e, 0) for e in other_emotions)
+                    
+                    if other_total > 0:
+                        for emo in other_emotions:
+                            if emo in emotion_scores:
+                                ratio = emotion_scores[emo] / other_total
+                                emotion_scores[emo] += excess_sadness * 0.7 * ratio
+                    else:
+                        # 다른 감정이 없으면 분노와 놀람에 균등 분배
+                        emotion_scores["분노"] = emotion_scores.get("분노", 0) + excess_sadness * 0.35
+                        emotion_scores["놀람"] = emotion_scores.get("놀람", 0) + excess_sadness * 0.35
+                    
+                    # 재정규화
+                    total = sum(emotion_scores.values())
+                    if total > 0:
+                        emotion_scores = {k: v / total for k, v in emotion_scores.items()}
+            
             # 두려움 점수가 과도하게 높으면 (0.3 이상) 다른 감정으로 재분배 (더 강하게 제한)
             fear_score = emotion_scores.get("두려움", 0)
             if fear_score > 0.3:
@@ -350,7 +381,11 @@ def predict(text: str) -> Dict:
                     excess_fear = fear_score - max_fear
                     emotion_scores["두려움"] = max_fear
                 
-                    # 초과분을 다른 부정 감정에 재분배 (슬픔, 분노 우선, 두려움 제외)
+                    # 초과분의 일부를 기쁨으로 재분배 (10%)
+                    joy_boost = excess_fear * 0.1
+                    emotion_scores["기쁨"] = emotion_scores.get("기쁨", 0) + joy_boost
+                    
+                    # 나머지 90%는 다른 부정 감정에 재분배 (슬픔, 분노 우선)
                     other_negative = ["슬픔", "분노", "놀람", "부끄러움"]
                     other_total = sum(emotion_scores.get(e, 0) for e in other_negative)
                     
@@ -358,11 +393,11 @@ def predict(text: str) -> Dict:
                         for emo in other_negative:
                             if emo in emotion_scores:
                                 ratio = emotion_scores[emo] / other_total
-                                emotion_scores[emo] += excess_fear * ratio  # 100% 재분배
+                                emotion_scores[emo] += excess_fear * 0.9 * ratio
                     else:
                         # 다른 부정 감정이 없으면 슬픔과 분노에 균등 분배
-                        emotion_scores["슬픔"] = emotion_scores.get("슬픔", 0) + excess_fear * 0.5
-                        emotion_scores["분노"] = emotion_scores.get("분노", 0) + excess_fear * 0.5
+                        emotion_scores["슬픔"] = emotion_scores.get("슬픔", 0) + excess_fear * 0.45
+                        emotion_scores["분노"] = emotion_scores.get("분노", 0) + excess_fear * 0.45
                     
                     # 재정규화
                     total = sum(emotion_scores.values())
