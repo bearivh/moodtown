@@ -4,7 +4,7 @@ MoodTown 백엔드 API 엔드포인트 문서입니다.
 
 ## 기본 정보
 
-- **Base URL**: `http://localhost:5000` (개발) 또는 프로덕션 URL
+- **Base URL**: `http://localhost:5000` 개발 URL
 - **인증**: 세션 쿠키 기반 (대부분의 엔드포인트는 인증 필요)
 
 ## 인증 (Auth)

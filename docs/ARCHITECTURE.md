@@ -138,4 +138,4 @@ moodtown/
 - [ML 모델 문서](ML_MODELS.md)
 - [API 레퍼런스](API_REFERENCE.md)
 
-[← README로 돌아가기](../README.md)
+[← README로 돌아가기](../README.md#️-기술-스택)
