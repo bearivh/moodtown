@@ -6,6 +6,7 @@ import { getOfficeStats, getSimilarDiaries } from '../utils/api'
 import { normalizeEmotionScores } from '../utils/emotionUtils'
 import { clearDiaryCacheForDate } from '../utils/diaryCache'
 import { clearVillageCacheForDate } from './Village'
+import { clearPlazaCacheForDate } from './Plaza'
 import FloatingResidents from '../components/FloatingResidents'
 import './Office.css'
 
@@ -212,6 +213,7 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
         // 캐시 무효화
         clearDiaryCacheForDate(diaryToDelete.date)
         clearVillageCacheForDate(diaryToDelete.date)
+        clearPlazaCacheForDate(diaryToDelete.date)
         
         // 선택된 날짜의 일기 목록 새로고침
         if (selectedDate === diaryToDelete.date) {

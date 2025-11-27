@@ -1,42 +1,69 @@
-# 🚀 배포 가이드
+# DEPLOYMENT GUIDE
 
-MoodTown 애플리케이션의 배포 과정에 대한 설명입니다.
+moodtown 웹 애플리케이션의 **백엔드(Flask)**와 **프론트엔드(React)**를 프로덕션 환경에 배포하는 과정 정리입니다.
 
 ## 프로덕션 배포
 
-### Backend 배포
+### ❤︎ Backend 배포
 
-#### Railway 배포
-1. Railway 계정 생성 및 프로젝트 생성
-2. PostgreSQL 데이터베이스 추가
-3. GitHub 저장소 연결
-4. 환경 변수 설정:
-   - `DATABASE_URL`: PostgreSQL 연결 문자열
-   - `OPENAI_API_KEY`: OpenAI API 키
-   - `SECRET_KEY`: 세션 시크릿 키
-   - `FRONTEND_URL`: 프론트엔드 URL
-   - `ENVIRONMENT`: `production`
-5. `Procfile` 생성:
-   ```
-   web: gunicorn app:app
-   ```
+#### ❥ Railway 배포
+1-1. 프로젝트 생성
 
-### Frontend 배포
+1. Railway 계정 생성
+2. New Project → Deploy from GitHub Repo
+3. moodtown 저장소 연결
 
-#### Vercel 배포
+1-2. PostgreSQL 데이터베이스 추가
+- Railway → Add → PostgreSQL
+- 생성된 DB의 Connection URL을 DATABASE_URL 값으로 사용
+
+1-3. 환경 변수 설정  
+- Railway → Variables
+
+   | Key              | 설명                |
+   | ---------------- | ----------------- |
+   | `DATABASE_URL`   | PostgreSQL 연결 문자열 |
+   | `OPENAI_API_KEY` | OpenAI API 키      |
+   | `SECRET_KEY`     | 세션 암호 키           |
+   | `FRONTEND_URL`   | Vercel 배포 주소      |
+   | `ENVIRONMENT`    | `production`      |
+
+1-4. Procfile
+- Railway가 Flask를 프로덕션 환경에서 실행하도록 설정:  
+web: gunicorn app:app
+
+1-5. 배포
+- Railway가 자동으로 빌드 → 배포 진행
+- 결과 URL 예시:
+https://moodtown-production.up.railway.app
+
+### ❤︎ Frontend 배포
+#### ❥ Vercel 배포
+2-1. 프로젝트 생성
 1. Vercel 계정 생성
 2. GitHub 저장소 연결
-3. 프로젝트 설정:
-   - 프레임워크: Vite
-   - 빌드 명령: `npm run build`
-   - 출력 디렉토리: `dist`
-4. 환경 변수 설정:
-   - `VITE_API_URL`: 백엔드 API URL
-5. 배포
+3. Framework: Vite 선택
+
+2-2. Build 옵션
+- Build Command: npm run build
+- Output Directory: dist
+
+2-3. 환경 변수 설정  
+- Vercel → Project → Settings → Environment Variables
+   | Key            | 설명                  |
+   | -------------- | ------------------- |
+   | `VITE_API_URL` | Railway 백엔드 API URL |
+   - 예:
+https://moodtown-production.up.railway.app
+
+2-4. 배포
+- Push → 자동 빌드 → 자동 배포
+- 결과 URL 예시:
+https://moodtown.vercel.app
 
 ## 환경 변수
 
-### Backend 환경 변수
+### ❤︎ Backend 환경 변수
 ```env
 # 데이터베이스
 DATABASE_URL=postgresql://user:password@host:port/database
@@ -54,7 +81,7 @@ FRONTEND_URL=https://your-frontend-domain.com
 ENVIRONMENT=production
 ```
 
-### Frontend 환경 변수
+### ❤︎ Frontend 환경 변수
 ```env
 VITE_API_URL=https://your-backend-api-url.com
 ```
@@ -69,18 +96,15 @@ python -c "from db import init_db; init_db()"
 
 ## 모니터링
 
-### 로깅
+### ❤︎ 로깅
 - 애플리케이션 로그는 Railway 대시보드에서 확인 가능
 - 에러 로그는 자동으로 기록됩니다
 
-### 헬스 체크
+### ❤︎ 헬스 체크
 ```
 GET /health
 ```
 
-## 관련 문서
 
-- [백엔드 가이드](BACKEND.md)
-- [프론트엔드 가이드](FRONTEND.md)
-
+ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ  
 [← README로 돌아가기](../README.md)

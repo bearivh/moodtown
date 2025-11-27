@@ -7,13 +7,11 @@ moodtown은 사용자의 일기를 AI가 분석해 7가지 감정의 주민 캐�
 
 **테스트 계정**  
 **ID**: ososo /  **PW**: moodtown  
-👉🏻 로그인을 하면 예시 데이터를 통해 moodtown의 구현 모습습을 빠르게 확인해 볼 수 있어요!
+👉🏻 로그인을 하면 예시 데이터를 통해 moodtown의 구현 모습을 빠르게 확인해 볼 수 있어요!
 
 ## 📖 개요
 
-감정을 돌아보고 나의 마음을 알아갈 수 있어요.
-
-moodtown은 단순한 일기 앱을 넘어서, 감정을 시각화하고 게임화 요소를 통해 사용자의 감정 표현과 자기 이해를 돕는 플랫폼입니다.  
+moodtown은 단순한 일기 앱을 넘어서, 감정을 시각화하고 게임화 요소를 통해 사용자의 감정 표현과 자기 이해를 돕습니다. 지나치기 쉬운 감정을 돌아보고 나의 마음을 알아갈 수 있어요.
 
 일기를 작성하면:
 
@@ -83,7 +81,7 @@ npm run dev
 
 ## 🐻 핵심 컨셉
 
-### 1. 감정의 시각화와 의인화를 통한 커뮤니케이션션
+### 1. 감정의 시각화와 의인화를 통한 커뮤니케이션
 추상적인 감정을 구체적인 캐릭터와 게임 요소로 표현합니다. 7가지 감정(기쁨, 사랑, 놀람, 두려움, 분노, 부끄러움, 슬픔)은 각각 고유한 색상과 성격을 가진 주민 캐릭터로 나타납니다. 감정의 의인화를 통해 자신의 감정에 더욱 친근하게 다가갈 수 있도록 합니다.
 
 ### 2. 게임화(Gamification)
@@ -99,8 +97,6 @@ GPT-4o-mini와 ML 모델을 활용한 정확한 감정 분석:
 - **ML 모델**: 참고용 감정 분석 제공
 
 
-
-
 ## ⚙️ 작동 방식
 
 일기를 작성하면 자동으로 다음 과정이 진행됩니다:
@@ -113,7 +109,7 @@ GPT-4o-mini와 ML 모델을 활용한 정확한 감정 분석:
 ### 2. 👥 감정 주민 대화 생성
 - 감정 분석 결과를 바탕으로 GPT-4o-mini가 감정 주민들의 대화 생성
 - 각 주민은 고유한 성격과 말투를 가짐
-- 일기 내용에 대해 주민들이 서로 의견 및 감정정을 나누는 형태
+- 일기 내용에 대해 주민들이 서로 의견 및 감정을 나누는 형태
 
 ### 3. 🌳 행복 나무 성장
 - 긍정적인 감정(기쁨, 사랑, 긍정적 놀람/부끄러움)이 쌓이면 나무가 자라남
@@ -176,26 +172,86 @@ moodtown/
 자세한 구조는 [프로젝트 구조](#)를 참고하세요.
 
 ## 📚 자세한 설명
-- **[프로젝트 소개](docs/INTRO.md)** - 프로젝트 전체 소개 (확장 버전)  
-
-**기능 및 로직**
+#### 기능 및 로직
 - **[주요 기능](docs/FEATURES.md)** - 주요 기능 설명
 - **[게임 디자인](docs/GAME_DESIGN.md)** - 감정 마을/나무/우물의 게임 메커니즘  
 
-**시스템 설계 구조 및 기술**  
+#### 시스템 설계 구조 및 기술 
 - **[시스템 아키텍처](docs/ARCHITECTURE.md)** - 시스템 아키텍처 구조
 - **[프론트엔드](docs/FRONTEND.md)** - 프론트엔드 실행/설계 설명
 - **[백엔드](docs/BACKEND.md)** - 백엔드 실행/설계 설명
 - **[ML 모델](docs/ML_MODELS.md)** - 감정 분석/Doc2Vec 모델 설명
 - **[API 레퍼런스](docs/API_REFERENCE.md)** - API 라우트 문서
 - **[배포 가이드](docs/DEPLOYMENT.md)** - 배포 과정 설명
-- **[기여 가이드](docs/CONTRIBUTING.md)** - 기여 가이드
 
 ## 📝 라이선스
 
-이 프로젝트는 개인 프로젝트입니다.
+This project is licensed under the MIT License
 
-## 🙏 감사 인사
 
-- OpenAI GPT-4o-mini
-- 감성대화말뭉치 데이터셋 (AI hub)
+## 📚 외부 리소스 및 참고 자료
+
+이 프로젝트는 다음 외부 기술, 데이터셋, 라이브러리를 활용하여 구현되었습니다:
+
+### 데이터셋
+| 리소스 | 설명 | 라이선스 |
+|--------|------|----------|
+| AI Hub – 감성대화말뭉치 | ML 감정 분석 모델 학습용 한국어 감성 대화 데이터 | CC-BY-SA 4.0 |
+
+### AI / 모델
+| 리소스 | 설명 | 라이선스 |
+|--------|------|----------|
+| OpenAI GPT-4o-mini | 감정 분석, 대화 생성, 편지 생성 | OpenAI Terms of Service |
+
+### 백엔드 라이브러리
+| 리소스 | 설명 | 라이선스 |
+|--------|------|----------|
+| Flask 3.1.2 | REST API 서버 | BSD-3-Clause |
+| Werkzeug 3.1.3 | WSGI 유틸리티 라이브러리 (Flask 의존성) | BSD-3-Clause |
+| blinker 1.9.0 | 시그널 지원 (Flask 의존성) | MIT |
+| click 8.3.0 | CLI 인터페이스 (Flask 의존성) | BSD-3-Clause |
+| itsdangerous 2.2.0 | 안전한 데이터 직렬화 (Flask 의존성) | BSD-3-Clause |
+| Jinja2 3.1.6 | 템플릿 엔진 (Flask 의존성) | BSD-3-Clause |
+| MarkupSafe 3.0.3 | 안전한 문자열 처리 (Flask 의존성) | BSD-3-Clause |
+| flask-cors 6.0.1 | CORS 처리 | MIT |
+| psycopg2-binary 2.9.9+ | PostgreSQL 연결 | LGPL-2.1 |
+| gunicorn 21.2.0+ | 프로덕션 WSGI 서버 | MIT |
+| python-dotenv 1.2.1 | 환경변수 관리 | BSD-3-Clause |
+| openai 1.0.0+ | OpenAI API 클라이언트 | MIT |
+
+### 머신러닝
+| 리소스 | 설명 | 라이선스 |
+|--------|------|----------|
+| numpy | 수치 연산 라이브러리 | BSD-3-Clause |
+| scikit-learn 1.3.0+ | Logistic Regression 기반 감정 분류 모델 | BSD-3-Clause |
+| Gensim 4.3.0+ | Doc2Vec 기반 유사 일기 검색 모델 | LGPL-2.1 |
+| joblib 1.3.0+ | ML 모델 저장/로딩 | BSD-3-Clause |
+| matplotlib 3.8.0+ | 데이터 시각화 (학습 스크립트용) | PSF-based |
+| seaborn 0.13.0+ | 통계 데이터 시각화 (학습 스크립트용) | BSD-3-Clause |
+
+### 프론트엔드
+| 리소스 | 설명 | 라이선스 |
+|--------|------|----------|
+| React 19.2.0 | UI 구현 | MIT |
+| react-dom 19.2.0 | React DOM 렌더링 | MIT |
+| Vite (rolldown-vite 7.2.2) | 빌드 도구 및 개발 서버 | MIT |
+| @vitejs/plugin-react 5.1.0 | React 플러그인 | MIT |
+| eslint 9.39.1 | JavaScript 린터 | MIT |
+| @eslint/js 9.39.1 | ESLint JavaScript 플러그인 | Apache-2.0 |
+| eslint-plugin-react-hooks 5.2.0 | React Hooks 린트 규칙 | MIT |
+| eslint-plugin-react-refresh 0.4.24 | React Fast Refresh 린트 규칙 | MIT |
+| @types/react 19.2.2 | React TypeScript 타입 정의 | MIT |
+| @types/react-dom 19.2.2 | React DOM TypeScript 타입 정의 | MIT |
+| globals 16.5.0 | ESLint 글로벌 변수 정의 | MIT |
+| Dongle Font (Google Fonts) | UI용 커스텀 폰트 | OFL-1.1 |
+
+### 데이터베이스
+| 리소스 | 설명 | 라이선스 |
+|--------|------|----------|
+| PostgreSQL | 관계형 데이터베이스 관리 시스템 | PostgreSQL License |
+
+### 배포 플랫폼
+| 리소스 | 설명 | 라이선스 |
+|--------|------|----------|
+| Vercel | 프론트엔드 배포 | Vercel Terms of Service |
+| Railway | 백엔드 및 PostgreSQL 호스팅 | Railway Terms of Service |

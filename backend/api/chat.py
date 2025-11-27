@@ -5,7 +5,7 @@ from core.common import client, CHARACTERS
 chat_bp = Blueprint("chat", __name__)
 chat_sessions: Dict[str, List[Dict[str, str]]] = {}
 
-@chat_bp.route("/chat", methods=["POST"])
+@chat_bp.route("/api/chat", methods=["POST"])
 def chat_with_characters():
     data = request.get_json() or {}
     user_input = (data.get("message") or "").strip()

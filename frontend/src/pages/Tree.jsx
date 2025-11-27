@@ -6,6 +6,8 @@ import {
   getStageEmoji,
   getStageProgress,
   getPointsToNextStage,
+  getTreeStateCache,
+  updateTreeStateCache,
   TREE_STAGES
 } from '../utils/treeUtils'
 import FloatingResidents from '../components/FloatingResidents'
@@ -15,22 +17,21 @@ import { classifyEmotionsWithContext } from '../utils/emotionUtils'
 import { getEmotionColorByName } from '../utils/emotionColorMap'
 import './Tree.css'
 
-// 모듈 레벨 캐시 - 나무 상태를 캐싱하여 즉시 표시
-const treeStateCache = { state: null, progress: 0, timestamp: 0 }
-
 function Tree({ onNavigate, selectedDate }) {
   // 캐시에서 초기값 가져오기 (lazy initialization)
   const [treeState, setTreeState] = useState(() => {
-    if (treeStateCache.state && Date.now() - treeStateCache.timestamp < 60000) {
-      return treeStateCache.state
+    const cachedState = getTreeStateCache()
+    if (cachedState) {
+      return cachedState.state
     }
     return null
   })
   
   const [fruitCount, setFruitCount] = useState(0)
   const [progress, setProgress] = useState(() => {
-    if (treeStateCache.progress !== undefined) {
-      return treeStateCache.progress
+    const cachedState = getTreeStateCache()
+    if (cachedState && cachedState.progress !== undefined) {
+      return cachedState.progress
     }
     return 0
   })
@@ -117,9 +118,10 @@ function Tree({ onNavigate, selectedDate }) {
 
   useEffect(() => {
     // 캐시에서 즉시 복원
-    if (treeStateCache.state && Date.now() - treeStateCache.timestamp < 60000) {
-      setTreeState(treeStateCache.state)
-      setProgress(treeStateCache.progress || 0)
+    const cachedState = getTreeStateCache()
+    if (cachedState) {
+      setTreeState(cachedState.state)
+      setProgress(cachedState.progress || 0)
     }
     
     loadTreeData()
@@ -237,10 +239,8 @@ function Tree({ onNavigate, selectedDate }) {
     setProgress(progressPercent)
     setPointsToNext(pointsNeeded)
     
-    // 모듈 레벨 캐시 업데이트
-    treeStateCache.state = state
-    treeStateCache.progress = progressPercent
-    treeStateCache.timestamp = Date.now()
+    // 모듈 레벨 캐시 업데이트 (treeUtils의 캐시 사용)
+    updateTreeStateCache(state, progressPercent)
   }
 
   const loadEmotionContributions = async () => {

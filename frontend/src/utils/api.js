@@ -82,7 +82,7 @@ export async function analyzeText({ content, mode = 'ml' }) {
  */
 export async function chatWithCharacters(message, characters = [], date = null, diaryContent = null) {
   try {
-    const response = await fetch(`${API_BASE_URL}/chat`, {
+    const response = await fetch(`${API_BASE_URL}/api/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

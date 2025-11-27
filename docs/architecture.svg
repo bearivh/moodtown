@@ -21,54 +21,54 @@
   <text x="600" y="200" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">일기 작성 | 감정 분석 결과 표시 | 게임 요소 시각화</text>
   
   <!-- 화살표: 프론트엔드 -> 백엔드 -->
-  <path d="M 600 220 L 600 250" stroke="#4a90e2" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
-  <text x="620" y="235" font-family="Arial, sans-serif" font-size="10" fill="#666">HTTP/HTTPS REST API</text>
+  <path d="M 600 220 L 650 250" stroke="#4a90e2" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="625" y="235" font-family="Arial, sans-serif" font-size="10" fill="#666">HTTP/HTTPS REST API</text>
   
   <!-- ========== 레이어 3: 백엔드 ========== -->
-  <rect x="200" y="250" width="800" height="150" rx="8" fill="#ffd43b" stroke="#4a90e2" stroke-width="2"/>
-  <text x="600" y="275" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#333">Flask 백엔드 서버</text>
+  <rect x="200" y="250" width="900" height="150" rx="8" fill="#ffd43b" stroke="#4a90e2" stroke-width="2"/>
+  <text x="650" y="275" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#333">Flask 백엔드 서버</text>
   
   <!-- API 박스들 -->
-  <rect x="220" y="290" width="90" height="35" rx="5" fill="#ffffff" stroke="#4a90e2" stroke-width="1"/>
-  <text x="265" y="312" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#333">인증</text>
+  <rect x="220" y="290" width="85" height="35" rx="5" fill="#ffffff" stroke="#4a90e2" stroke-width="1"/>
+  <text x="262" y="312" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#333">인증</text>
   
-  <rect x="330" y="290" width="90" height="35" rx="5" fill="#ffffff" stroke="#4a90e2" stroke-width="1"/>
-  <text x="375" y="312" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#333">일기</text>
+  <rect x="320" y="290" width="85" height="35" rx="5" fill="#ffffff" stroke="#4a90e2" stroke-width="1"/>
+  <text x="362" y="312" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#333">일기</text>
   
-  <rect x="440" y="290" width="90" height="35" rx="5" fill="#ffffff" stroke="#4a90e2" stroke-width="1"/>
-  <text x="485" y="312" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#333">감정 분석</text>
+  <rect x="420" y="290" width="85" height="35" rx="5" fill="#ffffff" stroke="#4a90e2" stroke-width="1"/>
+  <text x="462" y="312" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#333">감정 분석</text>
   
-  <rect x="550" y="290" width="90" height="35" rx="5" fill="#ffffff" stroke="#4a90e2" stroke-width="1"/>
-  <text x="595" y="312" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#333">대화 생성</text>
+  <rect x="520" y="290" width="85" height="35" rx="5" fill="#ffffff" stroke="#4a90e2" stroke-width="1"/>
+  <text x="562" y="312" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#333">대화 생성</text>
   
-  <rect x="660" y="290" width="90" height="35" rx="5" fill="#ffffff" stroke="#4a90e2" stroke-width="1"/>
-  <text x="705" y="312" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#333">유사 일기</text>
+  <rect x="620" y="290" width="85" height="35" rx="5" fill="#ffffff" stroke="#4a90e2" stroke-width="1"/>
+  <text x="662" y="312" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#333">유사 일기</text>
   
-  <rect x="770" y="290" width="90" height="35" rx="5" fill="#ffffff" stroke="#4a90e2" stroke-width="1"/>
-  <text x="815" y="312" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#333">나무/우물</text>
+  <rect x="720" y="290" width="85" height="35" rx="5" fill="#ffffff" stroke="#4a90e2" stroke-width="1"/>
+  <text x="762" y="312" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#333">나무/우물</text>
   
-  <rect x="880" y="290" width="90" height="35" rx="5" fill="#ffffff" stroke="#4a90e2" stroke-width="1"/>
-  <text x="925" y="312" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#333">편지</text>
+  <rect x="820" y="290" width="85" height="35" rx="5" fill="#ffffff" stroke="#4a90e2" stroke-width="1"/>
+  <text x="862" y="312" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#333">편지</text>
   
-  <rect x="990" y="290" width="90" height="35" rx="5" fill="#ffffff" stroke="#4a90e2" stroke-width="1"/>
-  <text x="1035" y="312" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#333">채팅</text>
+  <rect x="920" y="290" width="85" height="35" rx="5" fill="#ffffff" stroke="#4a90e2" stroke-width="1"/>
+  <text x="962" y="312" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#333">채팅</text>
   
   <!-- 하위 설명 -->
-  <text x="600" y="355" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#666">세션 관리, 데이터 검증, 비즈니스 로직 처리</text>
-  <text x="600" y="370" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#666">외부 API 호출, ML 모델 실행, 데이터베이스 연동</text>
+  <text x="650" y="355" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#666">세션 관리, 데이터 검증, 비즈니스 로직 처리</text>
+  <text x="650" y="370" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#666">외부 API 호출, ML 모델 실행, 데이터베이스 연동</text>
   
   <!-- 화살표: 백엔드 -> 하위 레이어들 -->
   <path d="M 400 400 L 200 450" stroke="#336791" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
   <text x="280" y="430" font-family="Arial, sans-serif" font-size="10" fill="#666">데이터 저장/조회</text>
   
-  <path d="M 600 400 L 600 450" stroke="#10a37f" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <path d="M 650 400 L 600 450" stroke="#10a37f" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
   <text x="620" y="430" font-family="Arial, sans-serif" font-size="10" fill="#666">감정 분석/대화 생성</text>
   
-  <path d="M 705 400 L 900 450" stroke="#28a745" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
-  <text x="800" y="430" font-family="Arial, sans-serif" font-size="10" fill="#666">유사 일기 검색</text>
+  <path d="M 780 400 L 900 450" stroke="#28a745" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="840" y="430" font-family="Arial, sans-serif" font-size="10" fill="#666">유사 일기 검색</text>
   
-  <path d="M 705 400 L 1000 550" stroke="#f7931e" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
-  <text x="850" y="480" font-family="Arial, sans-serif" font-size="10" fill="#666">참고용 분석</text>
+  <path d="M 780 400 L 1000 550" stroke="#f7931e" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="890" y="480" font-family="Arial, sans-serif" font-size="10" fill="#666">참고용 분석</text>
   
   <!-- ========== 레이어 4: 데이터베이스 ========== -->
   <rect x="50" y="450" width="300" height="280" rx="8" fill="#336791" stroke="#4a90e2" stroke-width="2"/>
@@ -94,7 +94,7 @@
   <text x="195" y="703" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#333">plaza_conversations - 광장 대화</text>
   
   <!-- ========== 레이어 4: OpenAI API ========== -->
-  <rect x="450" y="450" width="300" height="120" rx="8" fill="#10a37f" stroke="#4a90e2" stroke-width="2"/>
+  <rect x="450" y="450" width="300" height="160" rx="8" fill="#10a37f" stroke="#4a90e2" stroke-width="2"/>
   <text x="600" y="475" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#fff">OpenAI API</text>
   <text x="600" y="495" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#fff">GPT-4o-mini</text>
   

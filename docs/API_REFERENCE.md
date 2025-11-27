@@ -1,6 +1,6 @@
-# 📡 API 레퍼런스
+# API REFERENCE
 
-MoodTown 백엔드 API 엔드포인트 문서입니다.
+moodtown 백엔드 API 엔드포인트 문서입니다.
 
 ## 기본 정보
 
@@ -273,6 +273,27 @@ POST /api/tree/fruits
 
 **Response**: 200 OK
 
+### 나무 성장도 감소
+```
+POST /api/tree/subtract
+```
+
+**Request Body**:
+```json
+{
+  "amount": 30
+}
+```
+
+**Response**: 200 OK
+```json
+{
+  "success": true,
+  "growth": 270,
+  "stage": 3
+}
+```
+
 ## 스트레스 우물 (Well)
 
 ### 우물 상태 조회
@@ -366,6 +387,37 @@ GET /api/letters/unread/count
 }
 ```
 
+### 편지 생성 (GPT)
+```
+POST /api/letters/generate
+```
+
+**Request Body**:
+```json
+{
+  "type": "celebration",
+  "emotion_scores": {...},
+  "fruit_count": 3,
+  "diary_text": "일기 내용"
+}
+```
+
+**Request Fields**:
+- `type` (required): 편지 종류 ("celebration", "comfort", "cheer", "well_overflow", "emotion_high")
+- `emotion_scores` (optional): 감정 점수
+- `fruit_count` (optional): 열매 개수
+- `diary_text` (optional): 일기 내용
+
+**Response**: 200 OK
+```json
+{
+  "title": "편지 제목",
+  "content": "편지 내용",
+  "from": "주민 이름",
+  "type": "편지 종류"
+}
+```
+
 ## 감정 분석 (Analysis)
 
 ### 감정 분석 (v1)
@@ -410,18 +462,31 @@ POST /api/analyze2
 
 ### 주민과 채팅
 ```
-POST /chat
+POST /api/chat
 ```
 
 **Request Body**:
 ```json
 {
   "message": "사용자 메시지",
-  "character": "노랑이"
+  "characters": ["기쁨", "사랑"],
+  "date": "2024-01-01",
+  "diary_content": "일기 내용"
 }
 ```
 
+**Request Fields**:
+- `message` (required): 사용자 메시지
+- `characters` (required): 참여 감정 주민 배열 (예: ["기쁨", "사랑"])
+- `date` (optional): 세션 날짜 (기본값: "default")
+- `diary_content` (optional): 일기 내용
+
 **Response**: 200 OK
+```json
+{
+  "reply": "주민들의 대답"
+}
+```
 
 ## 헬스 체크
 
