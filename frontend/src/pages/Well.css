@@ -953,12 +953,96 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0.5rem;
+  gap: 0.5rem;
+}
+
+.well-contribution-emotion-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .well-contribution-emotion {
   font-size: 1.2rem;
   font-weight: 600;
   color: #000000;
+}
+
+/* 놀람/부끄러움 정보 툴팁 */
+.well-contribution-info-tooltip-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.well-contribution-info-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: #9ca3af;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: help;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  font-style: normal;
+}
+
+.well-contribution-info-icon:hover {
+  background-color: #6b7280;
+  transform: scale(1.1);
+}
+
+.well-contribution-info-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 280px;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  z-index: 1000;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #374151;
+  pointer-events: none;
+}
+
+.well-contribution-info-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 8px solid transparent;
+  border-top-color: white;
+}
+
+.well-contribution-info-tooltip::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 10px solid transparent;
+  border-top-color: #e5e7eb;
+  margin-top: -2px;
+  z-index: -1;
+}
+
+.well-contribution-info-tooltip-container:hover .well-contribution-info-tooltip {
+  opacity: 1;
+  visibility: visible;
 }
 
 .well-contribution-percent {

@@ -622,22 +622,35 @@ export async function getPlazaConversationByDate(date) {
       credentials: 'include'
     })
     if (!response.ok) {
-      // 404나 500 에러도 조용히 처리 (대화가 없는 것으로 간주)
-      if (response.status === 404 || response.status === 500 || response.status === 401) {
+      // 404는 대화가 없는 것으로 간주 (정상)
+      if (response.status === 404) {
+        console.log('[대화 불러오기] 404 - 대화가 없음:', date)
         return null
       }
-      throw new Error(`API 오류: ${response.status}`)
+      // 401은 로그인 문제
+      if (response.status === 401) {
+        console.error('[대화 불러오기] 401 - 로그인 필요:', date)
+        return null
+      }
+      // 500은 서버 에러
+      if (response.status === 500) {
+        console.error('[대화 불러오기] 500 - 서버 에러:', date)
+        return null
+      }
+      console.error('[대화 불러오기] API 오류:', response.status, date)
+      return null
     }
     const result = await response.json()
     // 빈 대화 배열이면 null 반환 (기존 동작 유지)
     if (result && result.conversation && result.conversation.length > 0) {
+      console.log('[대화 불러오기] 성공:', date, result.conversation.length, '개 메시지')
       return result
     }
+    console.log('[대화 불러오기] 빈 대화:', date)
     return null
   } catch (error) {
-    // 네트워크 에러 등은 조용히 처리 (대화가 없는 것으로 간주)
-    // console.error는 개발 중에만 필요하면 주석 처리
-    // console.error('대화 불러오기 실패:', error)
+    // 네트워크 에러 등
+    console.error('[대화 불러오기] 네트워크 에러:', error, date)
     return null
   }
 }
@@ -665,12 +678,16 @@ export async function savePlazaConversationByDate(date, conversation, emotionSco
     })
     
     if (!response.ok) {
+      const errorText = await response.text()
+      console.error('[대화 저장] API 오류:', response.status, errorText)
       throw new Error(`API 오류: ${response.status}`)
     }
     
+    const result = await response.json()
+    console.log('[대화 저장] 성공:', date, conversation.length, '개 메시지')
     return true
   } catch (error) {
-    console.error('대화 저장 실패:', error)
+    console.error('[대화 저장] 실패:', error, date)
     return false
   }
 }

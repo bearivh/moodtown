@@ -101,6 +101,16 @@
   margin-bottom: 0.5rem;
 }
 
+.date-display {
+  padding: 0.75rem;
+  font-size: 1.3rem;
+  color: #374151;
+  background: #f9fafb;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.5rem;
+  font-family: inherit;
+}
+
 .form-input {
   width: 100%;
   padding: 0.75rem;
@@ -224,6 +234,106 @@
   box-shadow: 0 4px 12px rgba(188, 170, 164, 0.4) !important;
 }
 
+/* 분석 버튼 래퍼 */
+.analyze-button-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+/* 툴팁 컨테이너 */
+.analyze-tooltip-container {
+  position: relative;
+  display: inline-block;
+  margin-top: 0.25rem;
+}
+
+/* 물음표 아이콘 */
+.analyze-tooltip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: #9ca3af;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: help;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.analyze-tooltip-icon:hover {
+  background-color: #6b7280;
+  transform: scale(1.1);
+}
+
+/* 툴팁 */
+.analyze-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 280px;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  z-index: 1000;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #374151;
+  pointer-events: none;
+}
+
+.analyze-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 8px solid transparent;
+  border-top-color: white;
+}
+
+.analyze-tooltip::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 10px solid transparent;
+  border-top-color: #e5e7eb;
+  margin-top: -2px;
+  z-index: -1;
+}
+
+.analyze-tooltip-container:hover .analyze-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+.analyze-tooltip strong {
+  display: block;
+  margin-bottom: 8px;
+  color: #1f2937;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.analyze-tooltip p {
+  margin: 4px 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
 .save-message {
   padding: 1rem;
   border-radius: 0.5rem;
@@ -259,7 +369,7 @@
 }
 
 .existing-diary-warning {
-  padding: 1rem;
+  padding: 0.8rem;
   background: #fef3c7;
   border: 2px solid #fbbf24;
   border-radius: 0.5rem;
@@ -273,7 +383,7 @@
 }
 
 .existing-diary-warning-detail {
-  font-size: 0.75rem !important;
+  font-size: 0.85rem !important;
   color: #78350f;
   margin-top: 0.5rem;
 }
@@ -523,6 +633,23 @@
   .save-success-button {
     font-size: 1.2rem;
     padding: 0.9rem 1.5rem;
+  }
+
+  .analyze-button-wrapper {
+    width: 100%;
+  }
+
+  .analyze-tooltip {
+    width: calc(100vw - 4rem);
+    max-width: 300px;
+    left: 0;
+    transform: translateX(0);
+  }
+
+  .analyze-tooltip::after,
+  .analyze-tooltip::before {
+    left: 20px;
+    transform: translateX(0);
   }
 }
 

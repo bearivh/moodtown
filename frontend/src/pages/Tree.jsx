@@ -279,13 +279,23 @@ function Tree({ onNavigate, selectedDate }) {
       // 총합 계산
       const total = Object.values(emotionTotals).reduce((sum, val) => sum + val, 0)
       
-      // 비율로 변환하여 기여도 배열 생성
+      // 비율로 변환하여 기여도 배열 생성 (놀람/부끄러움의 경우 극성 정보 포함)
       const contributions = Object.entries(emotionTotals)
-        .map(([emotion, score]) => ({
-          emotion,
-          score,
-          ratio: total > 0 ? score / total : 0
-        }))
+        .map(([emotion, score]) => {
+          const contribution = {
+            emotion,
+            score,
+            ratio: total > 0 ? score / total : 0
+          }
+          
+          // 놀람/부끄러움이 기여도에 포함된 경우, 긍정으로 해석되었다는 정보 추가
+          if ((emotion === '놀람' || emotion === '부끄러움') && score > 0) {
+            contribution.isContextual = true
+            contribution.polarity = 'positive'
+          }
+          
+          return contribution
+        })
         .filter(item => item.score > 0) // 점수가 있는 것만
         .sort((a, b) => b.score - a.score) // 점수 높은 순으로 정렬
       
@@ -424,7 +434,7 @@ function Tree({ onNavigate, selectedDate }) {
         {isPastDate && !hideDateNotice && (
           <div className="tree-date-notice">
             <span className="tree-date-notice-text">
-              📅 현재 상태는 {new Date(today).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })} 기준입니다
+              📅 현재 상태는 {new Date(today).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })} 기준이에요
             </span>
             <button
               className="tree-alert-close"
@@ -543,9 +553,19 @@ function Tree({ onNavigate, selectedDate }) {
               {emotionContributions.map((item) => (
                 <div key={item.emotion} className="tree-contribution-item">
                   <div className="tree-contribution-label">
-                    <span className="tree-contribution-emotion">
-                      {item.emotion}
-                    </span>
+                    <div className="tree-contribution-emotion-wrapper">
+                      <span className="tree-contribution-emotion">
+                        {item.emotion}
+                      </span>
+                      {(item.emotion === '놀람' || item.emotion === '부끄러움') && item.isContextual && (
+                        <div className="tree-contribution-info-tooltip-container">
+                          <span className="tree-contribution-info-icon">ⓘ</span>
+                          <div className="tree-contribution-info-tooltip">
+                            긍정적인 {item.emotion}으로 해석되어 행복 나무가 자라게 했어요.
+                          </div>
+                        </div>
+                      )}
+                    </div>
                     <span className="tree-contribution-percent">
                       {Math.round(item.ratio * 100)}%
                     </span>

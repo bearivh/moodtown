@@ -80,37 +80,28 @@ function Plaza({ onNavigate, selectedDate }) {
 
     let isMounted = true // 컴포넌트가 마운트되어 있는지 추적
 
-    // 캐시에서 즉시 복원
+    // 캐시에서 즉시 복원 (있으면 즉시 표시)
     const cached = plazaDataCache.get(selectedDate)
     if (cached && cached.conversation && cached.conversation.length > 0) {
-      // 캐시에 대화가 있으면 즉시 표시하고 API 호출 건너뛰기
+      // 캐시에 대화가 있으면 즉시 표시
       setConversation(cached.conversation || [])
       setEmotionScores(cached.emotionScores || {})
       setDateDiaries(cached.diaries || [])
       setLoading(false)
       setShowChat(true)
-      return // 캐시에 저장된 대화가 있으면 여기서 종료
-    } else if (cached) {
-      // 캐시에 일기는 있지만 대화가 없는 경우
-      setConversation(cached.conversation || [])
-      setEmotionScores(cached.emotionScores || {})
-      setDateDiaries(cached.diaries || [])
-      setLoading(false)
-    } else {
-      // 일기 캐시 확인
-      const cachedDiaries = getCachedDiariesForDate(selectedDate)
-      if (cachedDiaries) {
-        setDateDiaries(cachedDiaries)
-      }
+    } else if (cached && cached.diaries) {
+      // 캐시에 일기는 있지만 대화가 없는 경우 일기만 표시
+      setDateDiaries(cached.diaries)
     }
 
     const loadData = async () => {
-      // 캐시에 저장된 대화가 있으면 API 호출 건너뛰기
+      // 캐시에 대화가 이미 있으면 DB 조회 건너뛰기
       const cached = plazaDataCache.get(selectedDate)
       if (cached && cached.conversation && cached.conversation.length > 0) {
         return
       }
-      // 선택한 날짜의 일기 가져오기 (캐시 확인 후)
+
+      // 선택한 날짜의 일기 가져오기
       let diaries = getCachedDiariesForDate(selectedDate)
       if (!diaries) {
         diaries = await getDiariesByDate(selectedDate)
@@ -119,20 +110,26 @@ function Plaza({ onNavigate, selectedDate }) {
         setDiariesForDate(selectedDate, diaries)
       }
       
+      if (!isMounted) return
       setDateDiaries(diaries)
 
-      // 일기가 있으면 저장된 대화가 있는지 확인
+      // 일기가 있으면 저장된 대화가 있는지 DB에서 확인
       if (diaries.length > 0) {
-        // 먼저 저장된 대화 확인
+        // 데이터베이스에서 저장된 대화 확인
+        console.log('[광장] 데이터베이스에서 대화 불러오기 시도:', selectedDate)
         const savedConversation = await getPlazaConversationByDate(selectedDate)
         if (!isMounted) return
         
+        console.log('[광장] 데이터베이스 응답:', savedConversation ? 
+          `대화 있음 (${savedConversation.conversation?.length || 0}개 메시지)` : 
+          '대화 없음')
+        
         if (savedConversation && savedConversation.conversation && savedConversation.conversation.length > 0) {
-          // 저장된 대화가 있으면 불러오기 (재생성하지 않음, 로딩 없이 즉시 표시)
+          // 저장된 대화가 있으면 불러오기
+          console.log('[광장] 저장된 대화 불러오기 성공')
           setConversation(savedConversation.conversation)
           setEmotionScores(savedConversation.emotionScores || {})
           setLoading(false)
-          // 대화가 있으면 챗봇 활성화
           setShowChat(true)
           
           // 모듈 레벨 캐시에 저장
@@ -141,17 +138,21 @@ function Plaza({ onNavigate, selectedDate }) {
             emotionScores: savedConversation.emotionScores || {},
             diaries: diaries
           })
+          console.log('[광장] 캐시에 저장 완료')
           return // 저장된 대화가 있으면 여기서 종료
         } else {
           // 저장된 대화가 없으면 새로 생성 (이 경우에만 로딩 표시)
+          console.log('[광장] 저장된 대화가 없어서 새로 생성합니다')
           setLoading(true)
           const combinedContent = diaries.map(d => d.content).join('\n\n')
           analyzeDateDiaries(combinedContent)
         }
       } else {
+        // 일기가 없으면 초기화
         setConversation([])
         setEmotionScores({})
         setLoading(false)
+        setShowChat(false)
         
         // 모듈 레벨 캐시에도 저장
         plazaDataCache.set(selectedDate, {
@@ -162,6 +163,7 @@ function Plaza({ onNavigate, selectedDate }) {
       }
     }
     
+    // 캐시에 대화가 없으면 항상 데이터베이스에서 불러오기
     loadData()
     
     // cleanup 함수: 컴포넌트가 언마운트되면 플래그 설정
@@ -250,13 +252,17 @@ function Plaza({ onNavigate, selectedDate }) {
       
       // 대화 저장
       if (selectedDate && dialogue.length > 0) {
-        await savePlazaConversationByDate(selectedDate, dialogue, scores)
+        console.log('[광장] 대화 저장 시도:', selectedDate, dialogue.length, '개 메시지')
+        const saveSuccess = await savePlazaConversationByDate(selectedDate, dialogue, scores)
+        console.log('[광장] 대화 저장 결과:', saveSuccess ? '성공' : '실패')
+        
         // 모듈 레벨 캐시 업데이트
         plazaDataCache.set(selectedDate, {
           conversation: dialogue,
           emotionScores: scores,
           diaries: dateDiaries
         })
+        console.log('[광장] 캐시 업데이트 완료')
         // 대화 생성 완료 후 챗봇 활성화
         setShowChat(true)
       }

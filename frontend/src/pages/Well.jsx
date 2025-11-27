@@ -453,13 +453,23 @@ function Well({ onNavigate, selectedDate }) {
       // 총합 계산
       const total = Object.values(emotionTotals).reduce((sum, val) => sum + val, 0)
       
-      // 비율로 변환하여 기여도 배열 생성
+      // 비율로 변환하여 기여도 배열 생성 (놀람/부끄러움의 경우 극성 정보 포함)
       const contributions = Object.entries(emotionTotals)
-        .map(([emotion, score]) => ({
-          emotion,
-          score,
-          ratio: total > 0 ? score / total : 0
-        }))
+        .map(([emotion, score]) => {
+          const contribution = {
+            emotion,
+            score,
+            ratio: total > 0 ? score / total : 0
+          }
+          
+          // 놀람/부끄러움이 기여도에 포함된 경우, 부정으로 해석되었다는 정보 추가
+          if ((emotion === '놀람' || emotion === '부끄러움') && score > 0) {
+            contribution.isContextual = true
+            contribution.polarity = 'negative'
+          }
+          
+          return contribution
+        })
         .filter(item => item.score > 0) // 점수가 있는 것만
         .sort((a, b) => b.score - a.score) // 점수 높은 순으로 정렬
       
@@ -567,6 +577,14 @@ function Well({ onNavigate, selectedDate }) {
                   <span className="well-info-text">행복 나무의 열매가 열리면</span>
                   <span className="well-info-arrow">→</span>
                   <span className="well-info-result">물이 –50점 줄어들어요</span>
+                </div>
+              </div>
+              <div className="well-info-card">
+                <span className="well-info-icon">💚</span>
+                <div className="well-info-content">
+                  <span className="well-info-text">긍정적인 감정만 있으면</span>
+                  <span className="well-info-arrow">→</span>
+                  <span className="well-info-result">물이 –30점 줄어들어요</span>
                 </div>
               </div>
               <div className="well-info-card">
@@ -735,9 +753,19 @@ function Well({ onNavigate, selectedDate }) {
               {emotionContributions.map((item) => (
                 <div key={item.emotion} className="well-contribution-item">
                   <div className="well-contribution-label">
-                    <span className="well-contribution-emotion">
-                      {item.emotion}
-                    </span>
+                    <div className="well-contribution-emotion-wrapper">
+                      <span className="well-contribution-emotion">
+                        {item.emotion}
+                      </span>
+                      {(item.emotion === '놀람' || item.emotion === '부끄러움') && item.isContextual && (
+                        <div className="well-contribution-info-tooltip-container">
+                          <span className="well-contribution-info-icon">ⓘ</span>
+                          <div className="well-contribution-info-tooltip">
+                            부정적인 {item.emotion}으로 해석되어 물이 차오르게 했어요.
+                          </div>
+                        </div>
+                      )}
+                    </div>
                     <span className="well-contribution-percent">
                       {Math.round(item.ratio * 100)}%
                     </span>

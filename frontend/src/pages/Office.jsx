@@ -19,6 +19,7 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
   const [weekdayPattern, setWeekdayPattern] = useState(null)
   const [writingActivity, setWritingActivity] = useState(null)
   const [selectedDateEmotionStats, setSelectedDateEmotionStats] = useState(null)
+  const [selectedDateAllEmotions, setSelectedDateAllEmotions] = useState(null) // 선택된 날짜의 전체 감정 분석 결과
   const [officeStats, setOfficeStats] = useState(null)
   const [showInfo, setShowInfo] = useState(false)
   const [selectedDiaryForSimilarity, setSelectedDiaryForSimilarity] = useState(null)
@@ -139,6 +140,32 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
     setSelectedDiaryForSimilarity(null)
     setSimilarDiaries([])
     setSimilarError(null)
+    
+    // 선택된 날짜의 전체 감정 점수 합산
+    if (diaries.length > 0) {
+      const allEmotionStats = {
+        '기쁨': 0,
+        '사랑': 0,
+        '놀람': 0,
+        '두려움': 0,
+        '분노': 0,
+        '부끄러움': 0,
+        '슬픔': 0
+      }
+      
+      for (const diary of diaries) {
+        const scores = diary.emotion_scores || {}
+        Object.keys(allEmotionStats).forEach(emotion => {
+          allEmotionStats[emotion] += scores[emotion] || 0
+        })
+      }
+      
+      // 정규화된 감정 점수 계산
+      const normalizedScores = normalizeEmotionScores(allEmotionStats)
+      setSelectedDateAllEmotions(normalizedScores)
+    } else {
+      setSelectedDateAllEmotions(null)
+    }
   }
 
   const handleFindSimilar = async (diary) => {
@@ -490,47 +517,84 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
               {selectedDiaries.length === 0 ? (
                 <p className="diary-detail-empty">이 날짜에는 일기가 없어요</p>
               ) : (
-                <div className="diary-detail-list">
-                  {selectedDiaries.map(diary => (
-                    <div key={diary.id} className="diary-detail-item">
-                      <div className="diary-detail-header">
-                        <h5 className="diary-detail-item-title">
-                          {diary.title || '제목 없음'}
-                        </h5>
-                        {diary.emotion_scores && (
-                          <div className="diary-emotion-scores">
-                            {Object.entries(normalizeEmotionScores(diary.emotion_scores))
-                              .sort(([, a], [, b]) => b - a)
-                              .slice(0, 3)
-                              .map(([emotion, score]) => {
-                                const normalizedScore = Math.round(score)
-                                return (
+                <>
+                  {/* 전체 감정 분석 결과 바 그래프 */}
+                  {selectedDateAllEmotions && (
+                    <div className="selected-date-emotion-graph">
+                      <h5 className="emotion-graph-title">전체 감정 분석 결과</h5>
+                      <div className="emotion-bar-chart">
+                        {Object.entries(selectedDateAllEmotions)
+                          .sort(([, a], [, b]) => b - a)
+                          .map(([emotion, score]) => {
+                            const normalizedScore = Math.round(score)
+                            return (
+                              <div key={emotion} className="emotion-bar-item">
+                                <div className="emotion-bar-label">
+                                  <span 
+                                    className="emotion-bar-color"
+                                    style={{ backgroundColor: getEmotionColorByName(emotion) }}
+                                  ></span>
+                                  <span className="emotion-bar-name">{emotion}</span>
+                                </div>
+                                <div className="emotion-bar-container">
                                   <div
-                                    key={emotion}
-                                    className="emotion-score-badge"
-                                    style={{ 
-                                      backgroundColor: getEmotionColorByName(emotion),
-                                      color: 'white'
+                                    className="emotion-bar-fill"
+                                    style={{
+                                      width: `${normalizedScore}%`,
+                                      backgroundColor: getEmotionColorByName(emotion)
                                     }}
-                                  >
-                                    {emotion} {normalizedScore}%
-                                  </div>
-                                )
-                              })}
-                          </div>
-                        )}
+                                  ></div>
+                                </div>
+                                <span className="emotion-bar-value">{normalizedScore}%</span>
+                              </div>
+                            )
+                          })}
                       </div>
-                      <p className="diary-detail-content">{diary.content}</p>
-                      <button
-                        className="diary-similar-button"
-                        onClick={() => handleFindSimilar(diary)}
-                        disabled={loadingSimilar}
-                      >
-                        🔍 비슷한 일기 찾기
-                      </button>
                     </div>
-                  ))}
-                </div>
+                  )}
+                  
+                  <div className="diary-detail-list">
+                    {selectedDiaries.map(diary => (
+                      <div key={diary.id} className="diary-detail-item">
+                        <div className="diary-detail-header">
+                          <h5 className="diary-detail-item-title">
+                            {diary.title || '제목 없음'}
+                          </h5>
+                          {diary.emotion_scores && (
+                            <div className="diary-emotion-scores">
+                              {Object.entries(normalizeEmotionScores(diary.emotion_scores))
+                                .sort(([, a], [, b]) => b - a)
+                                .slice(0, 3)
+                                .map(([emotion, score]) => {
+                                  const normalizedScore = Math.round(score)
+                                  return (
+                                    <div
+                                      key={emotion}
+                                      className="emotion-score-badge"
+                                      style={{ 
+                                        backgroundColor: getEmotionColorByName(emotion),
+                                        color: 'white'
+                                      }}
+                                    >
+                                      {emotion} {normalizedScore}%
+                                    </div>
+                                  )
+                                })}
+                            </div>
+                          )}
+                        </div>
+                        <p className="diary-detail-content">{diary.content}</p>
+                        <button
+                          className="diary-similar-button"
+                          onClick={() => handleFindSimilar(diary)}
+                          disabled={loadingSimilar}
+                        >
+                          🔍 비슷한 일기 찾기
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -897,30 +961,30 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
             {emotionAverages && emotionAverages.totalDiaries > 0 && (
               <div className="stats-card averages-card">
                 <h3 className="stats-subtitle">📊 감정별 평균 점수</h3>
-                <div className="averages-content">
+                <div className="averages-bar-chart">
                   {Object.entries(emotionAverages.emotionAverages)
                     .filter(([_, avg]) => avg > 0)
                     .sort(([_, a], [__, b]) => b - a)
                     .map(([emotion, avg]) => (
-                      <div key={emotion} className="average-item">
-                        <div className="average-label">
+                      <div key={emotion} className="average-bar-item">
+                        <div className="average-bar-label">
                           <span 
-                            className="average-color"
+                            className="average-bar-color"
                             style={{ backgroundColor: getEmotionColorByName(emotion) }}
                           ></span>
-                          <span>{emotion}</span>
-                          </div>
-                        <div className="average-bar-container">
-                            <div
-                            className="average-bar"
-                              style={{
-                              width: `${(avg / 100) * 100}%`,
-                                backgroundColor: getEmotionColorByName(emotion)
-                              }}
-                            ></div>
-                          </div>
-                        <div className="average-value">{avg.toFixed(1)}점</div>
+                          <span className="average-bar-name">{emotion}</span>
                         </div>
+                        <div className="average-bar-container">
+                          <div
+                            className="average-bar-fill"
+                            style={{
+                              width: `${(avg / 100) * 100}%`,
+                              backgroundColor: getEmotionColorByName(emotion)
+                            }}
+                          ></div>
+                        </div>
+                        <span className="average-bar-value">{avg.toFixed(1)}점</span>
+                      </div>
                     ))}
                   {Object.values(emotionAverages.emotionAverages).every(v => v === 0) && (
                     <p className="stats-empty">평균 점수 데이터가 없어요</p>

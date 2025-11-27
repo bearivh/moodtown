@@ -30,6 +30,13 @@ function WriteDiary({ onNavigate, selectedDate }) {
 
   const getContentKey = (txt) => `${(txt || '').trim()}::${(txt || '').length}`
 
+  // selectedDate prop이 변경되면 date state 업데이트
+  useEffect(() => {
+    if (selectedDate) {
+      setDate(selectedDate)
+    }
+  }, [selectedDate])
+
   // 날짜가 변경될 때마다 해당 날짜의 기존 일기 확인
   useEffect(() => {
     const checkExistingDiary = async () => {
@@ -629,17 +636,21 @@ function WriteDiary({ onNavigate, selectedDate }) {
       </div>
 
       <form onSubmit={handleSubmit} className="write-diary-form">
-        {/* 날짜 선택 */}
+        {/* 날짜 표시 */}
         <div className="form-group">
-          <label htmlFor="date" className="form-label">날짜</label>
-          <input
-            type="date"
-            id="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="form-input"
-            max={getTodayDateString()}
-          />
+          <label className="form-label">날짜</label>
+          <div className="date-display">
+            {(() => {
+              if (!date) return ''
+              const dateObj = new Date(date + 'T00:00:00')
+              return dateObj.toLocaleDateString('ko-KR', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                weekday: 'long'
+              })
+            })()}
+          </div>
         </div>
 
         {/* 제목 입력 */}
@@ -681,26 +692,46 @@ function WriteDiary({ onNavigate, selectedDate }) {
 
         {/* 분석하기 섹션: ML 데모 / GPT 미리보기 */}
         <div className="form-group">
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              className="submit-button analyze-button-ml"
-              onClick={handleAnalyzeDemoML}
-              disabled={demoLoading || !content.trim()}
-            >
-              {demoLoading ? '분석 중...' : 'ML 모델으로 감정 분석하기'}
-            </button>
-            <button
-              type="button"
-              className="submit-button analyze-button-gpt"
-              onClick={handleAnalyzePreviewGPT}
-              disabled={demoLoading || !content.trim()}
-            >
-              {demoLoading ? '분석 중...' : 'GPT-4o mini로 감정 분석하기'}
-            </button>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+            <div className="analyze-button-wrapper">
+              <button
+                type="button"
+                className="submit-button analyze-button-ml"
+                onClick={handleAnalyzeDemoML}
+                disabled={demoLoading || !content.trim()}
+              >
+                {demoLoading ? '분석 중...' : 'ML 모델로 감정 분석하기'}
+              </button>
+              <div className="analyze-tooltip-container">
+                <span className="analyze-tooltip-icon">?</span>
+                <div className="analyze-tooltip">
+                  <strong>ML 모델로 분석하기란?</strong>
+                  <p>머신러닝으로 학습된 감정 분석 모델이 일기의 감정 분위기를 간단히 보여 줘요.</p>
+                  <p>다만 정확도가 낮을 수 있어 참고용으로만 제공돼요.</p>
+                </div>
+              </div>
+            </div>
+            <div className="analyze-button-wrapper">
+              <button
+                type="button"
+                className="submit-button analyze-button-gpt"
+                onClick={handleAnalyzePreviewGPT}
+                disabled={demoLoading || !content.trim()}
+              >
+                {demoLoading ? '분석 중...' : 'GPT-4o mini로 감정 분석하기'}
+              </button>
+              <div className="analyze-tooltip-container">
+                <span className="analyze-tooltip-icon">?</span>
+                <div className="analyze-tooltip">
+                  <strong>GPT-4o mini로 분석하기란?</strong>
+                  <p>GPT-4o mini가 일기를 읽고 더 정교하게 감정을 분석해 줘요.</p>
+                  <p>일기를 저장하면 이 분석 결과가 최종적으로 저장돼요.</p>
+                </div>
+              </div>
+            </div>
           </div>
           <p style={{ marginTop: 8, fontSize: 12, color: '#666' }}>
-            ML 모델으로 분석한 결과는 마을에 반영되지 않아요.
+            ML 모델로 분석한 결과는 마을에 반영되지 않아요.
           </p>
 
           {/* 데모/미리보기 결과 표시 */}
