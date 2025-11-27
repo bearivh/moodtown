@@ -718,7 +718,7 @@ function WriteDiary({ onNavigate, selectedDate }) {
                 <span className="analyze-tooltip-icon">?</span>
                 <div className="analyze-tooltip">
                   <strong>ML 모델로 분석하기란?</strong>
-                  <p>머신러닝으로 학습된 감정 분석 모델이 일기의 감정 분위기를 간단히 보여 줘요.</p>
+                  <p>머신러닝으로 학습된 감정 분석 모델이 일기의 감정 통계를 간단히 보여 줘요.</p>
                   <p>다만 정확도가 낮을 수 있어 참고용으로만 제공돼요.</p>
                 </div>
               </div>

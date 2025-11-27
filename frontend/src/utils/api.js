@@ -80,14 +80,14 @@ export async function analyzeText({ content, mode = 'ml' }) {
  * @param {string} date - 세션 구분용 날짜 (선택)
  * @returns {Promise<Object>} 대화 응답
  */
-export async function chatWithCharacters(message, characters = [], date = null) {
+export async function chatWithCharacters(message, characters = [], date = null, diaryContent = null) {
   try {
     const response = await fetch(`${API_BASE_URL}/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ message, characters, date }),
+      body: JSON.stringify({ message, characters, date, diary_content: diaryContent }),
     })
 
     if (!response.ok) {

@@ -426,7 +426,12 @@ function Plaza({ onNavigate, selectedDate }) {
         .slice(0, 4)
         .map(([emotion]) => emotion)
 
-      const result = await chatWithCharacters(userMessage, activeEmotions, selectedDate)
+      // 일기 내용 추출 (여러 일기가 있으면 합쳐서 전달)
+      const diaryContent = dateDiaries && dateDiaries.length > 0
+        ? dateDiaries.map(d => d.content).join('\n\n')
+        : null
+
+      const result = await chatWithCharacters(userMessage, activeEmotions, selectedDate, diaryContent)
       console.log('[챗봇] 백엔드 응답:', result)
       
       const dialogue = parseDialogue(result.reply || '')
