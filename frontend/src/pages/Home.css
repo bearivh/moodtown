@@ -364,6 +364,15 @@
   z-index: 1;
 }
 
+.home-title-logo {
+  width: clamp(5rem, 7vw, 80px);
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  position: relative;
+  z-index: 2;
+}
+
 .home-title {
   font-size: clamp(5rem, 7vw, 80px);
   font-weight: 700;
@@ -774,6 +783,10 @@
     margin-bottom: 2rem;
   }
 
+  .home-title-logo {
+    width: clamp(4rem, 16vw, 7rem);
+  }
+
   .home-title {
     font-size: clamp(4rem, 16vw, 7rem);
     letter-spacing: 0.03em;
@@ -848,6 +861,10 @@
 
 /* 태블릿 반응형 */
 @media (min-width: 769px) and (max-width: 1024px) {
+  .home-title-logo {
+    width: clamp(5.5rem, 10vw, 8rem);
+  }
+
   .home-title {
     font-size: clamp(5.5rem, 10vw, 8rem);
   }

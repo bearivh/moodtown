@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getAllDiaries } from '../utils/storage'
 import { getTodayDateString } from '../utils/dateUtils'
+import moodtownLogo from '../assets/icons/moodtown!.svg'
 import './Home.css'
 
 function Home({ onNavigate, selectedDate, user, onLogout }) {
@@ -99,9 +100,11 @@ function Home({ onNavigate, selectedDate, user, onLogout }) {
         
         {/* 마을 입구 제목 */}
         <div className="home-title-section">
-          <h1 className="home-title">
-            <span className="home-title-mood">mood</span><span className="home-title-town">town!</span>
-          </h1>
+          <img 
+            src={moodtownLogo} 
+            alt="moodtown!" 
+            className="home-title-logo"
+          />
         </div>
 
         {/* 날짜 선택 & 마을 입장 카드 */}
