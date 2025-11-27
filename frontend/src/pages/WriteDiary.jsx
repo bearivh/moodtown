@@ -704,7 +704,7 @@ function WriteDiary({ onNavigate, selectedDate }) {
 
         {/* 분석하기 섹션: ML 데모 / GPT 미리보기 */}
         <div className="form-group">
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          <div className="analyze-buttons-container">
             <div className="analyze-button-wrapper">
               <button
                 type="button"
