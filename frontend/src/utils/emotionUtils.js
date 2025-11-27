@@ -146,24 +146,32 @@ export function classifyEmotionsWithContext(emotionScores, emotionPolarity = {})
   
   // 놀람: 맥락 기반 분류
   const surprise = scores['놀람'] || 0
-  if (surprise > 0 && polarity['놀람']) {
-    if (polarity['놀람'] === 'positive') {
+  if (surprise > 0) {
+    const surprisePolarity = polarity['놀람']
+    if (surprisePolarity === 'positive') {
       positive += surprise
-    } else if (polarity['놀람'] === 'negative') {
+      console.log('[감정 분류] 놀람을 긍정으로 분류:', surprise, '점을 긍정에 추가')
+    } else if (surprisePolarity === 'negative') {
       negative += surprise
+      console.log('[감정 분류] 놀람을 부정으로 분류:', surprise, '점을 부정에 추가')
+    } else {
+      console.log('[감정 분류] 놀람의 극성이 없어서 제외:', surprise, '점 (극성:', surprisePolarity, ')')
     }
-    // null이면 중립으로 처리 (어디에도 포함 안됨)
   }
   
   // 부끄러움: 맥락 기반 분류
   const shame = scores['부끄러움'] || 0
-  if (shame > 0 && polarity['부끄러움']) {
-    if (polarity['부끄러움'] === 'positive') {
+  if (shame > 0) {
+    const shamePolarity = polarity['부끄러움']
+    if (shamePolarity === 'positive') {
       positive += shame
-    } else if (polarity['부끄러움'] === 'negative') {
+      console.log('[감정 분류] 부끄러움을 긍정으로 분류:', shame, '점을 긍정에 추가')
+    } else if (shamePolarity === 'negative') {
       negative += shame
+      console.log('[감정 분류] 부끄러움을 부정으로 분류:', shame, '점을 부정에 추가')
+    } else {
+      console.log('[감정 분류] 부끄러움의 극성이 없어서 제외:', shame, '점 (극성:', shamePolarity, ')')
     }
-    // null이면 중립으로 처리 (어디에도 포함 안됨)
   }
   
   return { positive, negative }

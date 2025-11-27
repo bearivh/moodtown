@@ -76,9 +76,21 @@ function WriteDiary({ onNavigate, selectedDate }) {
       const emotionScores = analysisResult.emotion_result?.emotion_scores || {}
       const emotionPolarity = analysisResult.emotion_result?.emotion_polarity || {}
       
+      // 디버깅: 놀람/부끄러움 극성 확인
+      console.log('[일기 저장] 감정 점수:', emotionScores)
+      console.log('[일기 저장] 감정 극성:', emotionPolarity)
+      if ((emotionScores['놀람'] || 0) > 0) {
+        console.log('[일기 저장] 놀람 점수:', emotionScores['놀람'], '극성:', emotionPolarity['놀람'])
+      }
+      if ((emotionScores['부끄러움'] || 0) > 0) {
+        console.log('[일기 저장] 부끄러움 점수:', emotionScores['부끄러움'], '극성:', emotionPolarity['부끄러움'])
+      }
+      
       // 2-3. 긍정/부정 감정 점수 계산 (맥락 기반 분류)
       const { positive: positiveScore, negative: negativeScore } = 
         classifyEmotionsWithContext(emotionScores, emotionPolarity)
+      
+      console.log('[일기 저장] 계산된 점수 - 긍정:', positiveScore, '부정:', negativeScore)
       
       const newDiaryData = {
         title: title.trim() || '제목 없음',
