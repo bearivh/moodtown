@@ -21,6 +21,11 @@ export function clearAllPlazaCache() {
   plazaDataCache.clear()
 }
 
+// 특정 날짜의 캐시만 초기화 함수 (일기 수정 시 사용)
+export function clearPlazaCacheForDate(date) {
+  plazaDataCache.delete(date)
+}
+
 // 캐릭터 정보 (백엔드 characters.json과 동기화)
 const CHARACTER_INFO = {
   '기쁨': { name: '노랑이', emoji: '🟡', color: '#eab308', pastelColor: '#fff9cc', image: yellowImage },
@@ -136,17 +141,51 @@ function Plaza({ onNavigate, selectedDate }) {
           '대화 없음')
         
         if (savedConversation && savedConversation.conversation && Array.isArray(savedConversation.conversation) && savedConversation.conversation.length > 0) {
+          // 저장된 대화의 감정 점수와 현재 일기의 감정 점수를 비교
+          const savedEmotionScores = savedConversation.emotionScores || {}
+          const currentDiaryContent = diaries.map(d => d.content).join('\n\n')
+          const currentDiaryEmotionScores = diaries.length > 0 ? (diaries[0].emotion_scores || {}) : {}
+          
+          // 일기 감정 점수가 변경되었는지 확인 (감정 점수가 있으면 비교)
+          let emotionScoresChanged = false
+          if (Object.keys(currentDiaryEmotionScores).length > 0 && Object.keys(savedEmotionScores).length > 0) {
+            // 주요 감정 점수 비교
+            const emotionKeys = ['기쁨', '사랑', '놀람', '두려움', '분노', '부끄러움', '슬픔']
+            for (const key of emotionKeys) {
+              const savedScore = savedEmotionScores[key] || 0
+              const currentScore = currentDiaryEmotionScores[key] || 0
+              // 감정 점수 차이가 5 이상이면 변경된 것으로 간주
+              if (Math.abs(savedScore - currentScore) > 5) {
+                emotionScoresChanged = true
+                console.log(`[광장] 감정 점수 변경 감지: ${key} (${savedScore} → ${currentScore})`)
+                break
+              }
+            }
+          }
+          
+          // 감정 점수가 변경되었거나 캐시에 일기 내용이 없는 경우 재생성
+          if (emotionScoresChanged || !cached || !cached.diaries || cached.diaries.length === 0) {
+            console.log('[광장] 감정 점수가 변경되어 대화 재생성이 필요합니다')
+            // 캐시 클리어
+            plazaDataCache.delete(selectedDate)
+            // 대화 재생성
+            setLoading(true)
+            const combinedContent = diaries.map(d => d.content).join('\n\n')
+            analyzeDateDiaries(combinedContent)
+            return
+          }
+          
           // 저장된 대화가 있으면 불러오기 (로딩 화면 안 띄움)
           console.log('[광장] 저장된 대화 불러오기 성공 - 재생성하지 않음', savedConversation.conversation.length, '개 메시지')
           setConversation(savedConversation.conversation)
-          setEmotionScores(savedConversation.emotionScores || {})
+          setEmotionScores(savedEmotionScores)
           setLoading(false) // 로딩 화면 안 띄움
           setShowChat(true)
           
-          // 모듈 레벨 캐시에 저장
+          // 모듈 레벨 캐시에 저장 (일기 내용 포함)
           plazaDataCache.set(selectedDate, {
             conversation: savedConversation.conversation,
-            emotionScores: savedConversation.emotionScores || {},
+            emotionScores: savedEmotionScores,
             diaries: diaries
           })
           console.log('[광장] 캐시에 저장 완료')

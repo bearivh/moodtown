@@ -8,6 +8,7 @@ import { getTodayDateString } from '../utils/dateUtils'
 import { normalizeEmotionScores, classifyEmotionsWithContext } from '../utils/emotionUtils'
 import { clearDiaryCacheForDate, setDiariesForDate } from '../utils/diaryCache'
 import { clearVillageCacheForDate, updateVillageCacheForDate } from './Village'
+import { clearPlazaCacheForDate } from './Plaza'
 import FloatingResidents from '../components/FloatingResidents'
 import './WriteDiary.css'
 
@@ -147,6 +148,9 @@ function WriteDiary({ onNavigate, selectedDate }) {
       
       // 1. 기존 일기 덮어쓰기 (백엔드에서 관련 상태 되돌리기 포함)
       await replaceDiary(date, oldEmotionScores, newDiaryData)
+      
+      // 1-1. 일기 수정 시 플라자 캐시 클리어 (새로운 감정 분석 반영을 위해)
+      clearPlazaCacheForDate(date)
       
       // 2. 새 일기로 나무/우물 업데이트 (덮어쓰기 플래그 전달)
       await saveAndUpdateStates(newDiaryData, emotionScores, positiveScore, negativeScore, true)
