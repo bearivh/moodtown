@@ -66,8 +66,17 @@ def get_db():
         raise RuntimeError("DATABASE_URL이 설정되지 않았습니다.")
     
     try:
-        conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+        # 연결 타임아웃 설정 (5초)
+        conn = psycopg2.connect(
+            DATABASE_URL, 
+            cursor_factory=RealDictCursor,
+            connect_timeout=5  # 5초 타임아웃
+        )
         return conn
+    except psycopg2.OperationalError as e:
+        print(f"⚠️  PostgreSQL 연결 실패 (운영 오류): {e}")
+        print(f"🔍 연결 시도한 DATABASE_URL: {DATABASE_URL.split('@')[0] if '@' in DATABASE_URL else 'N/A'}@***")
+        raise
     except Exception as e:
         print(f"⚠️  PostgreSQL 연결 실패: {e}")
         print(f"🔍 연결 시도한 DATABASE_URL: {DATABASE_URL.split('@')[0] if '@' in DATABASE_URL else 'N/A'}@***")
