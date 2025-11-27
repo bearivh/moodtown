@@ -23,6 +23,94 @@ from services.letter_generator import generate_letter_with_gpt
 import json
 
 # 유사 일기 검색 서비스 import
+
+# 편지 생성 헬퍼 함수
+def generate_letter_for_high_emotion(emotion_scores_raw, diary_content, diary_date, user_id):
+    """감정 점수가 70 이상일 때 편지 생성"""
+    if not emotion_scores_raw:
+        return
+    
+    print(f"[편지 생성 디버깅] emotion_scores_raw 타입: {type(emotion_scores_raw)}, 값: {emotion_scores_raw}")
+    
+    # emotion_scores 파싱 (다양한 형식 지원)
+    emotion_scores = {}
+    if isinstance(emotion_scores_raw, str):
+        try:
+            parsed = json.loads(emotion_scores_raw)
+            if isinstance(parsed, dict) and 'emotion_scores' in parsed:
+                emotion_scores = parsed.get('emotion_scores', {})
+            else:
+                emotion_scores = parsed
+            print(f"[편지 생성 디버깅] 문자열 파싱 성공: {emotion_scores}")
+        except Exception as e:
+            print(f"[편지 생성 디버깅] 문자열 파싱 실패: {e}")
+            emotion_scores = {}
+    elif isinstance(emotion_scores_raw, dict):
+        if 'emotion_scores' in emotion_scores_raw:
+            emotion_scores = emotion_scores_raw.get('emotion_scores', {})
+        else:
+            emotion_scores = emotion_scores_raw
+        print(f"[편지 생성 디버깅] 딕셔너리에서 추출: {emotion_scores}")
+    else:
+        print(f"[편지 생성 디버깅] emotion_scores_raw가 예상치 못한 타입: {type(emotion_scores_raw)}")
+    
+    if emotion_scores and isinstance(emotion_scores, dict):
+        # 감정 점수가 70점 이상인 감정 찾기
+        EMOTION_THRESHOLD = 70
+        high_emotions = []
+        
+        print(f"[편지 생성 디버깅] 감정 점수 전체: {emotion_scores}")
+        
+        for emotion, score in emotion_scores.items():
+            print(f"[편지 생성 디버깅] 감정 '{emotion}': 점수={score} (타입: {type(score)})")
+            if isinstance(score, (int, float)) and score >= EMOTION_THRESHOLD:
+                high_emotions.append({'emotion': emotion, 'score': score})
+                print(f"[편지 생성 디버깅] ✅ '{emotion}' 감정이 {score}점으로 70점 이상임")
+        
+        print(f"[편지 생성 디버깅] 70점 이상 감정 목록: {high_emotions}")
+        
+        # 가장 높은 감정 하나만 선택 (여러 개면 가장 높은 것)
+        if high_emotions:
+            high_emotions.sort(key=lambda x: x['score'], reverse=True)
+            top_emotion = high_emotions[0]
+            print(f"[편지 생성 디버깅] 선택된 감정: {top_emotion['emotion']} ({top_emotion['score']}점)")
+            
+            try:
+                # 해당 감정 주민에게 편지 생성
+                print(f"[편지 생성 디버깅] GPT 편지 생성 시작...")
+                letter_data = generate_letter_with_gpt(
+                    letter_type='emotion_high',
+                    emotion_scores={
+                        'emotion_name': top_emotion['emotion'],
+                        'score': top_emotion['score']
+                    },
+                    diary_text=diary_content or ''
+                )
+                print(f"[편지 생성 디버깅] GPT 편지 생성 완료: {letter_data.get('title', 'N/A')}")
+                
+                # 편지 저장
+                letter = {
+                    'title': letter_data.get('title', '💌 주민들의 편지'),
+                    'content': letter_data.get('content', ''),
+                    'from': letter_data.get('from', '감정 마을'),
+                    'type': 'emotion_high',
+                    'date': diary_date or datetime.now().strftime('%Y-%m-%d')
+                }
+                print(f"[편지 생성 디버깅] 편지 저장 시작... user_id={user_id}")
+                save_result = save_letter(letter, user_id)
+                if save_result:
+                    print(f"[편지 생성 성공] {top_emotion['emotion']} 감정이 {top_emotion['score']}점으로 높아서 편지 생성 및 저장 완료")
+                else:
+                    print(f"[편지 생성 실패] {top_emotion['emotion']} 감정 편지 저장 실패 (save_letter가 False 반환)")
+            except Exception as e:
+                print(f"[편지 생성 실패] 감정 점수 기반 편지 생성 오류: {e}")
+                import traceback
+                traceback.print_exc()
+                # 편지 생성 실패해도 일기 저장은 성공으로 처리
+        else:
+            print(f"[편지 생성 디버깅] 70점 이상 감정이 없음. 전체 감정 점수: {emotion_scores}")
+    else:
+        print(f"[편지 생성 디버깅] emotion_scores가 없거나 딕셔너리가 아님. emotion_scores={emotion_scores}, 타입={type(emotion_scores)}")
 _HAS_SIMILARITY = False
 try:
     # 절대 경로로 services 모듈 import
@@ -78,88 +166,9 @@ def create_diary_endpoint():
     if save_diary(data, user_id):
         # 일기 저장 성공 후 감정 점수 확인하여 편지 생성
         emotion_scores_raw = data.get('emotion_scores', {})
-        
-        print(f"[편지 생성 디버깅] emotion_scores_raw 타입: {type(emotion_scores_raw)}, 값: {emotion_scores_raw}")
-        
-        # emotion_scores 파싱 (다양한 형식 지원)
-        emotion_scores = {}
-        if isinstance(emotion_scores_raw, str):
-            try:
-                parsed = json.loads(emotion_scores_raw)
-                if isinstance(parsed, dict) and 'emotion_scores' in parsed:
-                    emotion_scores = parsed.get('emotion_scores', {})
-                else:
-                    emotion_scores = parsed
-                print(f"[편지 생성 디버깅] 문자열 파싱 성공: {emotion_scores}")
-            except Exception as e:
-                print(f"[편지 생성 디버깅] 문자열 파싱 실패: {e}")
-                emotion_scores = {}
-        elif isinstance(emotion_scores_raw, dict):
-            if 'emotion_scores' in emotion_scores_raw:
-                emotion_scores = emotion_scores_raw.get('emotion_scores', {})
-            else:
-                emotion_scores = emotion_scores_raw
-            print(f"[편지 생성 디버깅] 딕셔너리에서 추출: {emotion_scores}")
-        else:
-            print(f"[편지 생성 디버깅] emotion_scores_raw가 예상치 못한 타입: {type(emotion_scores_raw)}")
-        
-        if emotion_scores and isinstance(emotion_scores, dict):
-            # 감정 점수가 70점 이상인 감정 찾기
-            EMOTION_THRESHOLD = 70
-            high_emotions = []
-            
-            print(f"[편지 생성 디버깅] 감정 점수 전체: {emotion_scores}")
-            
-            for emotion, score in emotion_scores.items():
-                print(f"[편지 생성 디버깅] 감정 '{emotion}': 점수={score} (타입: {type(score)})")
-                if isinstance(score, (int, float)) and score >= EMOTION_THRESHOLD:
-                    high_emotions.append({'emotion': emotion, 'score': score})
-                    print(f"[편지 생성 디버깅] ✅ '{emotion}' 감정이 {score}점으로 70점 이상임")
-            
-            print(f"[편지 생성 디버깅] 70점 이상 감정 목록: {high_emotions}")
-            
-            # 가장 높은 감정 하나만 선택 (여러 개면 가장 높은 것)
-            if high_emotions:
-                high_emotions.sort(key=lambda x: x['score'], reverse=True)
-                top_emotion = high_emotions[0]
-                print(f"[편지 생성 디버깅] 선택된 감정: {top_emotion['emotion']} ({top_emotion['score']}점)")
-                
-                try:
-                    # 해당 감정 주민에게 편지 생성
-                    print(f"[편지 생성 디버깅] GPT 편지 생성 시작...")
-                    letter_data = generate_letter_with_gpt(
-                        letter_type='emotion_high',
-                        emotion_scores={
-                            'emotion_name': top_emotion['emotion'],
-                            'score': top_emotion['score']
-                        },
-                        diary_text=data.get('content', '')
-                    )
-                    print(f"[편지 생성 디버깅] GPT 편지 생성 완료: {letter_data.get('title', 'N/A')}")
-                    
-                    # 편지 저장
-                    letter = {
-                        'title': letter_data.get('title', '💌 주민들의 편지'),
-                        'content': letter_data.get('content', ''),
-                        'from': letter_data.get('from', '감정 마을'),
-                        'type': 'emotion_high',
-                        'date': data.get('date', datetime.now().strftime('%Y-%m-%d'))
-                    }
-                    print(f"[편지 생성 디버깅] 편지 저장 시작... user_id={user_id}")
-                    save_result = save_letter(letter, user_id)
-                    if save_result:
-                        print(f"[편지 생성 성공] {top_emotion['emotion']} 감정이 {top_emotion['score']}점으로 높아서 편지 생성 및 저장 완료")
-                    else:
-                        print(f"[편지 생성 실패] {top_emotion['emotion']} 감정 편지 저장 실패 (save_letter가 False 반환)")
-                except Exception as e:
-                    print(f"[편지 생성 실패] 감정 점수 기반 편지 생성 오류: {e}")
-                    import traceback
-                    traceback.print_exc()
-                    # 편지 생성 실패해도 일기 저장은 성공으로 처리
-            else:
-                print(f"[편지 생성 디버깅] 70점 이상 감정이 없음. 전체 감정 점수: {emotion_scores}")
-        else:
-            print(f"[편지 생성 디버깅] emotion_scores가 없거나 딕셔너리가 아님. emotion_scores={emotion_scores}, 타입={type(emotion_scores)}")
+        diary_content = data.get('content', '')
+        diary_date = data.get('date', datetime.now().strftime('%Y-%m-%d'))
+        generate_letter_for_high_emotion(emotion_scores_raw, diary_content, diary_date, user_id)
         
         return jsonify({"success": True, "message": "일기가 저장되었습니다."})
     return jsonify({"error": "일기 저장에 실패했습니다."}), 500
@@ -230,6 +239,12 @@ def replace_diary():
     delete_plaza_conversation_by_date(date, user_id)
     delete_diary_by_date(date, user_id)
     if save_diary(new_diary_data, user_id):
+        # 일기 수정 후에도 감정 점수 확인하여 편지 생성
+        emotion_scores_raw = new_diary_data.get('emotion_scores', {})
+        diary_content = new_diary_data.get('content', '')
+        diary_date = date
+        generate_letter_for_high_emotion(emotion_scores_raw, diary_content, diary_date, user_id)
+        
         return jsonify({"success": True, "message": "일기가 덮어씌워졌습니다."})
     return jsonify({"error": "일기 저장에 실패했습니다."}), 500
 
