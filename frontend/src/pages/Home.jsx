@@ -9,10 +9,20 @@ function Home({ onNavigate, selectedDate, user, onLogout }) {
   const [showDateList, setShowDateList] = useState(false)
 
   useEffect(() => {
-    // 일기가 있는 날짜 목록 가져오기 - 오래된 순부터 정렬
+    // 일기가 있는 날짜 목록 가져오기 - 현재 월 기준으로만 필터링
     const loadDates = async () => {
       const diaries = await getAllDiaries()
-      const dates = [...new Set(diaries.map(diary => diary.date))].sort()
+      const today = new Date()
+      const currentYear = today.getFullYear()
+      const currentMonth = today.getMonth() + 1 // getMonth()는 0부터 시작하므로 +1
+      
+      // 현재 월의 날짜만 필터링
+      const dates = [...new Set(diaries.map(diary => diary.date))]
+        .filter(dateStr => {
+          const date = new Date(dateStr + 'T00:00:00')
+          return date.getFullYear() === currentYear && (date.getMonth() + 1) === currentMonth
+        })
+        .sort()
       setAvailableDates(dates)
     }
     loadDates()
@@ -145,7 +155,7 @@ function Home({ onNavigate, selectedDate, user, onLogout }) {
                   className="home-date-toggle"
                   onClick={() => setShowDateList(!showDateList)}
                 >
-                  <span>일기가 있는 날짜 ({availableDates.length})</span>
+                  <span>{new Date().getMonth() + 1}월 일기가 있는 날짜 ({availableDates.length})</span>
                   <span className={`home-date-toggle-icon ${showDateList ? 'open' : ''}`}>▼</span>
                 </button>
                 {showDateList && (
