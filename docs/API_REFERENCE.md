@@ -457,9 +457,5 @@ GET /health
 - `404`: 리소스를 찾을 수 없음
 - `500`: 서버 오류
 
-## 관련 문서
-
-- [백엔드 가이드](BACKEND.md)
-- [프론트엔드 가이드](FRONTEND.md)
 
 [← README로 돌아가기](../README.md)

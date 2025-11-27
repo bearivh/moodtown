@@ -670,7 +670,7 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
                             onClick={() => handleDeleteDiary(diary)}
                             disabled={deleting}
                           >
-                            🗑️ 삭제
+                            삭제
                           </button>
                         </div>
                       </div>

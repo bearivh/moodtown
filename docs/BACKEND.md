@@ -147,13 +147,8 @@ backend/
 ### 보안
 - SQL 인젝션 방지 (파라미터화된 쿼리)
 - XSS 방지 (쿠키 HttpOnly 설정)
-- CORS 설정 (프로덕션 환경)
+- CORS 설정 (프로덕션 환경)  
 
-## 관련 문서
 
-- [프론트엔드 가이드](FRONTEND.md)
-- [API 레퍼런스](API_REFERENCE.md)
-- [ML 모델 문서](ML_MODELS.md)
-- [배포 가이드](DEPLOYMENT.md)
 
 [← README로 돌아가기](../README.md#설치-및-실행)

@@ -1,6 +1,6 @@
 # 🏗️ 시스템 아키텍처
 
-MoodTown의 시스템 아키텍처와 기술 스택에 대한 상세 설명입니다.
+MoodTown의 시스템 아키텍처에 대한 상세 설명입니다.
 
 ## 기술 스택 흐름 다이어그램
 
@@ -10,11 +10,6 @@ MoodTown의 시스템 아키텍처와 기술 스택에 대한 상세 설명입�
 
 ![데이터 플로우](data-flow.svg)
 
-## 기술 스택
-
-자세한 기술 스택 설명은 각 문서를 참고하세요:
-- [프론트엔드 가이드](FRONTEND.md)
-- [백엔드 가이드](BACKEND.md)
 
 ## 시스템 동작 원리
 
@@ -128,14 +123,8 @@ moodtown/
 │
 ├── 감성대화말뭉치(최종데이터)_Training.json    # ML 학습 데이터
 ├── 감성대화말뭉치(최종데이터)_Validation.json  # ML 검증 데이터
-└── README.md
+└── README.md  
 ```
 
-## 관련 문서
-
-- [프론트엔드 가이드](FRONTEND.md)
-- [백엔드 가이드](BACKEND.md)
-- [ML 모델 문서](ML_MODELS.md)
-- [API 레퍼런스](API_REFERENCE.md)
 
 [← README로 돌아가기](../README.md#️-기술-스택)

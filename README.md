@@ -1,13 +1,21 @@
 # moodtown 🏘️
 
-**배포 링크**  
-[Go to moodtown!](https://moodtown-three.vercel.app/)
-
 moodtown은 사용자의 일기를 AI가 분석해 7가지 감정의 주민 캐릭터로 시각화하고, 감정 기반의 마을을 성장시키는 인터랙티브 다이어리 플랫폼입니다.
 
-## 📖 간단 소개
+**배포 링크**  
+[☘️ Go to moodtown!](https://moodtown-three.vercel.app/)  
 
-moodtown은 단순한 일기 앱을 넘어서, 감정을 시각화하고 게임화 요소를 통해 사용자의 감정 표현과 자기 이해를 돕는 플랫폼입니다. 일기를 작성하면:
+**테스트 계정**  
+**ID**: ososo /  **PW**: moodtown  
+👉🏻 로그인을 하면 예시 데이터를 통해 moodtown의 구현 모습습을 빠르게 확인해 볼 수 있어요!
+
+## 📖 개요
+
+감정을 돌아보고 나의 마음을 알아갈 수 있어요.
+
+moodtown은 단순한 일기 앱을 넘어서, 감정을 시각화하고 게임화 요소를 통해 사용자의 감정 표현과 자기 이해를 돕는 플랫폼입니다.  
+
+일기를 작성하면:
 
 - 🤖 **AI가 감정을 분석**하고 (GPT-4o-mini)
 - 👥 **감정 주민들이 대화**를 나누며
@@ -17,20 +25,19 @@ moodtown은 단순한 일기 앱을 넘어서, 감정을 시각화하고 게임�
 
 감정 기반 소셜 게임형 일기 플랫폼입니다.
 
-## 📚 문서
+## 📸 기본 화면 스크린샷
 
-자세한 내용은 다음 문서를 참고하세요:
+### 로그인 페이지
+![로그인 페이지](screenshots/login.png)  
+﻿~❥
+### 홈 화면
+![홈 화면](screenshots/home.png)
+﻿~❥
+### 마을 입구
+![마을 입구](screenshots/village.png)
 
-- **[프로젝트 소개](docs/INTRO.md)** - 프로젝트 전체 소개 (확장 버전)
-- **[주요 기능](docs/FEATURES.md)** - 주요 기능 상세 설명
-- **[시스템 아키텍처](docs/ARCHITECTURE.md)** - 시스템 아키텍처 구조
-- **[프론트엔드](docs/FRONTEND.md)** - 프론트엔드 실행/설계 설명
-- **[백엔드](docs/BACKEND.md)** - 백엔드 실행/설계 설명
-- **[ML 모델](docs/ML_MODELS.md)** - 감정 분석/Doc2Vec 모델 설명
-- **[API 레퍼런스](docs/API_REFERENCE.md)** - API 라우트 문서
-- **[게임 디자인](docs/GAME_DESIGN.md)** - 감정 마을/나무/우물의 게임 메커니즘
-- **[배포 가이드](docs/DEPLOYMENT.md)** - 배포 과정 설명
-- **[기여 가이드](docs/CONTRIBUTING.md)** - 기여 가이드
+---
+
 
 ## 🚀 빠른 시작
 
@@ -72,132 +79,117 @@ npm run dev
 
 자세한 내용은 [시스템 아키텍처](docs/ARCHITECTURE.md)를 참고하세요.
 
-## 📁 프로젝트 구조
+
+
+## 🐻 핵심 컨셉
+
+### 1. 감정의 시각화와 의인화를 통한 커뮤니케이션션
+추상적인 감정을 구체적인 캐릭터와 게임 요소로 표현합니다. 7가지 감정(기쁨, 사랑, 놀람, 두려움, 분노, 부끄러움, 슬픔)은 각각 고유한 색상과 성격을 가진 주민 캐릭터로 나타납니다. 감정의 의인화를 통해 자신의 감정에 더욱 친근하게 다가갈 수 있도록 합니다.
+
+### 2. 게임화(Gamification)
+일기 작성이 재미있고 지속 가능하도록 게임 요소를 추가했습니다:
+- 행복 나무가 자라나고 열매를 맺음
+- 스트레스 우물의 물이 변화함
+- 감정 주민들이 대화를 나눔
+- 편지와 메시지를 받음
+
+### 3. AI 기반 분석
+GPT-4o-mini와 ML 모델을 활용한 정확한 감정 분석:
+- **GPT-4o-mini**: 최종 감정 분석 및 대화 생성 (실제 사용)
+- **ML 모델**: 참고용 감정 분석 제공
+
+
+
+
+## ⚙️ 작동 방식
+
+일기를 작성하면 자동으로 다음 과정이 진행됩니다:
+
+### 1. 🤖 AI 감정 분석
+- GPT-4o-mini가 일기 내용을 읽고 7가지 감정에 대한 점수를 산출
+- 각 감정은 0~100점으로 표시되며, 여러 감정이 동시에 존재할 수 있음
+- 참고용으로 ML 모델 분석 결과도 제공 (비교용)
+
+### 2. 👥 감정 주민 대화 생성
+- 감정 분석 결과를 바탕으로 GPT-4o-mini가 감정 주민들의 대화 생성
+- 각 주민은 고유한 성격과 말투를 가짐
+- 일기 내용에 대해 주민들이 서로 의견 및 감정정을 나누는 형태
+
+### 3. 🌳 행복 나무 성장
+- 긍정적인 감정(기쁨, 사랑, 긍정적 놀람/부끄러움)이 쌓이면 나무가 자라남
+- 나무가 일정 단계까지 성장하면 열매가 열림
+- 열매 수집을 통해 성취감 제공
+
+### 4. 💧 스트레스 우물 변화
+- 부정적인 감정(분노, 슬픔, 두려움, 부정적 놀람/부끄러움)이 쌓이면 우물에 물이 차오름
+- 물이 가득 차면 넘치게 됨
+
+### 5. 💌 감정 주민 편지
+- 특별한 상황에 주민이 편지를 보냄
+
+## 기술적 특징
+
+### 하이브리드 감정 분석
+GPT-4o-mini와 ML 모델을 함께 사용합니다:
+- **GPT-4o-mini**: 최종 감정 분석 (실제 시스템 사용)
+- **ML 모델**: 참고용 분석 (사용자가 비교 가능)
+
+### 문맥 기반 감정 분류
+"놀람"과 "부끄러움"은 문맥에 따라 긍정/부정으로 구분됩니다:
+- **Rule-based 분석**: 키워드 패턴 매칭
+- **GPT 기반 분석**: 문맥 이해
+- 두 결과를 결합하여 최종 극성 결정
+
+### 실시간 대화 생성
+GPT를 활용한 자연스러운 캐릭터 대화:
+- 각 주민의 고유한 성격과 말투 반영
+- 감정 점수에 따라 주요 감정과 반응 감정 구분
+- 일기 내용에 대한 다양한 관점 제공
+
+### 유사 일기 검색
+Doc2Vec 기반으로 과거 유사한 감정의 일기 찾기:
+- 텍스트 유사도 + 감정 점수 유사도 결합
+- 자기 이해와 감정 패턴 파악에 도움
+
+### 캐시 최적화
+모듈 레벨 캐싱으로 빠른 페이지 전환:
+- 페이지 전환 시 즉시 데이터 표시
+- 불필요한 API 호출 최소화
+
+## 대략적인 프로젝트 구조
 
 ```
 moodtown/
-├── README.md
-│
-├── docs/                      # 📚 문서
-│   ├── INTRO.md              # 프로젝트 전체 소개 (확장 버전)
-│   ├── FEATURES.md           # 주요 기능 상세 설명
-│   ├── ARCHITECTURE.md       # 시스템 아키텍처 구조
-│   ├── FRONTEND.md           # 프론트엔드 실행/설계 설명
-│   ├── BACKEND.md            # 백엔드 실행/설계 설명
-│   ├── ML_MODELS.md          # 감정 분석/Doc2Vec 모델 설명
-│   ├── API_REFERENCE.md      # API 라우트 문서
-│   ├── GAME_DESIGN.md        # 감정 마을/나무/우물의 게임 메커니즘
-│   ├── DEPLOYMENT.md         # 배포 과정 설명
-│   ├── CONTRIBUTING.md       # 기여 가이드
-│   ├── architecture.svg      # 시스템 아키텍처 다이어그램
-│   └── data-flow.svg         # 데이터 플로우 다이어그램
-│
-├── backend/                  # 🐍 Flask 백엔드
-│   ├── api/                  # API 라우트
-│   │   ├── __init__.py
-│   │   ├── auth.py          # 인증 API (회원가입, 로그인, 로그아웃)
-│   │   ├── diary.py         # 일기 CRUD API
-│   │   ├── letters.py       # 편지 관리 API
-│   │   ├── tree.py          # 행복 나무 API
-│   │   ├── well.py          # 스트레스 우물 API
-│   │   ├── chat.py          # 채팅 API
-│   │   ├── routes.py        # 메인 라우트 (감정 분석)
-│   │   └── middleware.py    # 미들웨어 (인증 등)
-│   │
-│   ├── services/            # 비즈니스 로직
-│   │   ├── emotion_gpt.py      # GPT 감정 분석
-│   │   ├── emotion_ml.py       # ML 감정 분석 (참고용)
-│   │   ├── conversation.py     # 광장 대화 생성
-│   │   ├── letter_generator.py # 편지 생성
-│   │   ├── diary_similarity.py # 유사 일기 검색
-│   │   ├── train_emotion_ml.py # 감정 분석 모델 학습
-│   │   ├── train_diary_similarity.py # 유사 일기 검색 모델 학습
-│   │   └── models/          # 학습된 ML 모델 파일
-│   │       ├── emotion_ml.joblib
-│   │       ├── diary_similarity_doc2vec.model
-│   │       ├── metrics.json
-│   │       ├── confusion_matrix.png
-│   │       └── ...
-│   │
-│   ├── core/                # 공통 모듈
-│   │   ├── __init__.py
-│   │   └── common.py        # 공통 함수 및 캐릭터 정보
-│   │
-│   ├── characters.json      # 감정 주민 캐릭터 정의
-│   ├── db.py               # 데이터베이스 연결 및 함수
-│   ├── app.py              # Flask 앱 진입점
-│   ├── requirements.txt    # Python 의존성
-│   ├── Procfile            # 프로덕션 배포 설정
-│   ├── runtime.txt         # Python 버전 설정
-│   └── railway.json        # Railway 배포 설정
-│
-├── frontend/                # ⚛️ React 프론트엔드
-│   ├── src/
-│   │   ├── pages/          # 페이지 컴포넌트
-│   │   │   ├── Home.jsx         # 홈 화면
-│   │   │   ├── Login.jsx        # 로그인 페이지
-│   │   │   ├── Village.jsx      # 마을 입구
-│   │   │   ├── WriteDiary.jsx   # 일기 작성
-│   │   │   ├── Plaza.jsx        # 와글와글 광장
-│   │   │   ├── Tree.jsx         # 행복 나무
-│   │   │   ├── Well.jsx         # 스트레스 우물
-│   │   │   ├── Office.jsx       # 마을 사무소
-│   │   │   ├── Mailbox.jsx      # 우체통
-│   │   │   ├── Guide.jsx        # 마을 안내도
-│   │   │   └── *.css            # 각 페이지의 스타일 파일
-│   │   │
-│   │   ├── components/     # 재사용 컴포넌트
-│   │   │   ├── FloatingResidents.jsx  # 플로팅 주민 캐릭터
-│   │   │   ├── FloatingResidents.css
-│   │   │   ├── EmotionSky.jsx         # 감정 하늘 배경
-│   │   │   ├── EmotionSky.css
-│   │   │   ├── ResidentsIntro.jsx     # 주민 소개
-│   │   │   └── ResidentsIntro.css
-│   │   │
-│   │   ├── utils/          # 유틸리티 함수
-│   │   │   ├── api.js            # API 호출 함수
-│   │   │   ├── storage.js        # 데이터 저장/조회
-│   │   │   ├── diaryCache.js     # 일기 캐시 관리
-│   │   │   ├── emotionUtils.js   # 감정 관련 유틸리티
-│   │   │   ├── emotionColorMap.js # 감정 색상 매핑
-│   │   │   ├── dateUtils.js      # 날짜 유틸리티
-│   │   │   ├── treeUtils.js      # 나무 관련 유틸리티
-│   │   │   ├── wellUtils.js      # 우물 관련 유틸리티
-│   │   │   └── mailboxUtils.js   # 편지 관련 유틸리티
-│   │   │
-│   │   ├── assets/         # 정적 리소스
-│   │   │   ├── characters/  # 주민 캐릭터 이미지
-│   │   │   │   ├── yellow.png (노랑이 - 기쁨)
-│   │   │   │   ├── green.png (초록이 - 사랑)
-│   │   │   │   ├── purple.png (보라 - 놀람)
-│   │   │   │   ├── navy.png (남색이 - 두려움)
-│   │   │   │   ├── red.png (빨강이 - 분노)
-│   │   │   │   ├── orange.png (주황이 - 부끄러움)
-│   │   │   │   └── blue.png (파랑이 - 슬픔)
-│   │   │   └── icons/      # 아이콘 이미지
-│   │   │
-│   │   ├── style/          # 전역 스타일
-│   │   │   └── globals.css
-│   │   │
-│   │   ├── App.jsx         # 메인 앱 컴포넌트
-│   │   ├── App.css         # 앱 스타일
-│   │   ├── main.jsx        # 진입점
-│   │   └── index.css       # 전역 CSS
-│   │
-│   ├── public/             # 정적 파일
-│   │   ├── favicon.svg
-│   │   └── vite.svg
-│   │
-│   ├── index.html          # HTML 템플릿
-│   ├── package.json        # npm 의존성
-│   ├── vite.config.js      # Vite 설정
-│   ├── eslint.config.js    # ESLint 설정
-│   ├── vercel.json         # Vercel 배포 설정
-│   └── README.md           # 프론트엔드 README
-│
-├── 감성대화말뭉치(최종데이터)_Training.json    # ML 학습 데이터
-└── 감성대화말뭉치(최종데이터)_Validation.json  # ML 검증 데이터
+├── backend/                 # Flask 백엔드
+│   ├── api/                # API 라우트
+│   ├── services/           # 비즈니스 로직
+│   ├── core/               # 공통 모듈
+│   └── db.py              # 데이터베이스 연결
+├── frontend/              # React 프론트엔드
+│   └── src/
+│       ├── pages/         # 페이지 컴포넌트
+│       ├── components/    # 재사용 컴포넌트
+│       └── utils/         # 유틸리티 함수
+└── docs/                  # 문서
 ```
+
+자세한 구조는 [프로젝트 구조](#)를 참고하세요.
+
+## 📚 자세한 설명
+- **[프로젝트 소개](docs/INTRO.md)** - 프로젝트 전체 소개 (확장 버전)  
+
+**기능 및 로직**
+- **[주요 기능](docs/FEATURES.md)** - 주요 기능 설명
+- **[게임 디자인](docs/GAME_DESIGN.md)** - 감정 마을/나무/우물의 게임 메커니즘  
+
+**시스템 설계 구조 및 기술**  
+- **[시스템 아키텍처](docs/ARCHITECTURE.md)** - 시스템 아키텍처 구조
+- **[프론트엔드](docs/FRONTEND.md)** - 프론트엔드 실행/설계 설명
+- **[백엔드](docs/BACKEND.md)** - 백엔드 실행/설계 설명
+- **[ML 모델](docs/ML_MODELS.md)** - 감정 분석/Doc2Vec 모델 설명
+- **[API 레퍼런스](docs/API_REFERENCE.md)** - API 라우트 문서
+- **[배포 가이드](docs/DEPLOYMENT.md)** - 배포 과정 설명
+- **[기여 가이드](docs/CONTRIBUTING.md)** - 기여 가이드
 
 ## 📝 라이선스
 
@@ -207,4 +199,3 @@ moodtown/
 
 - OpenAI GPT-4o-mini
 - 감성대화말뭉치 데이터셋 (AI hub)
-
