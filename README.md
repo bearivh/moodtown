@@ -194,64 +194,64 @@ This project is licensed under the MIT License
 이 프로젝트는 다음 외부 기술, 데이터셋, 라이브러리를 활용하여 구현되었습니다:
 
 ### 데이터셋
-| 리소스 | 설명 | 라이선스 |
-|--------|------|----------|
-| AI Hub – 감성대화말뭉치 | ML 감정 분석 모델 학습용 한국어 감성 대화 데이터 | CC-BY-SA 4.0 |
+| 리소스 | 설명 |
+|--------|------|
+| AI Hub – 감성대화말뭉치 | ML 감정 분석 모델 학습용 한국어 감성 대화 데이터 |
 
 ### AI / 모델
-| 리소스 | 설명 | 라이선스 |
-|--------|------|----------|
-| OpenAI GPT-4o-mini | 감정 분석, 대화 생성, 편지 생성 | OpenAI Terms of Service |
+| 리소스 | 설명 |
+|--------|------|
+| OpenAI GPT-4o-mini | 감정 분석, 대화 생성, 편지 생성 |
 
 ### 백엔드 라이브러리
-| 리소스 | 설명 | 라이선스 |
-|--------|------|----------|
-| Flask 3.1.2 | REST API 서버 | BSD-3-Clause |
-| Werkzeug 3.1.3 | WSGI 유틸리티 라이브러리 (Flask 의존성) | BSD-3-Clause |
-| blinker 1.9.0 | 시그널 지원 (Flask 의존성) | MIT |
-| click 8.3.0 | CLI 인터페이스 (Flask 의존성) | BSD-3-Clause |
-| itsdangerous 2.2.0 | 안전한 데이터 직렬화 (Flask 의존성) | BSD-3-Clause |
-| Jinja2 3.1.6 | 템플릿 엔진 (Flask 의존성) | BSD-3-Clause |
-| MarkupSafe 3.0.3 | 안전한 문자열 처리 (Flask 의존성) | BSD-3-Clause |
-| flask-cors 6.0.1 | CORS 처리 | MIT |
-| psycopg2-binary 2.9.9+ | PostgreSQL 연결 | LGPL-2.1 |
-| gunicorn 21.2.0+ | 프로덕션 WSGI 서버 | MIT |
-| python-dotenv 1.2.1 | 환경변수 관리 | BSD-3-Clause |
-| openai 1.0.0+ | OpenAI API 클라이언트 | MIT |
+| 리소스 | 설명 |
+|--------|------|
+| Flask 3.1.2 | REST API 서버 |
+| Werkzeug 3.1.3 | WSGI 유틸리티 라이브러리 (Flask 의존성) |
+| blinker 1.9.0 | 시그널 지원 (Flask 의존성) |
+| click 8.3.0 | CLI 인터페이스 (Flask 의존성) |
+| itsdangerous 2.2.0 | 안전한 데이터 직렬화 (Flask 의존성) |
+| Jinja2 3.1.6 | 템플릿 엔진 (Flask 의존성) |
+| MarkupSafe 3.0.3 | 안전한 문자열 처리 (Flask 의존성) |
+| flask-cors 6.0.1 | CORS 처리 |
+| psycopg2-binary 2.9.9+ | PostgreSQL 연결 |
+| gunicorn 21.2.0+ | 프로덕션 WSGI 서버 |
+| python-dotenv 1.2.1 | 환경변수 관리 |
+| openai 1.0.0+ | OpenAI API 클라이언트 |
 
 ### 머신러닝
-| 리소스 | 설명 | 라이선스 |
-|--------|------|----------|
-| numpy | 수치 연산 라이브러리 | BSD-3-Clause |
-| scikit-learn 1.3.0+ | Logistic Regression 기반 감정 분류 모델 | BSD-3-Clause |
-| Gensim 4.3.0+ | Doc2Vec 기반 유사 일기 검색 모델 | LGPL-2.1 |
-| joblib 1.3.0+ | ML 모델 저장/로딩 | BSD-3-Clause |
-| matplotlib 3.8.0+ | 데이터 시각화 (학습 스크립트용) | PSF-based |
-| seaborn 0.13.0+ | 통계 데이터 시각화 (학습 스크립트용) | BSD-3-Clause |
+| 리소스 | 설명 |
+|--------|------|
+| numpy | 수치 연산 라이브러리 |
+| scikit-learn 1.3.0+ | Logistic Regression 기반 감정 분류 모델 |
+| Gensim 4.3.0+ | Doc2Vec 기반 유사 일기 검색 모델 |
+| joblib 1.3.0+ | ML 모델 저장/로딩 |
+| matplotlib 3.8.0+ | 데이터 시각화 (학습 스크립트용) |
+| seaborn 0.13.0+ | 통계 데이터 시각화 (학습 스크립트용) |
 
 ### 프론트엔드
-| 리소스 | 설명 | 라이선스 |
-|--------|------|----------|
-| React 19.2.0 | UI 구현 | MIT |
-| react-dom 19.2.0 | React DOM 렌더링 | MIT |
-| Vite (rolldown-vite 7.2.2) | 빌드 도구 및 개발 서버 | MIT |
-| @vitejs/plugin-react 5.1.0 | React 플러그인 | MIT |
-| eslint 9.39.1 | JavaScript 린터 | MIT |
-| @eslint/js 9.39.1 | ESLint JavaScript 플러그인 | Apache-2.0 |
-| eslint-plugin-react-hooks 5.2.0 | React Hooks 린트 규칙 | MIT |
-| eslint-plugin-react-refresh 0.4.24 | React Fast Refresh 린트 규칙 | MIT |
-| @types/react 19.2.2 | React TypeScript 타입 정의 | MIT |
-| @types/react-dom 19.2.2 | React DOM TypeScript 타입 정의 | MIT |
-| globals 16.5.0 | ESLint 글로벌 변수 정의 | MIT |
-| Dongle Font (Google Fonts) | UI용 커스텀 폰트 | OFL-1.1 |
+| 리소스 | 설명 |
+|--------|------|
+| React 19.2.0 | UI 구현 |
+| react-dom 19.2.0 | React DOM 렌더링 |
+| Vite (rolldown-vite 7.2.2) | 빌드 도구 및 개발 서버 |
+| @vitejs/plugin-react 5.1.0 | React 플러그인 |
+| eslint 9.39.1 | JavaScript 린터 |
+| @eslint/js 9.39.1 | ESLint JavaScript 플러그인 |
+| eslint-plugin-react-hooks 5.2.0 | React Hooks 린트 규칙 |
+| eslint-plugin-react-refresh 0.4.24 | React Fast Refresh 린트 규칙 |
+| @types/react 19.2.2 | React TypeScript 타입 정의 |
+| @types/react-dom 19.2.2 | React DOM TypeScript 타입 정의 |
+| globals 16.5.0 | ESLint 글로벌 변수 정의 |
+| Dongle Font (Google Fonts) | UI용 커스텀 폰트 |
 
 ### 데이터베이스
-| 리소스 | 설명 | 라이선스 |
-|--------|------|----------|
-| PostgreSQL | 관계형 데이터베이스 관리 시스템 | PostgreSQL License |
+| 리소스 | 설명 |
+|--------|------|
+| PostgreSQL | 관계형 데이터베이스 관리 시스템 |
 
 ### 배포 플랫폼
-| 리소스 | 설명 | 라이선스 |
-|--------|------|----------|
-| Vercel | 프론트엔드 배포 | Vercel Terms of Service |
-| Railway | 백엔드 및 PostgreSQL 호스팅 | Railway Terms of Service |
+| 리소스 | 설명 |
+|--------|------|
+| Vercel | 프론트엔드 배포 |
+| Railway | 백엔드 및 PostgreSQL 호스팅 |

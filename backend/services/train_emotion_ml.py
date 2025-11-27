@@ -17,6 +17,19 @@ try:
     matplotlib.use("Agg")  # headless
     import matplotlib.pyplot as plt
     import seaborn as sns
+    import platform
+    
+    # 플랫폼별 한글 폰트 설정
+    system = platform.system()
+    if system == 'Windows':
+        plt.rcParams['font.family'] = 'Malgun Gothic'
+    elif system == 'Darwin':  # macOS
+        plt.rcParams['font.family'] = 'AppleGothic'
+    else:  # Linux
+        plt.rcParams['font.family'] = 'NanumGothic'
+    
+    plt.rcParams['axes.unicode_minus'] = False  # 마이너스 기호 깨짐 방지
+    
     _CAN_PLOT = True
 except Exception:
     _CAN_PLOT = False
@@ -114,7 +127,6 @@ def load_dataset(path: str) -> Tuple[List[str], List[str]]:
 
 def parse_args():
     p = argparse.ArgumentParser()
-    p.add_argument("--val_path", type=str, default=None, help="검증용 JSON/JSONL 경로(선택)")
     return p.parse_args()
 
 
@@ -217,81 +229,6 @@ def main():
     with open(os.path.join(OUT_DIR, "test_predictions.jsonl"), "w", encoding="utf-8") as f:
         for yt, yp in zip(y_te, y_pred):
             f.write(jsonlib.dumps({"y_true": yt, "y_pred": yp}, ensure_ascii=False) + "\n")
-
-    # -----------------------------
-    # 외부 Validation 평가(선택)
-    # -----------------------------
-    def find_validation_file() -> str | None:
-        # 1) 명시 경로
-        if args.val_path and os.path.exists(args.val_path):
-            return args.val_path
-        # 2) 정해진 후보
-        fixed = [
-            os.path.join(ROOT_DIR, "감성대화말뭉치(최종데이터)_Validation.json"),
-            os.path.join(BACKEND_DIR, "감성대화말뭉치(최종데이터)_Validation.json"),
-        ]
-        for p in fixed:
-            if os.path.exists(p):
-                return p
-        # 3) 루트 디렉토리에서 'validation' 키워드 검색 (대소문자 무시)
-        try:
-            for name in os.listdir(ROOT_DIR):
-                lower = name.lower()
-                if ("validation" in lower or "valid" in lower) and (lower.endswith(".json") or lower.endswith(".jsonl")):
-                    return os.path.join(ROOT_DIR, name)
-        except Exception:
-            pass
-        return None
-
-    val_path = find_validation_file()
-
-    if val_path and os.path.exists(val_path):
-        print(f"[val] Loading external validation: {val_path}")
-        Xv_text, yv = load_dataset(val_path)
-        if len(Xv_text) > 0:
-            # -----------------------------
-            # 라벨 분포 저장(검증 데이터)
-            # -----------------------------
-            try:
-                v_label_counts = {}
-                for lab in yv:
-                    v_label_counts[lab] = v_label_counts.get(lab, 0) + 1
-                with open(os.path.join(OUT_DIR, "label_counts.val.json"), "w", encoding="utf-8") as f:
-                    jsonlib.dump(v_label_counts, f, ensure_ascii=False, indent=2)
-            except Exception:
-                pass
-
-            Xv = vectorizer.transform(Xv_text)
-            yv_pred = clf.predict(Xv)
-            v_labels_all = sorted(list(set(yv)))
-            v_report = classification_report(yv, yv_pred, labels=v_labels_all, digits=4, output_dict=True)
-            v_cm = confusion_matrix(yv, yv_pred, labels=v_labels_all)
-            with open(os.path.join(OUT_DIR, "val_metrics.json"), "w", encoding="utf-8") as f:
-                jsonlib.dump({
-                    "labels": v_labels_all,
-                    "macro_f1": v_report.get("macro avg", {}).get("f1-score", None),
-                    "accuracy": v_report.get("accuracy", None),
-                    "per_class": {lab: v_report.get(lab, {}) for lab in v_labels_all}
-                }, f, ensure_ascii=False, indent=2)
-            np.savetxt(os.path.join(OUT_DIR, "val_confusion_matrix.csv"), v_cm, fmt='%d', delimiter=',')
-            if _CAN_PLOT:
-                plt.figure(figsize=(8, 6))
-                sns.heatmap(v_cm, annot=True, fmt="d", cmap="Greens",
-                            xticklabels=v_labels_all, yticklabels=v_labels_all)
-                plt.title("Confusion Matrix (Validation)")
-                plt.ylabel("True")
-                plt.xlabel("Predicted")
-                plt.tight_layout()
-                plt.savefig(os.path.join(OUT_DIR, "val_confusion_matrix.png"))
-                plt.close()
-            with open(os.path.join(OUT_DIR, "val_predictions.jsonl"), "w", encoding="utf-8") as f:
-                for yt, yp in zip(yv, yv_pred):
-                    f.write(jsonlib.dumps({"y_true": yt, "y_pred": yp}, ensure_ascii=False) + "\n")
-            print("[val] Saved validation metrics/predictions.")
-        else:
-            print("[val] No samples found in validation file.")
-    else:
-        print("[val] Validation file not provided or not found. Skipping.")
 
     # -----------------------------
     # 모델 저장

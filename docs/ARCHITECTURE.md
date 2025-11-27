@@ -122,7 +122,6 @@ moodtown/
 │   └── package.json
 │
 ├── 감성대화말뭉치(최종데이터)_Training.json    # ML 학습 데이터
-├── 감성대화말뭉치(최종데이터)_Validation.json  # ML 검증 데이터
 └── README.md  
 ```
 

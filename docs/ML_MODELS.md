@@ -14,7 +14,6 @@ ML 모델의 분석 결과는 정확하지 않으므로 **참고용**으로 제�
   - 원천 데이터(.xlsx)와 라벨링 데이터(.json) 중 라벨링 데이터를 사용했습니다.
 - **파일**:
   - `감성대화말뭉치(최종데이터)_Training.json`: 학습 데이터
-  - `감성대화말뭉치(최종데이터)_Validation.json`: 검증 데이터
 - **데이터 형식**: JSON 파일, 각 데이터는 대화 텍스트와 감정 라벨을 포함
 
 ### ❤︎ 알고리즘 및 구조
@@ -82,7 +81,6 @@ python train_emotion_ml.py
 # 옵션 지정
 python train_emotion_ml.py \
     --data-path "../감성대화말뭉치(최종데이터)_Training.json" \
-    --val-path "../감성대화말뭉치(최종데이터)_Validation.json" \
     --output-dir "./models"
 ```
 
@@ -92,8 +90,7 @@ python train_emotion_ml.py \
 3. **TF-IDF 벡터화**: 텍스트를 수치 벡터로 변환
 4. **모델 학습**: Logistic Regression 모델 학습
 5. **평가**: 테스트 데이터로 정확도, Precision, Recall, F1-Score 계산
-6. **검증 데이터 평가**: Validation 데이터셋으로 추가 평가
-7. **모델 저장**: 학습된 모델과 벡터라이저를 `joblib` 형식으로 저장
+6. **모델 저장**: 학습된 모델과 벡터라이저를 `joblib` 형식으로 저장
 
 ### ❤︎ 학습 결과
 
