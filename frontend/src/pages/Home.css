@@ -365,7 +365,7 @@
 }
 
 .home-title-logo {
-  width: clamp(15rem, 21vw, 240px);
+  width: clamp(45rem, 63vw, 720px);
   height: auto;
   display: block;
   margin: 0 auto;
@@ -784,7 +784,7 @@
   }
 
   .home-title-logo {
-    width: clamp(12rem, 48vw, 21rem);
+    width: clamp(36rem, 144vw, 63rem);
   }
 
   .home-title {
@@ -862,7 +862,7 @@
 /* 태블릿 반응형 */
 @media (min-width: 769px) and (max-width: 1024px) {
   .home-title-logo {
-    width: clamp(16.5rem, 30vw, 24rem);
+    width: clamp(49.5rem, 90vw, 72rem);
   }
 
   .home-title {
