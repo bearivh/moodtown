@@ -359,13 +359,13 @@
 .home-title-section {
   text-align: center;
   margin-bottom: 1rem;
-  margin-top: 0;
+  margin-top: 2rem;
   position: relative;
   z-index: 1;
 }
 
 .home-title-logo {
-  width: clamp(45rem, 63vw, 720px);
+  width: clamp(22.5rem, 31.5vw, 360px);
   height: auto;
   display: block;
   margin: 0 auto;
@@ -784,7 +784,7 @@
   }
 
   .home-title-logo {
-    width: clamp(36rem, 144vw, 63rem);
+    width: clamp(18rem, 72vw, 31.5rem);
   }
 
   .home-title {
@@ -862,7 +862,7 @@
 /* 태블릿 반응형 */
 @media (min-width: 769px) and (max-width: 1024px) {
   .home-title-logo {
-    width: clamp(49.5rem, 90vw, 72rem);
+    width: clamp(24.75rem, 45vw, 36rem);
   }
 
   .home-title {
