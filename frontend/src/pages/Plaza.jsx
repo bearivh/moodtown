@@ -16,6 +16,11 @@ import './Plaza.css'
 // 모듈 레벨 캐시 - 컴포넌트 언마운트와 무관하게 유지됨
 const plazaDataCache = new Map()
 
+// 모든 캐시 초기화 함수 (로그아웃 시 사용)
+export function clearAllPlazaCache() {
+  plazaDataCache.clear()
+}
+
 // 캐릭터 정보 (백엔드 characters.json과 동기화)
 const CHARACTER_INFO = {
   '기쁨': { name: '노랑이', emoji: '🟡', color: '#eab308', pastelColor: '#fff9cc', image: yellowImage },

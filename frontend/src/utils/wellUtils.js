@@ -31,6 +31,14 @@ export function getWellStateCache() {
 }
 
 /**
+ * 우물 상태 캐시 초기화 (로그아웃 시 사용)
+ */
+export function clearWellStateCache() {
+  wellStateCache.state = null
+  wellStateCache.timestamp = 0
+}
+
+/**
  * 우물 상태 가져오기
  * @returns {Promise<Object>} { waterLevel: number, isOverflowing: boolean, lastOverflowDate: string }
  */

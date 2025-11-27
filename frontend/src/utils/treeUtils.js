@@ -29,6 +29,15 @@ export function getTreeStateCache() {
   return null
 }
 
+/**
+ * 나무 상태 캐시 초기화 (로그아웃 시 사용)
+ */
+export function clearTreeStateCache() {
+  treeStateCache.state = null
+  treeStateCache.progress = 0
+  treeStateCache.timestamp = 0
+}
+
 // 나무 성장 단계 설정
 export const TREE_STAGES = {
   SEED: 0,        // 씨앗

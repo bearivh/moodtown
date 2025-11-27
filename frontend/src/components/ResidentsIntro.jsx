@@ -154,7 +154,7 @@ function ResidentsIntro({user}) {
           <div className="resident-intro-icon">🌈</div>
           <h3 className="resident-intro-title">무지개 주민들</h3>
           <p className="resident-intro-text">
-            무지개 주민들은 {user?.name ? `${user.name}님` : '당신'}의 내면에 사는 <br />여러가지 감정의 목소리예요.
+            {user?.name ? `${user.name}님` : '당신'}의 내면에 사는 <br />여러가지 감정의 목소리예요.
           </p>
         </div>
       </div>

@@ -1,0 +1,110 @@
+<svg width="1000" height="700" xmlns="http://www.w3.org/2000/svg">
+  <!-- 배경 -->
+  <rect width="1000" height="700" fill="#f8f9fa"/>
+  
+  <!-- 제목 -->
+  <text x="500" y="30" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#333">
+    일기 저장 데이터 플로우
+  </text>
+  
+  <!-- 참가자 박스 -->
+  <rect x="50" y="80" width="120" height="40" rx="5" fill="#e1f5ff" stroke="#4a90e2" stroke-width="2"/>
+  <text x="110" y="105" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">사용자</text>
+  
+  <rect x="220" y="80" width="120" height="40" rx="5" fill="#61dafb" stroke="#4a90e2" stroke-width="2"/>
+  <text x="280" y="105" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">React Frontend</text>
+  
+  <rect x="390" y="80" width="120" height="40" rx="5" fill="#ffd43b" stroke="#4a90e2" stroke-width="2"/>
+  <text x="450" y="105" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">Flask Backend</text>
+  
+  <rect x="560" y="80" width="120" height="40" rx="5" fill="#336791" stroke="#4a90e2" stroke-width="2"/>
+  <text x="620" y="105" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#fff">PostgreSQL</text>
+  
+  <rect x="730" y="80" width="120" height="40" rx="5" fill="#10a37f" stroke="#4a90e2" stroke-width="2"/>
+  <text x="790" y="105" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#fff">OpenAI GPT-4o</text>
+  
+  <!-- 수평선 -->
+  <line x1="110" y1="150" x2="110" y2="600" stroke="#ccc" stroke-width="1" stroke-dasharray="5,5"/>
+  <line x1="280" y1="150" x2="280" y2="600" stroke="#ccc" stroke-width="1" stroke-dasharray="5,5"/>
+  <line x1="450" y1="150" x2="450" y2="600" stroke="#ccc" stroke-width="1" stroke-dasharray="5,5"/>
+  <line x1="620" y1="150" x2="620" y2="600" stroke="#ccc" stroke-width="1" stroke-dasharray="5,5"/>
+  <line x1="790" y1="150" x2="790" y2="600" stroke="#ccc" stroke-width="1" stroke-dasharray="5,5"/>
+  
+  <!-- 메시지들 -->
+  <!-- 1. 일기 작성 -->
+  <path d="M 110 180 L 280 180" stroke="#4a90e2" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="195" y="175" font-family="Arial, sans-serif" font-size="11" fill="#333">[1] 일기 작성</text>
+  
+  <!-- 2. 일기 저장 요청 -->
+  <path d="M 280 210 L 450 210" stroke="#4a90e2" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="365" y="205" font-family="Arial, sans-serif" font-size="11" fill="#333">[2] POST /api/diaries</text>
+  
+  <!-- 3. 감정 분석 요청 -->
+  <path d="M 450 240 L 790 240" stroke="#10a37f" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="620" y="235" font-family="Arial, sans-serif" font-size="11" fill="#333">[3] 감정 분석 요청</text>
+  
+  <!-- 4. 감정 점수 반환 -->
+  <path d="M 790 270 L 450 270" stroke="#10a37f" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="620" y="265" font-family="Arial, sans-serif" font-size="11" fill="#333">[4] 감정 점수 + 극성</text>
+  
+  <!-- 5. 일기 저장 -->
+  <path d="M 450 300 L 620 300" stroke="#336791" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="535" y="295" font-family="Arial, sans-serif" font-size="11" fill="#333">[5] 일기 데이터 저장</text>
+  
+  <!-- 6. 나무/우물 상태 업데이트 -->
+  <path d="M 450 330 L 620 330" stroke="#336791" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="535" y="325" font-family="Arial, sans-serif" font-size="11" fill="#333">[6] 나무/우물 상태 업데이트</text>
+  
+  <!-- 7. 대화 생성 요청 -->
+  <path d="M 450 360 L 790 360" stroke="#10a37f" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="620" y="355" font-family="Arial, sans-serif" font-size="11" fill="#333">[7] 광장 대화 생성 요청</text>
+  
+  <!-- 8. 대화 반환 -->
+  <path d="M 790 390 L 450 390" stroke="#10a37f" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="620" y="385" font-family="Arial, sans-serif" font-size="11" fill="#333">[8] 주민들 대화 반환</text>
+  
+  <!-- 9. 대화 저장 -->
+  <path d="M 450 420 L 620 420" stroke="#336791" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="535" y="415" font-family="Arial, sans-serif" font-size="11" fill="#333">[9] 대화 저장</text>
+  
+  <!-- 10. 저장 완료 응답 -->
+  <path d="M 450 450 L 280 450" stroke="#4a90e2" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="365" y="445" font-family="Arial, sans-serif" font-size="11" fill="#333">[10] 저장 완료 응답</text>
+  
+  <!-- 11. 저장 완료 표시 -->
+  <path d="M 280 480 L 110 480" stroke="#4a90e2" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="195" y="475" font-family="Arial, sans-serif" font-size="11" fill="#333">[11] 일기 저장 완료</text>
+  
+  <!-- 광장 방문 플로우 -->
+  <text x="500" y="540" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#333">
+    광장 방문 플로우
+  </text>
+  
+  <!-- 12. 광장 방문 -->
+  <path d="M 110 570 L 280 570" stroke="#4a90e2" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="195" y="565" font-family="Arial, sans-serif" font-size="11" fill="#333">[12] 광장 방문</text>
+  
+  <!-- 13. 대화 조회 요청 -->
+  <path d="M 280 600 L 450 600" stroke="#4a90e2" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="365" y="595" font-family="Arial, sans-serif" font-size="11" fill="#333">[13] GET /api/plaza/conversation</text>
+  
+  <!-- 14. 대화 조회 -->
+  <path d="M 450 630 L 620 630" stroke="#336791" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="535" y="625" font-family="Arial, sans-serif" font-size="11" fill="#333">[14] 저장된 대화 조회</text>
+  
+  <!-- 15. 대화 반환 -->
+  <path d="M 620 660 L 450 660" stroke="#336791" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="535" y="655" font-family="Arial, sans-serif" font-size="11" fill="#333">[15] 대화 데이터</text>
+  
+  <!-- 16. 대화 표시 -->
+  <path d="M 450 690 L 280 690" stroke="#4a90e2" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="365" y="685" font-family="Arial, sans-serif" font-size="11" fill="#333">[16] 대화 반환</text>
+  
+  <!-- 화살표 정의 -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#4a90e2"/>
+    </marker>
+  </defs>
+</svg>
+

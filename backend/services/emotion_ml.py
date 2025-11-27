@@ -135,6 +135,23 @@ def predict(text: str) -> Dict:
             emotion_scores["놀람"] += panic_score * 0.5
             emotion_scores["부끄러움"] += panic_score * 0.5
             
+            # "기쁨" → "사랑" 매핑 (키워드 기반)
+            # 사랑 관련 키워드가 있으면 "기쁨"의 일부를 "사랑"으로 재분배
+            love_keywords = [
+                "사랑", "좋아", "애정", "그리움", "보고싶", "그리워", "사랑해", "좋아해",
+                "예뻐", "귀여워", "소중", "소중해", "사랑스러워", "고마워", "감사", "고마",
+                "사랑한다", "좋아한다", "그리워해", "보고파", "보고싶어", "좋아하는", "사랑하는",
+                "마음에 들어", "정들었", "애정", "애착", "사랑스럽"
+            ]
+            text_lower = text.lower()
+            love_count = sum(1 for keyword in love_keywords if keyword in text_lower)
+            
+            if love_count > 0 and emotion_scores["기쁨"] > 0:
+                # "기쁨" 점수의 30%를 "사랑"으로 재분배
+                love_portion = emotion_scores["기쁨"] * 0.3
+                emotion_scores["기쁨"] -= love_portion
+                emotion_scores["사랑"] += love_portion
+            
             # 정규화 (합이 1이 되도록)
             total = sum(emotion_scores.values())
             if total > 0:

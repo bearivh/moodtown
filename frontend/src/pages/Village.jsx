@@ -22,6 +22,11 @@ export function updateVillageCacheForDate(date, state) {
   }
 }
 
+// 모든 캐시 초기화 함수 (로그아웃 시 사용)
+export function clearAllVillageCache() {
+  villageStateCache.clear()
+}
+
 function Village({ onNavigate, selectedDate, user, onLogout }) {
   // 캐시에서 초기값 가져오기 (lazy initialization) - 렌더링 전에 즉시 적용
   const [hasDiary, setHasDiary] = useState(() => {

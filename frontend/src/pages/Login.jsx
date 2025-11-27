@@ -89,12 +89,21 @@ function Login({ onLoginSuccess }) {
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="login-form" autoComplete="on">
+          <form 
+            onSubmit={handleSubmit} 
+            className="login-form" 
+            autoComplete="on"
+            method="post"
+            action="#"
+            noValidate
+          >
             {!isLogin && (
               <div className="login-form-group">
-                <label className="login-label">이름</label>
+                <label htmlFor="login-name" className="login-label">이름</label>
                 <input
+                  id="login-name"
                   type="text"
+                  name="name"
                   className="login-input"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -106,9 +115,11 @@ function Login({ onLoginSuccess }) {
             )}
 
             <div className="login-form-group">
-              <label className="login-label">아이디</label>
+              <label htmlFor="login-username" className="login-label">아이디</label>
               <input
+                id="login-username"
                 type="text"
+                name="username"
                 className="login-input"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -119,9 +130,11 @@ function Login({ onLoginSuccess }) {
             </div>
 
             <div className="login-form-group">
-              <label className="login-label">비밀번호</label>
+              <label htmlFor="login-password" className="login-label">비밀번호</label>
               <input
+                id="login-password"
                 type="password"
+                name="password"
                 className="login-input"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Home from './pages/Home'
 import Village from './pages/Village'
 import WriteDiary from './pages/WriteDiary'
@@ -11,6 +11,11 @@ import Guide from './pages/Guide'
 import Login from './pages/Login'
 import { getTodayDateString } from './utils/dateUtils'
 import { getCurrentUser, logout as apiLogout } from './utils/api'
+import { clearAllDiaryCache } from './utils/diaryCache'
+import { clearAllVillageCache } from './pages/Village'
+import { clearAllPlazaCache } from './pages/Plaza'
+import { clearWellStateCache } from './utils/wellUtils'
+import { clearTreeStateCache } from './utils/treeUtils'
 import './App.css'
 
 function App() {
@@ -19,10 +24,37 @@ function App() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
+  // 모든 캐시 초기화 함수
+  const clearAllCaches = () => {
+    clearAllDiaryCache()
+    clearAllVillageCache()
+    clearAllPlazaCache()
+    clearWellStateCache()
+    clearTreeStateCache()
+    console.log('[캐시 초기화] 모든 캐시가 초기화되었습니다.')
+  }
+
   // 로그인 상태 확인
   useEffect(() => {
     checkAuth()
   }, [])
+
+  // user.id가 변경될 때 캐시 초기화 (다른 사용자로 로그인한 경우 대비)
+  // useRef로 이전 user.id를 추적하여 실제 변경 시에만 초기화
+  const prevUserIdRef = useRef(null)
+  useEffect(() => {
+    const prevUserId = prevUserIdRef.current
+    const currentUserId = user?.id
+
+    // user.id가 실제로 변경된 경우에만 캐시 초기화
+    if (currentUserId && currentUserId !== prevUserId) {
+      clearAllCaches()
+      prevUserIdRef.current = currentUserId
+    } else if (!currentUserId) {
+      // 로그아웃된 경우
+      prevUserIdRef.current = null
+    }
+  }, [user?.id])
 
   const checkAuth = async () => {
     try {
@@ -38,6 +70,8 @@ function App() {
   }
 
   const handleLoginSuccess = (userData) => {
+    // 로그인 성공 시에도 캐시 초기화 (이전 사용자 데이터 제거)
+    clearAllCaches()
     setUser(userData)
     setCurrentPage('home')
   }
@@ -45,10 +79,16 @@ function App() {
   const handleLogout = async () => {
     try {
       await apiLogout()
+      // 로그아웃 시 모든 캐시 초기화
+      clearAllCaches()
       setUser(null)
       setCurrentPage('home')
     } catch (error) {
       console.error('로그아웃 오류:', error)
+      // 오류가 발생해도 캐시는 초기화
+      clearAllCaches()
+      setUser(null)
+      setCurrentPage('home')
     }
   }
 
