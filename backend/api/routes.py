@@ -37,7 +37,11 @@ def analyze():
     if not diary_text:
         return jsonify({"error": "content 필드가 비어 있습니다."}), 400
     emo_result = analyze_emotions_with_gpt(diary_text)
-    dialogue = generate_dialogue_with_gpt(diary_text, emo_result.get("top_emotions", []))
+    dialogue = generate_dialogue_with_gpt(
+        diary_text, 
+        emo_result.get("top_emotions", []),
+        emo_result.get("emotion_scores", {})
+    )
     return jsonify({"emotion_result": emo_result, "openai_dialogue": dialogue})
 
 @api_bp.route("/analyze2", methods=["POST"])
@@ -58,7 +62,11 @@ def analyze_v2():
         })
     elif mode == "gpt":
         emo_result = analyze_emotions_with_gpt(text)
-        dialogue = generate_dialogue_with_gpt(text, emo_result.get("top_emotions", []))
+        dialogue = generate_dialogue_with_gpt(
+            text, 
+            emo_result.get("top_emotions", []),
+            emo_result.get("emotion_scores", {})
+        )
         return jsonify({
             "mode": "gpt",
             "emotion_result": emo_result,

@@ -5,7 +5,6 @@ Doc2Vec 모델을 사용하여 일기 간 유사도를 계산하고 유사한 �
 import os
 import json
 from typing import List, Dict, Tuple, Optional, Any, TYPE_CHECKING
-import sqlite3
 import numpy as np
 from datetime import datetime
 
@@ -24,7 +23,6 @@ if TYPE_CHECKING:
     from gensim.models import Doc2Vec
 
 BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-DB_PATH = os.path.join(BACKEND_DIR, "moodtown.db")
 MODEL_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), "models", "diary_similarity_doc2vec.model"))
 
 _model: Optional[Any] = None
@@ -176,16 +174,18 @@ def calculate_combined_similarity(
 def find_similar_diaries(
     target_diary_id: Optional[str] = None,
     target_diary_text: Optional[str] = None,
+    user_id: Optional[int] = None,
     limit: int = 5,
     min_similarity: float = 0.3,
     exclude_date: Optional[str] = None
 ) -> Optional[List[Dict[str, Any]]]:
     """
-    유사한 일기 찾기
+    유사한 일기 찾기 (PostgreSQL 사용)
     
     Args:
         target_diary_id: 기준 일기 ID (데이터베이스에서 조회)
         target_diary_text: 기준 일기 텍스트 (직접 제공)
+        user_id: 사용자 ID (해당 사용자의 일기만 검색)
         limit: 반환할 최대 개수
         min_similarity: 최소 유사도 임계값
         exclude_date: 제외할 날짜 (현재 일기와 같은 날짜 제외 등)
@@ -198,6 +198,13 @@ def find_similar_diaries(
         print(f"⚠️ 모델 로드 실패: {MODEL_FILE} 파일이 없거나 gensim이 설치되지 않았을 수 있습니다.")
         return None
     
+    # PostgreSQL 연결을 위한 import
+    try:
+        from db import get_db, get_diary_by_id, get_all_diaries
+    except ImportError:
+        print("⚠️ db 모듈을 import할 수 없습니다.")
+        return []
+    
     # 기준 일기 벡터 구하기
     target_vector = None
     target_diary = None
@@ -205,26 +212,31 @@ def find_similar_diaries(
     if target_diary_id:
         # 데이터베이스에서 일기 조회
         try:
-            conn = sqlite3.connect(DB_PATH)
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT id, date, title, content, emotion_scores FROM diaries WHERE id = ?",
-                (target_diary_id,)
-            )
-            row = cursor.fetchone()
-            if row:
+            target_diary = get_diary_by_id(target_diary_id)
+            if target_diary:
+                # emotion_scores가 dict인 경우 직접 사용, 아니면 JSON 파싱
+                if isinstance(target_diary.get("emotion_scores"), dict):
+                    emotion_scores = target_diary["emotion_scores"]
+                else:
+                    emotion_scores = json.loads(target_diary.get("emotion_scores") or "{}")
+                
                 target_diary = {
-                    "id": row["id"],
-                    "date": row["date"],
-                    "title": row["title"],
-                    "content": row["content"],
-                    "emotion_scores": json.loads(row["emotion_scores"]) if row["emotion_scores"] else {}
+                    "id": target_diary["id"],
+                    "date": target_diary["date"],
+                    "title": target_diary.get("title", ""),
+                    "content": target_diary.get("content", ""),
+                    "emotion_scores": emotion_scores,
+                    "user_id": target_diary.get("user_id")
                 }
-                target_vector = get_diary_vector(row["content"])
-            conn.close()
+                target_vector = get_diary_vector(target_diary["content"])
+                
+                # user_id가 전달되지 않았으면 일기의 user_id 사용
+                if user_id is None and target_diary.get("user_id"):
+                    user_id = target_diary["user_id"]
         except Exception as e:
             print(f"⚠️ 일기 조회 실패: {e}")
+            import traceback
+            traceback.print_exc()
             return []
     
     elif target_diary_text:
@@ -233,45 +245,46 @@ def find_similar_diaries(
     if target_vector is None:
         return []
     
-    # 모든 일기 가져오기
+    # 사용자 ID가 없으면 빈 리스트 반환
+    if user_id is None:
+        print("⚠️ user_id가 필요합니다.")
+        return []
+    
+    # 모든 일기 가져오기 (해당 사용자의 일기만)
     try:
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+        all_diaries = get_all_diaries(user_id=user_id)
         
-        query = "SELECT id, date, title, content, emotion_scores FROM diaries WHERE content IS NOT NULL AND content != ''"
-        params = []
+        # 필터링: 내용이 있는 일기만, 현재 일기 제외, 특정 날짜 제외
+        filtered_diaries = []
+        for diary in all_diaries:
+            # 현재 일기 제외
+            if target_diary_id and diary.get("id") == target_diary_id:
+                continue
+            
+            # 내용이 없는 일기 제외
+            if not diary.get("content") or diary["content"].strip() == "":
+                continue
+            
+            # 특정 날짜 제외
+            if exclude_date and diary.get("date") == exclude_date:
+                continue
+            elif target_diary and target_diary.get("date") and diary.get("date") == target_diary["date"]:
+                continue
+            
+            filtered_diaries.append(diary)
         
-        # 현재 일기 제외
-        if target_diary_id:
-            query += " AND id != ?"
-            params.append(target_diary_id)
-        
-        # 특정 날짜 제외
-        if exclude_date:
-            query += " AND date != ?"
-            params.append(exclude_date)
-        elif target_diary and target_diary.get("date"):
-            query += " AND date != ?"
-            params.append(target_diary["date"])
-        
-        cursor.execute(query, params)
-        rows = cursor.fetchall()
-        conn.close()
     except Exception as e:
         print(f"⚠️ 일기 목록 조회 실패: {e}")
+        import traceback
+        traceback.print_exc()
         return []
     
     # 각 일기와의 유사도 계산
     similarities = []
     
-    for row in rows:
-        diary_id = row["id"]
-        diary_content = row["content"]
-        
-        # 현재 일기와 같으면 스킵
-        if target_diary_id and diary_id == target_diary_id:
-            continue
+    for diary in filtered_diaries:
+        diary_id = diary.get("id")
+        diary_content = diary.get("content", "")
         
         # 벡터 계산
         diary_vector = get_diary_vector(diary_content)
@@ -284,8 +297,12 @@ def find_similar_diaries(
         # 감정 점수 가져오기
         diary_emotion_scores = {}
         try:
-            if row["emotion_scores"]:
-                diary_emotion_scores = json.loads(row["emotion_scores"])
+            emotion_scores_raw = diary.get("emotion_scores")
+            if emotion_scores_raw:
+                if isinstance(emotion_scores_raw, dict):
+                    diary_emotion_scores = emotion_scores_raw
+                else:
+                    diary_emotion_scores = json.loads(emotion_scores_raw)
         except Exception:
             pass
         
@@ -306,8 +323,8 @@ def find_similar_diaries(
         if combined_similarity >= min_similarity:
             similarities.append({
                 "id": diary_id,
-                "date": row["date"],
-                "title": row["title"],
+                "date": diary.get("date", ""),
+                "title": diary.get("title", ""),
                 "content": diary_content[:200] + "..." if len(diary_content) > 200 else diary_content,  # 미리보기
                 "similarity": float(combined_similarity),
                 "text_similarity": float(text_similarity),  # 디버깅용
@@ -324,6 +341,7 @@ def find_similar_diaries(
 
 def find_similar_diaries_by_text(
     text: str,
+    user_id: Optional[int] = None,
     limit: int = 5,
     min_similarity: float = 0.3
 ) -> List[Dict[str, Any]]:
@@ -332,9 +350,10 @@ def find_similar_diaries_by_text(
     """
     return find_similar_diaries(
         target_diary_text=text,
+        user_id=user_id,
         limit=limit,
         min_similarity=min_similarity
-    )
+    ) or []
 
 
 def get_similarity_score(text1: str, text2: str) -> float:

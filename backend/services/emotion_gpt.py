@@ -142,15 +142,40 @@ def rule_based_polarity(text: str, score_surprise: int, score_shy: int):
     if score_shy > 0:
         s = shy_text
         t = s.lower()
+        
+        # 긍정 패턴 확인 (설레, 좋아하는 사람, 칭찬 등)
+        positive_shy_patterns = [
+            "설레", "좋아하는 사람", "썸", "두근", "얼굴 빨개졌지만 좋",
+            "칭찬받아", "기분 좋게", "행복한", "기쁜"
+        ]
+        # 부정 패턴 확인 (창피, 수치심 등)
+        negative_shy_patterns = [
+            "창피", "민망", "수치심", "망신", "무안",
+            "머쓱", "욕먹었", "오해받", "실수해서", "잘못해서"
+        ]
+        
+        # 패턴 매칭
+        pos_pattern_match = any(p in t for p in positive_shy_patterns)
+        neg_pattern_match = any(p in t for p in negative_shy_patterns)
+        
+        # 키워드 카운트
         pos = sum(1 for w in POSITIVE_SHY if w in t)
         neg = sum(1 for w in NEGATIVE_SHY if w in t)
         
-        if pos > neg and pos > 0:
+        # 패턴 우선, 그 다음 키워드 카운트
+        if pos_pattern_match or (pos > neg and pos > 0):
             result["부끄러움"] = "positive"
-        elif neg > pos and neg > 0:
+        elif neg_pattern_match or (neg > pos and neg > 0):
             result["부끄러움"] = "negative"
         else:
-            result["부끄러움"] = None
+            # 패턴과 키워드가 모두 없으면 전체 텍스트에서 추가 확인
+            full_text_lower = text.lower()
+            # 기쁨/사랑과 함께 나타나면 긍정으로 해석
+            if any(w in full_text_lower for w in ["기쁘", "행복", "좋았", "사랑"]) and \
+               any(w in full_text_lower for w in ["부끄러", "창피", "쑥스러"]):
+                result["부끄러움"] = "positive"
+            else:
+                result["부끄러움"] = None
     
     return result
 
@@ -198,6 +223,35 @@ def hybrid_polarity(
             if any(w in text for w in ["좋았", "기뻤", "행복", "높았", "잘됐", "좋은 소식"]):
                 final[emo] = "positive"
                 continue
+        
+        # -------------------
+        # 추가 fallback: 부끄러움의 경우 문맥 분석
+        # -------------------
+        if emo == "부끄러움":
+            text_lower = text.lower()
+            # 긍정적인 부끄러움 키워드 확인
+            positive_shy_words = ["설레", "좋아하는", "칭찬", "기분 좋", "행복", "기쁘"]
+            # 부정적인 부끄러움 키워드 확인  
+            negative_shy_words = ["창피", "수치심", "망신", "욕먹", "실수", "잘못", "실망"]
+            
+            pos_count = sum(1 for w in positive_shy_words if w in text_lower)
+            neg_count = sum(1 for w in negative_shy_words if w in text_lower)
+            
+            # 기쁨/사랑 같은 긍정 감정과 함께 나타나면 긍정으로 해석
+            if any(w in text_lower for w in ["기쁘", "행복", "좋았", "사랑", "설레"]):
+                if neg_count == 0:  # 부정 키워드가 없으면
+                    final[emo] = "positive"
+                    continue
+            
+            # 명확한 부정 키워드가 있으면 부정으로 해석
+            if neg_count > pos_count and neg_count > 0:
+                final[emo] = "negative"
+                continue
+            
+            # 명확한 긍정 키워드가 있으면 긍정으로 해석
+            if pos_count > neg_count and pos_count > 0:
+                final[emo] = "positive"
+                continue
 
         final[emo] = None
 
@@ -225,6 +279,16 @@ def analyze_emotions_with_gpt(diary_text: str) -> Dict[str, Any]:
 다음 일기를 읽고 7가지 감정(기쁨, 사랑, 놀람, 두려움, 분노, 부끄러움, 슬픔)을
 0~100 정수로 분석하세요.
 
+**중요: "놀람"과 "부끄러움" 감정의 극성(polarity)을 반드시 분석하세요.**
+- "놀람": 긍정적 놀람이면 "positive", 부정적 놀람이면 "negative", 판단 불가면 null
+- "부끄러움": 긍정적 부끄러움(설레, 좋아하는 사람에 대한 부끄러움)이면 "positive", 부정적 부끄러움(창피, 수치심)이면 "negative", 판단 불가면 null
+
+극성 분석 가이드:
+- 긍정적 놀람: 예상보다 좋은 일, 기쁜 소식, 대박, 좋은 결과
+- 부정적 놀람: 예상보다 나쁜 일, 충격적인 소식, 실망
+- 긍정적 부끄러움: 좋아하는 사람 때문에 얼굴 빨개짐, 설레는 부끄러움, 칭찬받아서 부끄러움
+- 부정적 부끄러움: 창피, 수치심, 실수해서 부끄러움, 망신
+
 <BEGIN_JSON>
 {{
   "emotion_scores": {{
@@ -246,7 +310,7 @@ def analyze_emotions_with_gpt(diary_text: str) -> Dict[str, Any]:
 일기:
 {diary_text}
 
-JSON만 출력하세요.
+JSON만 출력하세요. emotion_polarity는 반드시 "positive", "negative", 또는 null 중 하나로 설정하세요.
 """.strip()
 
     try:

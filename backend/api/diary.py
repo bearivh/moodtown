@@ -390,7 +390,14 @@ def save_plaza_conversation_endpoint():
 @diary_bp.route("/api/diaries/<diary_id>/similar", methods=["GET"])
 def get_similar_diaries(diary_id):
     """특정 일기와 유사한 일기 찾기"""
-    print(f"[유사일기검색] 요청 받음 - diary_id: {diary_id}, _HAS_SIMILARITY: {_HAS_SIMILARITY}")
+    user_id = get_current_user_id()
+    if not user_id:
+        return jsonify({
+            "success": False,
+            "error": "로그인이 필요합니다."
+        }), 401
+    
+    print(f"[유사일기검색] 요청 받음 - diary_id: {diary_id}, user_id: {user_id}, _HAS_SIMILARITY: {_HAS_SIMILARITY}")
     
     if not _HAS_SIMILARITY:
         print("[유사일기검색] _HAS_SIMILARITY가 False입니다. 모듈이 로드되지 않았습니다.")
@@ -404,9 +411,10 @@ def get_similar_diaries(diary_id):
     min_similarity = request.args.get("min_similarity", 0.3, type=float)
     
     try:
-        print(f"[유사일기검색] 일기 ID: {diary_id}, limit: {limit}, min_similarity: {min_similarity}")
+        print(f"[유사일기검색] 일기 ID: {diary_id}, user_id: {user_id}, limit: {limit}, min_similarity: {min_similarity}")
         similar_diaries = find_similar_diaries(
             target_diary_id=diary_id,
+            user_id=user_id,
             limit=limit,
             min_similarity=min_similarity
         )
@@ -439,6 +447,10 @@ def get_similar_diaries(diary_id):
 @diary_bp.route("/api/diaries/similar", methods=["POST"])
 def find_similar_diaries_by_text_endpoint():
     """텍스트를 기준으로 유사한 일기 찾기"""
+    user_id = get_current_user_id()
+    if not user_id:
+        return jsonify({"error": "로그인이 필요합니다."}), 401
+    
     if not _HAS_SIMILARITY:
         return jsonify({"error": "유사 일기 검색 기능을 사용할 수 없습니다. 모델이 학습되지 않았을 수 있습니다."}), 503
     
@@ -454,6 +466,7 @@ def find_similar_diaries_by_text_endpoint():
     try:
         similar_diaries = find_similar_diaries_by_text(
             text=text,
+            user_id=user_id,
             limit=limit,
             min_similarity=min_similarity
         )

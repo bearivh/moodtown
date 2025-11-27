@@ -529,13 +529,7 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
                             const normalizedScore = Math.round(score)
                             return (
                               <div key={emotion} className="emotion-bar-item">
-                                <div className="emotion-bar-label">
-                                  <span 
-                                    className="emotion-bar-color"
-                                    style={{ backgroundColor: getEmotionColorByName(emotion) }}
-                                  ></span>
-                                  <span className="emotion-bar-name">{emotion}</span>
-                                </div>
+                                <span className="emotion-bar-name">{emotion}</span>
                                 <div className="emotion-bar-container">
                                   <div
                                     className="emotion-bar-fill"
