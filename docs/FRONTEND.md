@@ -112,5 +112,5 @@ frontend/
 - [API 레퍼런스](API_REFERENCE.md)
 - [주요 기능](FEATURES.md)
 
-[← README로 돌아가기](../README.md)
+[← README로 돌아가기](../README.md#설치-및-실행행)
 
