@@ -18,7 +18,7 @@
 
 .home-content {
   flex: 1;
-  padding: 0.5rem 2rem;
+  padding: 0.25rem 2rem 1rem;
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
@@ -357,14 +357,14 @@
 
 .home-title-section {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
   margin-top: 0;
   position: relative;
   z-index: 1;
 }
 
 .home-title {
-  font-size: clamp(5rem, 6vw, 70px);
+  font-size: clamp(3.5rem, 5vw, 55px);
   font-weight: 900;
   letter-spacing: 0.06em;
   text-transform: lowercase;
@@ -373,7 +373,7 @@
   position: relative;
   z-index: 2;
   line-height: 1.2;
-  -webkit-text-stroke: clamp(10px, 1.5vw, 18px) #FFFFFF;
+  -webkit-text-stroke: clamp(8px, 1.2vw, 14px) #FFFFFF;
   paint-order: stroke fill;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.05);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -461,8 +461,8 @@
 /* 날짜 선택 & 마을 입장 통합 카드 */
 .home-action-card {
   text-align: center;
-  margin-top: 1rem;
-  padding: 2rem;
+  margin-top: 0.5rem;
+  padding: 1.5rem;
   padding-top: 2.0rem;
   background-color: rgba(255, 255, 255, 0.95);
   border-radius: 20px;
@@ -476,8 +476,8 @@
 }
 
 .home-action-intro {
-  margin-bottom: 1.5rem;
-  padding-bottom: 1.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
   border-bottom: 1px solid rgba(229, 231, 235, 0.6);
 }
 
@@ -520,13 +520,13 @@
   font-size: 1.3rem;
   font-weight: 400;
   color: #4a5568;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 /* 포탈 박스 */
 .home-portal-box {
   position: relative;
-  padding: 1.0rem;
+  padding: 0.75rem;
   margin: 0 auto;
   max-width: 400px;
   background: linear-gradient(135deg, rgba(224, 246, 255, 0.4) 0%, rgba(255, 255, 255, 0.3) 100%);
@@ -644,8 +644,8 @@
 }
 
 .home-date-hint {
-  margin-top: 1.25rem;
-  padding-top: 1.25rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
   border-top: 1px solid rgba(229, 231, 235, 0.8);
 }
 
@@ -732,9 +732,9 @@
 
 .home-enter-section {
   text-align: center;
-  margin-top: 1.5rem;
+  margin-top: 1rem;
   padding: 0;
-  padding-top: 1.5rem;
+  padding-top: 1rem;
   border-top: 1px solid rgba(229, 231, 235, 0.8);
 }
 
