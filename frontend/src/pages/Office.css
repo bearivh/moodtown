@@ -980,22 +980,25 @@
 }
 
 .diary-delete-button {
-  padding: 0.35rem 0.9rem;
-  background: linear-gradient(135deg, rgba(254, 226, 226, 0.8) 0%, rgba(252, 165, 165, 0.6) 100%);
-  border: 1.5px solid rgba(252, 165, 165, 0.7);
+  padding: 0.35rem 1.5rem;
+  background-color: #ef4444;
+  color: white;
+  border: none;
   border-radius: 8px;
   font-size: 0.95rem;
   font-weight: 500;
-  color: #991b1b;
   cursor: pointer;
   transition: all 0.3s ease;
   font-family: 'Dongle', sans-serif;
+  height: auto;
+  display: inline-flex;
+  align-items: center;
 }
 
 .diary-delete-button:hover:not(:disabled) {
-  background: linear-gradient(135deg, rgba(252, 165, 165, 0.9) 0%, rgba(248, 113, 113, 0.7) 100%);
+  background-color: #dc2626;
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(252, 165, 165, 0.4);
+  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
 }
 
 .diary-delete-button:disabled {
