@@ -640,11 +640,18 @@ function Plaza({ onNavigate, selectedDate }) {
             <div className="plaza-emotions">
               <h3>감정 분석 결과</h3>
               <div className="plaza-emotion-scores">
-                {Object.entries(normalizeEmotionScores(emotionScores))
-                  .sort(([, a], [, b]) => b - a)
+                {Object.entries(emotionScores)
                   .map(([emotion, score]) => {
+                    // 원본 값을 숫자로 변환
+                    const numValue = typeof score === 'number' ? score : parseFloat(score) || 0
+                    // 0~1 범위인 경우 100 곱하기, 0~100 범위인 경우 그대로 사용
+                    const displayScore = (numValue >= 0 && numValue <= 1) ? Math.round(numValue * 100) : Math.round(numValue)
+                    return { emotion, displayScore }
+                  })
+                  .filter(({ displayScore }) => displayScore > 0) // 0보다 큰 값만 표시
+                  .sort((a, b) => b.displayScore - a.displayScore)
+                  .map(({ emotion, displayScore }) => {
                     const charInfo = CHARACTER_INFO[emotion]
-                    const normalizedScore = Math.round(score)
                     return (
                       <div key={emotion} className="plaza-emotion-item">
                         {charInfo?.image ? (
@@ -659,12 +666,12 @@ function Plaza({ onNavigate, selectedDate }) {
                           <div 
                             className="plaza-emotion-bar-fill"
                             style={{ 
-                              width: `${normalizedScore}%`,
+                              width: `${displayScore}%`,
                               backgroundColor: charInfo?.color || '#9ca3af'
                             }}
                           ></div>
                         </div>
-                        <span className="plaza-emotion-score">{normalizedScore}%</span>
+                        <span className="plaza-emotion-score">{displayScore}%</span>
                       </div>
                     )
                   })}
