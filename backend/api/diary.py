@@ -324,13 +324,22 @@ def get_plaza_conversation(date):
         })
     
     try:
+        print(f"[광장 대화 불러오기] 날짜: {date}, user_id: {user_id}")
         conversation = get_plaza_conversation_by_date(date, user_id)
+        print(f"[광장 대화 불러오기] DB 조회 결과: {conversation is not None}")
         if conversation:
-            return jsonify({
-                "conversation": conversation.get("conversation", []),
-                "emotionScores": conversation.get("emotionScores", {})
-            })
+            conv_data = conversation.get("conversation", [])
+            emotion_data = conversation.get("emotionScores", {})
+            print(f"[광장 대화 불러오기] 대화 개수: {len(conv_data) if isinstance(conv_data, list) else 'N/A'}, 타입: {type(conv_data)}")
+            if isinstance(conv_data, list) and len(conv_data) > 0:
+                return jsonify({
+                    "conversation": conv_data,
+                    "emotionScores": emotion_data
+                })
+            else:
+                print(f"[광장 대화 불러오기] 경고: 대화 데이터가 비어있거나 리스트가 아님: {conv_data}")
         # 대화가 없는 경우 빈 응답 반환 (404 대신 200으로 빈 데이터 반환)
+        print(f"[광장 대화 불러오기] 대화 없음 - 빈 응답 반환")
         return jsonify({
             "conversation": [],
             "emotionScores": {}
@@ -361,7 +370,19 @@ def save_plaza_conversation_endpoint():
     if not date:
         return jsonify({"error": "날짜가 필요합니다."}), 400
     
+    # 날짜 형식 정규화
+    date = str(date).strip()
+    
+    print(f"[광장 대화 저장] 날짜: '{date}', user_id: {user_id}, 대화 개수: {len(conversation) if isinstance(conversation, list) else 'N/A'}")
+    
     if save_plaza_conversation(date, conversation, emotion_scores, user_id):
+        # 저장 직후 확인
+        saved_conv = get_plaza_conversation_by_date(date, user_id)
+        if saved_conv:
+            saved_count = len(saved_conv.get("conversation", [])) if isinstance(saved_conv.get("conversation"), list) else 0
+            print(f"[광장 대화 저장] 저장 직후 확인 성공 - {saved_count}개 메시지")
+        else:
+            print(f"[광장 대화 저장] 경고: 저장 직후 확인 실패")
         return jsonify({"success": True, "message": "대화가 저장되었습니다."})
     return jsonify({"error": "대화 저장에 실패했습니다."}), 500
 

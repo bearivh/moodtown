@@ -641,12 +641,13 @@ export async function getPlazaConversationByDate(date) {
       return null
     }
     const result = await response.json()
+    console.log('[대화 불러오기] API 응답 전체:', result)
     // 빈 대화 배열이면 null 반환 (기존 동작 유지)
-    if (result && result.conversation && result.conversation.length > 0) {
+    if (result && result.conversation && Array.isArray(result.conversation) && result.conversation.length > 0) {
       console.log('[대화 불러오기] 성공:', date, result.conversation.length, '개 메시지')
       return result
     }
-    console.log('[대화 불러오기] 빈 대화:', date)
+    console.log('[대화 불러오기] 빈 대화:', date, '응답:', result)
     return null
   } catch (error) {
     // 네트워크 에러 등

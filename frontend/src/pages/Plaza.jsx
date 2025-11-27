@@ -130,9 +130,9 @@ function Plaza({ onNavigate, selectedDate }) {
           `대화 있음 (${savedConversation.conversation?.length || 0}개 메시지)` : 
           '대화 없음')
         
-        if (savedConversation && savedConversation.conversation && savedConversation.conversation.length > 0) {
+        if (savedConversation && savedConversation.conversation && Array.isArray(savedConversation.conversation) && savedConversation.conversation.length > 0) {
           // 저장된 대화가 있으면 불러오기 (로딩 화면 안 띄움)
-          console.log('[광장] 저장된 대화 불러오기 성공 - 재생성하지 않음')
+          console.log('[광장] 저장된 대화 불러오기 성공 - 재생성하지 않음', savedConversation.conversation.length, '개 메시지')
           setConversation(savedConversation.conversation)
           setEmotionScores(savedConversation.emotionScores || {})
           setLoading(false) // 로딩 화면 안 띄움
@@ -184,8 +184,8 @@ function Plaza({ onNavigate, selectedDate }) {
     // 이미 저장된 대화가 있는지 여러 번 확인 (중복 생성 방지) - 최우선 확인
     console.log('[광장] analyzeDateDiaries 시작 - 저장된 대화 확인 중...')
     let existingConversation = await getPlazaConversationByDate(selectedDate)
-    if (existingConversation && existingConversation.conversation && existingConversation.conversation.length > 0) {
-      console.log('[광장] analyzeDateDiaries - 이미 저장된 대화 발견, 재생성하지 않음')
+    if (existingConversation && existingConversation.conversation && Array.isArray(existingConversation.conversation) && existingConversation.conversation.length > 0) {
+      console.log('[광장] analyzeDateDiaries - 이미 저장된 대화 발견, 재생성하지 않음', existingConversation.conversation.length, '개 메시지')
       // 이미 저장된 대화가 있으면 불러오기만 하고 재생성하지 않음
       setConversation(existingConversation.conversation)
       setEmotionScores(existingConversation.emotionScores || {})
@@ -203,8 +203,8 @@ function Plaza({ onNavigate, selectedDate }) {
     // 한 번 더 확인 (네트워크 지연 등으로 인한 타이밍 이슈 방지)
     await new Promise(resolve => setTimeout(resolve, 500))
     existingConversation = await getPlazaConversationByDate(selectedDate)
-    if (existingConversation && existingConversation.conversation && existingConversation.conversation.length > 0) {
-      console.log('[광장] analyzeDateDiaries - 재확인 결과, 이미 저장된 대화 발견')
+    if (existingConversation && existingConversation.conversation && Array.isArray(existingConversation.conversation) && existingConversation.conversation.length > 0) {
+      console.log('[광장] analyzeDateDiaries - 재확인 결과, 이미 저장된 대화 발견', existingConversation.conversation.length, '개 메시지')
       setConversation(existingConversation.conversation)
       setEmotionScores(existingConversation.emotionScores || {})
       setLoading(false)
@@ -220,8 +220,8 @@ function Plaza({ onNavigate, selectedDate }) {
     // 최종 확인 (대화 생성 직전)
     await new Promise(resolve => setTimeout(resolve, 200))
     existingConversation = await getPlazaConversationByDate(selectedDate)
-    if (existingConversation && existingConversation.conversation && existingConversation.conversation.length > 0) {
-      console.log('[광장] analyzeDateDiaries - 최종 확인 결과, 이미 저장된 대화 발견')
+    if (existingConversation && existingConversation.conversation && Array.isArray(existingConversation.conversation) && existingConversation.conversation.length > 0) {
+      console.log('[광장] analyzeDateDiaries - 최종 확인 결과, 이미 저장된 대화 발견', existingConversation.conversation.length, '개 메시지')
       setConversation(existingConversation.conversation)
       setEmotionScores(existingConversation.emotionScores || {})
       setLoading(false)
@@ -298,7 +298,7 @@ function Plaza({ onNavigate, selectedDate }) {
       if (selectedDate && dialogue.length > 0) {
         // 저장하기 전에 다시 한 번 확인 (다른 프로세스가 이미 저장했을 수 있음)
         const finalCheck = await getPlazaConversationByDate(selectedDate)
-        if (finalCheck && finalCheck.conversation && finalCheck.conversation.length > 0) {
+        if (finalCheck && finalCheck.conversation && Array.isArray(finalCheck.conversation) && finalCheck.conversation.length > 0) {
           console.log('[광장] 저장 직전 최종 확인 - 이미 대화가 있음, 저장하지 않음')
           setConversation(finalCheck.conversation)
           setEmotionScores(finalCheck.emotionScores || scores)
@@ -316,13 +316,47 @@ function Plaza({ onNavigate, selectedDate }) {
         const saveSuccess = await savePlazaConversationByDate(selectedDate, dialogue, scores)
         console.log('[광장] 대화 저장 결과:', saveSuccess ? '성공' : '실패')
         
-        if (!saveSuccess) {
+        if (saveSuccess) {
+          // 저장 성공 후 잠시 대기하고 저장 확인 (DB 트랜잭션 커밋 대기)
+          await new Promise(resolve => setTimeout(resolve, 500))
+          const verifyConversation = await getPlazaConversationByDate(selectedDate)
+          if (verifyConversation && verifyConversation.conversation && Array.isArray(verifyConversation.conversation) && verifyConversation.conversation.length > 0) {
+            console.log('[광장] 저장 검증 성공 - DB에 대화가 있습니다')
+            // 모듈 레벨 캐시 업데이트
+            plazaDataCache.set(selectedDate, {
+              conversation: verifyConversation.conversation,
+              emotionScores: verifyConversation.emotionScores || scores,
+              diaries: dateDiaries
+            })
+          } else {
+            console.warn('[광장] 저장 검증 실패 - DB에 대화가 없습니다. 다시 확인 중...')
+            // 한 번 더 대기 후 확인
+            await new Promise(resolve => setTimeout(resolve, 500))
+            const retryVerify = await getPlazaConversationByDate(selectedDate)
+            if (retryVerify && retryVerify.conversation && Array.isArray(retryVerify.conversation) && retryVerify.conversation.length > 0) {
+              console.log('[광장] 재확인 성공 - DB에 대화가 있습니다')
+              plazaDataCache.set(selectedDate, {
+                conversation: retryVerify.conversation,
+                emotionScores: retryVerify.emotionScores || scores,
+                diaries: dateDiaries
+              })
+            } else {
+              console.error('[광장] 저장 검증 실패 - 대화 저장에 문제가 있을 수 있습니다')
+              // 캐시에는 저장해두기 (나중에 다시 확인)
+              plazaDataCache.set(selectedDate, {
+                conversation: dialogue,
+                emotionScores: scores,
+                diaries: dateDiaries
+              })
+            }
+          }
+        } else {
           console.error('[광장] 대화 저장 실패! 다시 시도합니다.')
           // 저장 실패 시 1초 후 재시도
           setTimeout(async () => {
             // 재시도 전에 다시 확인
             const retryCheck = await getPlazaConversationByDate(selectedDate)
-            if (retryCheck && retryCheck.conversation && retryCheck.conversation.length > 0) {
+            if (retryCheck && retryCheck.conversation && Array.isArray(retryCheck.conversation) && retryCheck.conversation.length > 0) {
               console.log('[광장] 재시도 전 확인 - 이미 대화가 있음')
               setConversation(retryCheck.conversation)
               setEmotionScores(retryCheck.emotionScores || scores)

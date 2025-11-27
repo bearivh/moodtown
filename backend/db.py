@@ -451,19 +451,93 @@ def get_plaza_conversation_by_date(date: str, user_id: int = None):
     if user_id is None:
         user_id = 0
     
+    # 날짜 형식 정규화 (공백 제거, 형식 통일)
+    date = str(date).strip()
+    
     conn = get_db()
     cur = conn.cursor()
+    print(f"[DB] plaza_conversations 조회: date='{date}', user_id={user_id}")
+    
+    # 먼저 user_id로만 조회해서 날짜 형식 확인
+    cur.execute("SELECT date, user_id FROM plaza_conversations WHERE user_id = %s LIMIT 5", (user_id,))
+    test_rows = cur.fetchall()
+    if test_rows:
+        print(f"[DB] 같은 user_id의 다른 날짜 예시: {[dict(r)['date'] for r in test_rows]}")
+    
     cur.execute("SELECT * FROM plaza_conversations WHERE date = %s AND user_id = %s",
                 (date, user_id))
     row = cur.fetchone()
-    conn.close()
+    
+    # user_id만으로도 시도 (날짜 형식 불일치 가능성 대비)
+    if not row:
+        print(f"[DB] date+user_id로 조회 실패, user_id만으로 조회 시도")
+        cur.execute("SELECT * FROM plaza_conversations WHERE user_id = %s ORDER BY saved_at DESC LIMIT 10", (user_id,))
+        all_rows = cur.fetchall()
+        print(f"[DB] user_id={user_id}로 조회된 모든 날짜: {[dict(r)['date'] for r in all_rows] if all_rows else '없음'}")
+        
+        # 날짜 부분만 비교 시도
+        for test_row in all_rows:
+            test_date = str(dict(test_row)['date']).strip()
+            if test_date == date or test_date.startswith(date) or date.startswith(test_date):
+                print(f"[DB] 유사한 날짜 발견: '{test_date}' (원하는 날짜: '{date}')")
+                row = test_row
+                break
     
     if not row:
+        print(f"[DB] plaza_conversations 조회 결과: 없음")
+        conn.close()
         return None
     
-    item = dict(row)
-    item["conversation"] = json.loads(item.get("conversation") or "[]")
-    item["emotionScores"] = json.loads(item.get("emotion_scores") or "{}")
+    row_dict = dict(row)
+    print(f"[DB] plaza_conversations 조회 결과: 있음")
+    print(f"[DB] - 날짜: {row_dict.get('date')}")
+    print(f"[DB] - user_id: {row_dict.get('user_id')}")
+    print(f"[DB] - conversation 컬럼 타입: {type(row_dict.get('conversation'))}")
+    print(f"[DB] - conversation 컬럼 길이: {len(str(row_dict.get('conversation'))) if row_dict.get('conversation') else 0}")
+    
+    item = row_dict
+    
+    # conversation 필드 파싱
+    conversation_raw = item.get("conversation")
+    if conversation_raw:
+        if isinstance(conversation_raw, str):
+            try:
+                parsed = json.loads(conversation_raw)
+                item["conversation"] = parsed
+                print(f"[DB] conversation JSON 파싱 성공: {len(parsed) if isinstance(parsed, list) else 'N/A'}개 항목")
+            except Exception as e:
+                print(f"[DB] conversation JSON 파싱 오류: {e}")
+                print(f"[DB] 원본 일부: {str(conversation_raw)[:200]}")
+                item["conversation"] = []
+        elif isinstance(conversation_raw, list):
+            item["conversation"] = conversation_raw
+            print(f"[DB] conversation이 이미 리스트: {len(conversation_raw)}개 항목")
+        else:
+            print(f"[DB] conversation 타입 오류: {type(conversation_raw)}, 값: {str(conversation_raw)[:100]}")
+            item["conversation"] = []
+    else:
+        print(f"[DB] conversation 컬럼이 비어있음")
+        item["conversation"] = []
+    
+    # emotion_scores 필드 파싱
+    emotion_scores_raw = item.get("emotion_scores")
+    if emotion_scores_raw:
+        if isinstance(emotion_scores_raw, str):
+            try:
+                item["emotionScores"] = json.loads(emotion_scores_raw)
+            except Exception as e:
+                print(f"[DB] emotion_scores JSON 파싱 오류: {e}")
+                item["emotionScores"] = {}
+        elif isinstance(emotion_scores_raw, dict):
+            item["emotionScores"] = emotion_scores_raw
+        else:
+            item["emotionScores"] = {}
+    else:
+        item["emotionScores"] = {}
+    
+    final_conv_len = len(item["conversation"]) if isinstance(item["conversation"], list) else 0
+    print(f"[DB] 최종 파싱 결과 - conversation 개수: {final_conv_len}")
+    conn.close()
     return item
 
 def delete_plaza_conversation_by_date(date: str, user_id: int = None) -> bool:
