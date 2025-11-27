@@ -365,8 +365,8 @@
 }
 
 .home-title {
-  font-size: clamp(3.5rem, 5vw, 55px);
-  font-weight: 400;
+  font-size: clamp(5rem, 7vw, 80px);
+  font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: lowercase;
   margin: 0;
@@ -775,7 +775,7 @@
   }
 
   .home-title {
-    font-size: clamp(3rem, 14vw, 5rem);
+    font-size: clamp(4rem, 16vw, 7rem);
     letter-spacing: 0.03em;
   }
 
@@ -849,6 +849,6 @@
 /* 태블릿 반응형 */
 @media (min-width: 769px) and (max-width: 1024px) {
   .home-title {
-    font-size: clamp(4.5rem, 9vw, 7rem);
+    font-size: clamp(5.5rem, 10vw, 8rem);
   }
 }
