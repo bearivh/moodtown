@@ -220,20 +220,3 @@ export async function addNegativeOnlyComfortLetter(diaryText = '') {
     return false
   }
 }
-
-/**
- * 긍정 감정만 있을 때 초록이(사랑)의 응원 편지
- * @param {string} diaryText - 일기 내용 (선택적)
- * @returns {Promise<boolean>} 저장 성공 여부
- */
-export async function addPositiveOnlyCheerLetter(diaryText = '') {
-  try {
-    const letter = await generateLetter('cheer', { diary_text: diaryText })
-    letter.type = 'cheer'
-    letter.date = new Date().toISOString().split('T')[0]
-    return await addLetter(letter)
-  } catch (error) {
-    console.error('긍정 감정만 있을 때 응원 편지 추가 실패:', error)
-    return false
-  }
-}
