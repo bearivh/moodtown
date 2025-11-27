@@ -80,10 +80,10 @@ function Plaza({ onNavigate, selectedDate }) {
 
     let isMounted = true // 컴포넌트가 마운트되어 있는지 추적
 
-    // 캐시에서 즉시 복원 (있으면 즉시 표시, 하지만 DB 확인은 계속 진행)
+    // 캐시에서 즉시 복원 (있으면 즉시 표시, 로딩 화면 안 뜨게)
     const cached = plazaDataCache.get(selectedDate)
     if (cached && cached.conversation && cached.conversation.length > 0) {
-      // 캐시에 대화가 있으면 즉시 표시
+      // 캐시에 대화가 있으면 즉시 표시하고 로딩 안 띄움
       setConversation(cached.conversation || [])
       setEmotionScores(cached.emotionScores || {})
       setDateDiaries(cached.diaries || [])
@@ -92,6 +92,10 @@ function Plaza({ onNavigate, selectedDate }) {
     } else if (cached && cached.diaries) {
       // 캐시에 일기는 있지만 대화가 없는 경우 일기만 표시
       setDateDiaries(cached.diaries)
+      setLoading(false) // 일기는 있으니 로딩 안 띄움
+    } else {
+      // 캐시에 아무것도 없으면 초기에는 로딩 안 띄움 (DB 확인 후 결정)
+      setLoading(false)
     }
 
     const loadData = async () => {
@@ -109,9 +113,17 @@ function Plaza({ onNavigate, selectedDate }) {
 
       // 일기가 있으면 저장된 대화가 있는지 DB에서 확인 (캐시 무시하고 항상 DB 확인)
       if (diaries.length > 0) {
-        // 데이터베이스에서 저장된 대화 확인
+        // 데이터베이스에서 저장된 대화 확인 (여러 번 확인하여 확실하게)
         console.log('[광장] 데이터베이스에서 대화 불러오기 시도:', selectedDate)
-        const savedConversation = await getPlazaConversationByDate(selectedDate)
+        let savedConversation = await getPlazaConversationByDate(selectedDate)
+        if (!isMounted) return
+        
+        // 한 번 더 확인 (네트워크 지연 등으로 인한 타이밍 이슈 방지)
+        if (!savedConversation || !savedConversation.conversation || savedConversation.conversation.length === 0) {
+          await new Promise(resolve => setTimeout(resolve, 300))
+          savedConversation = await getPlazaConversationByDate(selectedDate)
+        }
+        
         if (!isMounted) return
         
         console.log('[광장] 데이터베이스 응답:', savedConversation ? 
@@ -119,11 +131,11 @@ function Plaza({ onNavigate, selectedDate }) {
           '대화 없음')
         
         if (savedConversation && savedConversation.conversation && savedConversation.conversation.length > 0) {
-          // 저장된 대화가 있으면 불러오기
-          console.log('[광장] 저장된 대화 불러오기 성공')
+          // 저장된 대화가 있으면 불러오기 (로딩 화면 안 띄움)
+          console.log('[광장] 저장된 대화 불러오기 성공 - 재생성하지 않음')
           setConversation(savedConversation.conversation)
           setEmotionScores(savedConversation.emotionScores || {})
-          setLoading(false)
+          setLoading(false) // 로딩 화면 안 띄움
           setShowChat(true)
           
           // 모듈 레벨 캐시에 저장
@@ -133,11 +145,11 @@ function Plaza({ onNavigate, selectedDate }) {
             diaries: diaries
           })
           console.log('[광장] 캐시에 저장 완료')
-          return // 저장된 대화가 있으면 여기서 종료
+          return // 저장된 대화가 있으면 여기서 종료 - 절대 analyzeDateDiaries 호출 안 함
         } else {
           // 저장된 대화가 없으면 새로 생성 (이 경우에만 로딩 표시)
           console.log('[광장] 저장된 대화가 없어서 새로 생성합니다')
-          setLoading(true)
+          setLoading(true) // 새로 생성할 때만 로딩 화면 띄움
           const combinedContent = diaries.map(d => d.content).join('\n\n')
           analyzeDateDiaries(combinedContent)
         }
@@ -169,7 +181,8 @@ function Plaza({ onNavigate, selectedDate }) {
   const analyzeDateDiaries = async (content) => {
     if (!content.trim()) return
 
-    // 이미 저장된 대화가 있는지 여러 번 확인 (중복 생성 방지)
+    // 이미 저장된 대화가 있는지 여러 번 확인 (중복 생성 방지) - 최우선 확인
+    console.log('[광장] analyzeDateDiaries 시작 - 저장된 대화 확인 중...')
     let existingConversation = await getPlazaConversationByDate(selectedDate)
     if (existingConversation && existingConversation.conversation && existingConversation.conversation.length > 0) {
       console.log('[광장] analyzeDateDiaries - 이미 저장된 대화 발견, 재생성하지 않음')
@@ -192,6 +205,23 @@ function Plaza({ onNavigate, selectedDate }) {
     existingConversation = await getPlazaConversationByDate(selectedDate)
     if (existingConversation && existingConversation.conversation && existingConversation.conversation.length > 0) {
       console.log('[광장] analyzeDateDiaries - 재확인 결과, 이미 저장된 대화 발견')
+      setConversation(existingConversation.conversation)
+      setEmotionScores(existingConversation.emotionScores || {})
+      setLoading(false)
+      setShowChat(true)
+      plazaDataCache.set(selectedDate, {
+        conversation: existingConversation.conversation,
+        emotionScores: existingConversation.emotionScores || {},
+        diaries: dateDiaries
+      })
+      return
+    }
+
+    // 최종 확인 (대화 생성 직전)
+    await new Promise(resolve => setTimeout(resolve, 200))
+    existingConversation = await getPlazaConversationByDate(selectedDate)
+    if (existingConversation && existingConversation.conversation && existingConversation.conversation.length > 0) {
+      console.log('[광장] analyzeDateDiaries - 최종 확인 결과, 이미 저장된 대화 발견')
       setConversation(existingConversation.conversation)
       setEmotionScores(existingConversation.emotionScores || {})
       setLoading(false)
@@ -264,8 +294,24 @@ function Plaza({ onNavigate, selectedDate }) {
       
       setConversation(dialogue)
       
-      // 대화 저장 (반드시 DB에 저장)
+      // 대화 저장 (반드시 DB에 저장) - 저장 전에 한 번 더 확인
       if (selectedDate && dialogue.length > 0) {
+        // 저장하기 전에 다시 한 번 확인 (다른 프로세스가 이미 저장했을 수 있음)
+        const finalCheck = await getPlazaConversationByDate(selectedDate)
+        if (finalCheck && finalCheck.conversation && finalCheck.conversation.length > 0) {
+          console.log('[광장] 저장 직전 최종 확인 - 이미 대화가 있음, 저장하지 않음')
+          setConversation(finalCheck.conversation)
+          setEmotionScores(finalCheck.emotionScores || scores)
+          setLoading(false)
+          setShowChat(true)
+          plazaDataCache.set(selectedDate, {
+            conversation: finalCheck.conversation,
+            emotionScores: finalCheck.emotionScores || scores,
+            diaries: dateDiaries
+          })
+          return
+        }
+        
         console.log('[광장] 대화 저장 시도:', selectedDate, dialogue.length, '개 메시지')
         const saveSuccess = await savePlazaConversationByDate(selectedDate, dialogue, scores)
         console.log('[광장] 대화 저장 결과:', saveSuccess ? '성공' : '실패')
@@ -274,6 +320,22 @@ function Plaza({ onNavigate, selectedDate }) {
           console.error('[광장] 대화 저장 실패! 다시 시도합니다.')
           // 저장 실패 시 1초 후 재시도
           setTimeout(async () => {
+            // 재시도 전에 다시 확인
+            const retryCheck = await getPlazaConversationByDate(selectedDate)
+            if (retryCheck && retryCheck.conversation && retryCheck.conversation.length > 0) {
+              console.log('[광장] 재시도 전 확인 - 이미 대화가 있음')
+              setConversation(retryCheck.conversation)
+              setEmotionScores(retryCheck.emotionScores || scores)
+              setLoading(false)
+              setShowChat(true)
+              plazaDataCache.set(selectedDate, {
+                conversation: retryCheck.conversation,
+                emotionScores: retryCheck.emotionScores || scores,
+                diaries: dateDiaries
+              })
+              return
+            }
+            
             const retrySuccess = await savePlazaConversationByDate(selectedDate, dialogue, scores)
             console.log('[광장] 대화 저장 재시도 결과:', retrySuccess ? '성공' : '실패')
             if (retrySuccess) {
@@ -285,24 +347,6 @@ function Plaza({ onNavigate, selectedDate }) {
               })
             }
           }, 1000)
-        } else {
-          // 저장 성공 후 DB에서 확인하여 정말 저장되었는지 검증
-          setTimeout(async () => {
-            const verifyConversation = await getPlazaConversationByDate(selectedDate)
-            if (verifyConversation && verifyConversation.conversation && verifyConversation.conversation.length > 0) {
-              console.log('[광장] 저장 검증 성공 - DB에 대화가 있습니다')
-              // 모듈 레벨 캐시 업데이트
-              plazaDataCache.set(selectedDate, {
-                conversation: verifyConversation.conversation,
-                emotionScores: verifyConversation.emotionScores || scores,
-                diaries: dateDiaries
-              })
-            } else {
-              console.warn('[광장] 저장 검증 실패 - DB에 대화가 없습니다. 다시 저장 시도...')
-              // 다시 저장 시도
-              await savePlazaConversationByDate(selectedDate, dialogue, scores)
-            }
-          }, 500)
         }
         
         // 모듈 레벨 캐시 업데이트 (즉시 표시를 위해)
