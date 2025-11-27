@@ -180,8 +180,17 @@ def delete_diary_endpoint(diary_id):
     if not user_id:
         return jsonify({"error": "로그인이 필요합니다."}), 401
     
-    if delete_diary(diary_id, user_id):  # user_id도 전달해야 함
-        return jsonify({"success": True, "message": "일기가 삭제되었습니다."})
+    # 삭제 전에 일기 정보 가져오기 (날짜 확인용)
+    diary = get_diary_by_id(diary_id)
+    if diary and diary.get("user_id") == user_id:
+        date = diary.get("date")
+        # 일기 삭제
+        if delete_diary(diary_id, user_id):
+            # 일기 삭제 성공 시 해당 날짜의 광장 대화도 삭제
+            if date:
+                delete_plaza_conversation_by_date(date, user_id)
+            return jsonify({"success": True, "message": "일기가 삭제되었습니다."})
+    
     return jsonify({"error": "일기 삭제에 실패했습니다."}), 500
 
 
