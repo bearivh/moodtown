@@ -156,4 +156,4 @@ backend/
 - [ML 모델 문서](ML_MODELS.md)
 - [배포 가이드](DEPLOYMENT.md)
 
-[← README로 돌아가기](../README.md)
+[← README로 돌아가기](../README.md#설치-및-실행)
