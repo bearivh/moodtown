@@ -1,10 +1,10 @@
 // 행복 나무 관련 유틸리티 함수들
 
-// 환경 변수에서 API URL을 가져오고, 없으면 빈 문자열(프록시 사용)
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
-
 // 순환 참조를 방지하기 위해 동적 import 대신 정적 import 사용 (순환 참조가 실제로 발생하지 않으므로)
 import { reduceWaterLevel } from './wellUtils'
+
+// 환경 변수에서 API URL을 가져오고, 없으면 빈 문자열(프록시 사용)
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
 // 전역 나무 상태 캐시 (모듈 레벨)
 export const treeStateCache = { state: null, progress: 0, timestamp: 0 }
