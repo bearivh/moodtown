@@ -3,6 +3,9 @@
 // 환경 변수에서 API URL을 가져오고, 없으면 빈 문자열(프록시 사용)
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
+// 순환 참조를 방지하기 위해 동적 import 대신 정적 import 사용 (순환 참조가 실제로 발생하지 않으므로)
+import { reduceWaterLevel } from './wellUtils'
+
 // 전역 나무 상태 캐시 (모듈 레벨)
 export const treeStateCache = { state: null, progress: 0, timestamp: 0 }
 
@@ -277,8 +280,7 @@ export async function addPositiveEmotion(positiveScore, emotionScores = null, em
       timestamp: Date.now()
     }))
     
-    // 열매가 열리면 우물 물이 조금 줄어듦 (동적 import로 순환 참조 방지)
-    const { reduceWaterLevel } = await import('./wellUtils')
+    // 열매가 열리면 우물 물이 조금 줄어듦
     const reduceResult = await reduceWaterLevel(50) // 50점 감소
     
     // 물이 줄어들었다면 localStorage에 저장 (Well 페이지에서 표시)
