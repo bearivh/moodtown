@@ -5,6 +5,9 @@ moodtown은 사용자의 일기를 AI가 분석해 7가지 감정의 주민 캐�
 **배포 링크**  
 [☘️ Go to moodtown!](https://moodtown-three.vercel.app/)  
 
+**시연 영상**  
+[![시연 영상 보기](https://img.shields.io/badge/click!-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/E_laHcBldvI)
+
 **테스트 계정**  
 **ID**: ososo /  **PW**: moodtown  
 👉🏻 로그인을 하면 예시 데이터를 통해 moodtown의 구현 모습을 빠르게 확인해 볼 수 있어요!

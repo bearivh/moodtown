@@ -809,9 +809,26 @@ def delete_letter(letter_id: str, user_id: int = None):
     conn = get_db()
     cur = conn.cursor()
     cur.execute("DELETE FROM letters WHERE id = %s AND user_id = %s", (letter_id, user_id))
+    deleted_count = cur.rowcount
     conn.commit()
     conn.close()
-    return True
+    return deleted_count > 0
+
+def delete_letters_by_date_and_type(date: str, letter_type: str, user_id: int = None):
+    """특정 날짜와 타입의 편지 삭제 (일기 삭제 시 관련 편지 삭제용)"""
+    if user_id is None:
+        user_id = 0
+    
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        "DELETE FROM letters WHERE date = %s AND type = %s AND user_id = %s",
+        (date, letter_type, user_id)
+    )
+    deleted_count = cur.rowcount
+    conn.commit()
+    conn.close()
+    return deleted_count
 
 def get_unread_letter_count(user_id: int = None):
     """읽지 않은 편지 개수"""

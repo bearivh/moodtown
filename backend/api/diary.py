@@ -17,6 +17,7 @@ from db import (
     save_plaza_conversation,
     get_plaza_conversation_by_date,
     save_letter,
+    delete_letters_by_date_and_type,
 )
 from .middleware import get_current_user_id
 from services.letter_generator import generate_letter_with_gpt
@@ -180,16 +181,64 @@ def delete_diary_endpoint(diary_id):
     if not user_id:
         return jsonify({"error": "로그인이 필요합니다."}), 401
     
-    # 삭제 전에 일기 정보 가져오기 (날짜 확인용)
+    # 삭제 전에 일기 정보 가져오기 (감정 점수 및 날짜 확인용)
     diary = get_diary_by_id(diary_id)
     if diary and diary.get("user_id") == user_id:
         date = diary.get("date")
+        emotion_scores = diary.get("emotion_scores", {})
+        
         # 일기 삭제
         if delete_diary(diary_id, user_id):
-            # 일기 삭제 성공 시 해당 날짜의 광장 대화도 삭제
+            # 일기 삭제 성공 시 관련 데이터 삭제 및 되돌리기
             if date:
+                # 1. 해당 날짜의 광장 대화 삭제
                 delete_plaza_conversation_by_date(date, user_id)
-            return jsonify({"success": True, "message": "일기가 삭제되었습니다."})
+                
+                # 2. 해당 날짜에 생성된 편지 삭제 (일기로 인해 생성된 감정 편지)
+                delete_letters_by_date_and_type(date, "emotion_high", user_id)
+                
+                # 3. 행복 나무 상태 되돌리기 (긍정 감정 제거)
+                # 행복 나무를 자라게 하는 감정: 기쁨, 사랑
+                positive_score = (emotion_scores.get("기쁨", 0) or 0) + (emotion_scores.get("사랑", 0) or 0)
+                if positive_score > 0:
+                    state = get_tree_state(user_id)
+                    new_growth = max(0, state.get("growth", 0) - positive_score)
+                    stage_thresholds = [0, 40, 100, 220, 380, 600]
+                    new_stage = state.get("stage", 0)
+                    for i in range(len(stage_thresholds) - 1, -1, -1):
+                        if new_growth >= stage_thresholds[i]:
+                            new_stage = i
+                            break
+                    save_tree_state(
+                        {
+                            "growth": new_growth,
+                            "stage": new_stage,
+                            "lastFruitDate": state.get("lastFruitDate"),
+                        },
+                        user_id
+                    )
+                
+                # 4. 스트레스 우물 상태 되돌리기 (부정 감정 제거)
+                # 스트레스 우물을 차오르게 하는 감정: 슬픔, 분노, 두려움
+                negative_score = (
+                    (emotion_scores.get("분노", 0) or 0)
+                    + (emotion_scores.get("슬픔", 0) or 0)
+                    + (emotion_scores.get("두려움", 0) or 0)
+                )
+                if negative_score > 0:
+                    state = get_well_state(user_id)
+                    new_water_level = max(0, state.get("waterLevel", 0) - negative_score)
+                    is_overflowing = new_water_level >= 500
+                    save_well_state(
+                        {
+                            "waterLevel": new_water_level,
+                            "isOverflowing": is_overflowing,
+                            "lastOverflowDate": state.get("lastOverflowDate"),
+                        },
+                        user_id
+                    )
+            
+            return jsonify({"success": True, "message": "일기와 관련된 모든 데이터가 삭제되었습니다."})
     
     return jsonify({"error": "일기 삭제에 실패했습니다."}), 500
 
