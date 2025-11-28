@@ -269,7 +269,13 @@ export async function addPositiveEmotion(positiveScore, emotionScores = null, em
     fruitProduced = true
     
     // 행복 열매 개수 증가
-    await addHappyFruit()
+    const newFruitCount = await addHappyFruit()
+    
+    // 열매가 맺혔다는 정보를 localStorage에 저장 (Tree 페이지에서 팝업 표시용)
+    localStorage.setItem('treeFruitProduced', JSON.stringify({
+      fruitCount: newFruitCount,
+      timestamp: Date.now()
+    }))
     
     // 열매가 열리면 우물 물이 조금 줄어듦 (동적 import로 순환 참조 방지)
     const { reduceWaterLevel } = await import('./wellUtils')

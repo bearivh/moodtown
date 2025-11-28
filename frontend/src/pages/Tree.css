@@ -752,6 +752,106 @@
   color: #4a5568;
 }
 
+/* 열매 맺힘 축하 팝업 */
+.tree-fruit-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.tree-fruit-popup {
+  background: linear-gradient(135deg, rgba(255, 249, 196, 0.98) 0%, rgba(255, 245, 157, 0.95) 100%);
+  border-radius: 24px;
+  padding: 2.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border: 3px solid rgba(255, 245, 157, 0.9);
+  max-width: 500px;
+  width: 90%;
+  animation: popupSlideIn 0.4s ease;
+  position: relative;
+}
+
+@keyframes popupSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.tree-fruit-popup-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.tree-fruit-popup-icon {
+  font-size: 5rem;
+  animation: celebrateBounce 1s ease-in-out infinite;
+}
+
+@keyframes celebrateBounce {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-15px) scale(1.1);
+  }
+}
+
+.tree-fruit-popup-title {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #92400e;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.tree-fruit-popup-close {
+  padding: 0.8rem 2rem;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: white;
+  border: none;
+  border-radius: 30px;
+  font-size: 1.3rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Dongle', sans-serif;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.tree-fruit-popup-close:hover {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(34, 197, 94, 0.4);
+}
+
+.tree-fruit-popup-close:active {
+  transform: translateY(0);
+}
+
 /* 모바일 반응형 */
 @media (max-width: 768px) {
   .tree-container {

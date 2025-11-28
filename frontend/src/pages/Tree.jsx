@@ -42,6 +42,8 @@ function Tree({ onNavigate, selectedDate }) {
   const [hideDateNotice, setHideDateNotice] = useState(false)
   const [hideDateImpact, setHideDateImpact] = useState(false)
   const [emotionContributions, setEmotionContributions] = useState([])
+  const [showFruitPopup, setShowFruitPopup] = useState(false)
+  const [fruitCountPopup, setFruitCountPopup] = useState(0)
   const today = getTodayDateString()
   const isPastDate = selectedDate && selectedDate < today
 
@@ -136,6 +138,9 @@ function Tree({ onNavigate, selectedDate }) {
     
     // 보너스 정보 검증 및 로드
     loadAndValidateBonusInfo()
+    
+    // 열매 맺힘 팝업 확인
+    checkFruitProduced()
     
     // 주기적으로 상태 업데이트 (5초마다)
     const interval = setInterval(() => {
@@ -243,6 +248,27 @@ function Tree({ onNavigate, selectedDate }) {
     updateTreeStateCache(state, progressPercent)
   }
 
+  const checkFruitProduced = () => {
+    const fruitProducedStr = localStorage.getItem('treeFruitProduced')
+    if (fruitProducedStr) {
+      try {
+        const fruitData = JSON.parse(fruitProducedStr)
+        setFruitCountPopup(fruitData.fruitCount || 0)
+        setShowFruitPopup(true)
+      } catch (e) {
+        console.error('[열매 팝업 파싱 오류]', e)
+        localStorage.removeItem('treeFruitProduced')
+      }
+    }
+  }
+
+  const handleCloseFruitPopup = () => {
+    setShowFruitPopup(false)
+    localStorage.removeItem('treeFruitProduced')
+    // 나무 상태 새로고침 (이미 초기화되어 있을 것)
+    loadTreeData()
+  }
+
   const loadEmotionContributions = async () => {
     try {
       const allDiaries = await getAllDiaries()
@@ -320,6 +346,25 @@ function Tree({ onNavigate, selectedDate }) {
 
   return (
     <div className="tree-container">
+      {/* 열매 맺힘 축하 팝업 */}
+      {showFruitPopup && (
+        <div className="tree-fruit-popup-overlay" onClick={handleCloseFruitPopup}>
+          <div className="tree-fruit-popup" onClick={(e) => e.stopPropagation()}>
+            <div className="tree-fruit-popup-content">
+              <div className="tree-fruit-popup-icon">🎉</div>
+              <div className="tree-fruit-popup-title">
+                축하해요! {fruitCountPopup}번째 행복 열매가 맺혔어요!
+              </div>
+              <button 
+                className="tree-fruit-popup-close"
+                onClick={handleCloseFruitPopup}
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <FloatingResidents count={2} />
       <div className="tree-header">
         {onNavigate && (
