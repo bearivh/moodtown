@@ -33,6 +33,7 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
   const [diaryToDelete, setDiaryToDelete] = useState(null)
   const [deleting, setDeleting] = useState(false)
+  const [loadingCalendar, setLoadingCalendar] = useState(false)
   const today = getTodayDateString()
   const isPastDate = selectedDateFromVillage && selectedDateFromVillage < today
 
@@ -112,19 +113,57 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
   }
 
   const loadCalendarData = async () => {
-    const diaries = await getAllDiaries()
-    const data = {}
-    
-    for (const diary of diaries) {
-      if (diary.date) {
-        const dominant = await getDominantEmotionByDate(diary.date)
-        if (dominant) {
-          data[diary.date] = dominant
+    setLoadingCalendar(true)
+    try {
+      const diaries = await getAllDiaries()
+      const data = {}
+      
+      // 날짜별로 일기 그룹화
+      const diariesByDate = {}
+      diaries.forEach(diary => {
+        if (diary.date) {
+          if (!diariesByDate[diary.date]) {
+            diariesByDate[diary.date] = []
+          }
+          diariesByDate[diary.date].push(diary)
         }
-      }
+      })
+      
+      // 각 날짜별로 dominant emotion 계산 (API 호출 없이)
+      Object.keys(diariesByDate).forEach(date => {
+        const dayDiaries = diariesByDate[date]
+        if (dayDiaries.length === 0) return
+
+        // 모든 일기의 감정 점수 합산
+        const emotionTotals = {}
+        dayDiaries.forEach(diary => {
+          const scores = diary.emotion_scores || {}
+          Object.keys(scores).forEach(emotion => {
+            emotionTotals[emotion] = (emotionTotals[emotion] || 0) + (scores[emotion] || 0)
+          })
+        })
+
+        // 가장 높은 점수의 감정 찾기
+        let maxScore = 0
+        let dominantEmotion = null
+        Object.keys(emotionTotals).forEach(emotion => {
+          if (emotionTotals[emotion] > maxScore) {
+            maxScore = emotionTotals[emotion]
+            dominantEmotion = emotion
+          }
+        })
+
+        if (dominantEmotion) {
+          data[date] = { emotion: dominantEmotion, score: maxScore }
+        }
+      })
+      
+      setCalendarData(data)
+    } catch (error) {
+      console.error('캘린더 데이터 로드 실패:', error)
+    } finally {
+      setLoadingCalendar(false)
     }
-    
-    setCalendarData(data)
   }
 
   const loadWeeklyStats = async () => {
@@ -553,6 +592,18 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
         <div className="office-calendar-section">
           <h2 className="office-section-title">감정 캘린더</h2>
           
+          {/* 로딩 표시 */}
+          {loadingCalendar && (
+            <div className="calendar-loading" style={{ 
+              textAlign: 'center', 
+              padding: '20px',
+              color: '#666',
+              fontSize: '14px'
+            }}>
+              📅 캘린더를 불러오는 중...
+            </div>
+          )}
+          
           {/* 캘린더 헤더 */}
           <div className="calendar-header">
             <button className="calendar-nav-button" onClick={handlePrevMonth}>
@@ -565,6 +616,7 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
           </div>
 
           {/* 캘린더 그리드 */}
+          {!loadingCalendar && (
           <div className="calendar-grid">
             {/* 요일 헤더 */}
             <div className="calendar-weekdays">
@@ -605,6 +657,7 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
               })}
             </div>
           </div>
+          )}
 
           {/* 선택된 날짜의 일기 표시 */}
           {selectedDate && (

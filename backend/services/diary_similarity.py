@@ -22,7 +22,8 @@ if TYPE_CHECKING:
     from sentence_transformers import SentenceTransformer
 
 BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-MODEL_NAME = "jhgan/ko-sentence-transformer-multilingual"
+# 한국어 문장 임베딩 모델 (jhgan/ko-sbert-sts 사용)
+MODEL_NAME = "jhgan/ko-sbert-sts"
 
 _model: Optional[Any] = None
 
