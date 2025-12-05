@@ -188,7 +188,15 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
         setSimilarError(errorMsg + hintMsg)
         setSimilarDiaries([])
       } else {
-        setSimilarDiaries(result.similar_diaries || [])
+        // 새로운 형식: text_similar, emotion_similar
+        const diaries = []
+        if (result.text_similar) {
+          diaries.push({ ...result.text_similar, similarity_type: 'text' })
+        }
+        if (result.emotion_similar) {
+          diaries.push({ ...result.emotion_similar, similarity_type: 'emotion' })
+        }
+        setSimilarDiaries(diaries)
       }
     } catch (error) {
       console.error('유사 일기 검색 오류:', error)
@@ -711,42 +719,49 @@ function Office({ onNavigate, selectedDate: selectedDateFromVillage }) {
 
               {!loadingSimilar && !similarError && similarDiaries.length > 0 && (
                 <div className="similar-diaries-list">
-                  {similarDiaries.map((similarDiary, index) => (
-                    <div key={similarDiary.id} className="similar-diary-item">
-                      <div className="similar-diary-header">
-                        <div className="similar-diary-meta">
-                          <span className="similar-diary-date">{formatDate(similarDiary.date)}</span>
-                          <span className="similar-diary-similarity">
-                            유사도: {Math.round(similarDiary.similarity * 100)}%
-                          </span>
+                  {similarDiaries.map((similarDiary, index) => {
+                    const isTextSimilar = similarDiary.similarity_type === 'text'
+                    const isEmotionSimilar = similarDiary.similarity_type === 'emotion'
+                    
+                    return (
+                      <div key={similarDiary.id} className="similar-diary-item">
+                        <div className="similar-diary-header">
+                          <div className="similar-diary-meta">
+                            <span className="similar-diary-date">{formatDate(similarDiary.date)}</span>
+                            <span className="similar-diary-similarity">
+                              {isTextSimilar && '📝 텍스트 유사도: '}
+                              {isEmotionSimilar && '💭 감정 유사도: '}
+                              {Math.round(similarDiary.similarity * 100)}%
+                            </span>
+                          </div>
+                          <h6 className="similar-diary-title">{similarDiary.title || '제목 없음'}</h6>
                         </div>
-                        <h6 className="similar-diary-title">{similarDiary.title || '제목 없음'}</h6>
+                        {similarDiary.emotion_scores && Object.keys(similarDiary.emotion_scores).length > 0 && (
+                          <div className="diary-emotion-scores">
+                            {Object.entries(normalizeEmotionScores(similarDiary.emotion_scores))
+                              .sort(([, a], [, b]) => b - a)
+                              .slice(0, 3)
+                              .map(([emotion, score]) => {
+                                const normalizedScore = Math.round(score)
+                                return (
+                                  <div
+                                    key={emotion}
+                                    className="emotion-score-badge"
+                                    style={{ 
+                                      backgroundColor: getEmotionColorByName(emotion),
+                                      color: 'white'
+                                    }}
+                                  >
+                                    {emotion} {normalizedScore}%
+                                  </div>
+                                )
+                              })}
+                          </div>
+                        )}
+                        <p className="similar-diary-content">{similarDiary.content}</p>
                       </div>
-                      {similarDiary.emotion_scores && Object.keys(similarDiary.emotion_scores).length > 0 && (
-                        <div className="diary-emotion-scores">
-                          {Object.entries(normalizeEmotionScores(similarDiary.emotion_scores))
-                            .sort(([, a], [, b]) => b - a)
-                            .slice(0, 3)
-                            .map(([emotion, score]) => {
-                              const normalizedScore = Math.round(score)
-                              return (
-                                <div
-                                  key={emotion}
-                                  className="emotion-score-badge"
-                                  style={{ 
-                                    backgroundColor: getEmotionColorByName(emotion),
-                                    color: 'white'
-                                  }}
-                                >
-                                  {emotion} {normalizedScore}%
-                                </div>
-                              )
-                            })}
-                        </div>
-                      )}
-                      <p className="similar-diary-content">{similarDiary.content}</p>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>

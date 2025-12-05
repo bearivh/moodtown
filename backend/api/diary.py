@@ -115,7 +115,7 @@ def generate_letter_for_high_emotion(emotion_scores_raw, diary_content, diary_da
 _HAS_SIMILARITY = False
 try:
     # 절대 경로로 services 모듈 import
-    from services.diary_similarity import find_similar_diaries, find_similar_diaries_by_text, load_model
+    from services.diary_similarity import find_similar_diaries_separated, find_similar_diaries, find_similar_diaries_by_text, load_model
     _HAS_SIMILARITY = True
     print("[diary.py] 유사 일기 검색 모듈 로드 성공")
     # 서버 시작 시 모델 미리 로드 시도
@@ -501,35 +501,35 @@ def get_similar_diaries(diary_id):
         return jsonify({
             "success": False,
             "error": "유사 일기 검색 모듈을 로드할 수 없습니다. Flask 서버를 재시작해주세요.",
-            "hint": "서버 시작 시 '[diary.py] 유사 일기 검색 모듈 로드 성공' 메시지가 나타나야 합니다. 없다면 서버를 재시작하거나 gensim을 설치해주세요: pip install gensim"
+            "hint": "서버 시작 시 '[diary.py] 유사 일기 검색 모듈 로드 성공' 메시지가 나타나야 합니다. 없다면 서버를 재시작하거나 sentence-transformers를 설치해주세요: pip install sentence-transformers"
         }), 503
     
     limit = request.args.get("limit", 5, type=int)
     min_similarity = request.args.get("min_similarity", 0.3, type=float)
     
     try:
-        print(f"[유사일기검색] 일기 ID: {diary_id}, user_id: {user_id}, limit: {limit}, min_similarity: {min_similarity}")
-        similar_diaries = find_similar_diaries(
+        print(f"[유사일기검색] 일기 ID: {diary_id}, user_id: {user_id}, min_similarity: {min_similarity}")
+        result = find_similar_diaries_separated(
             target_diary_id=diary_id,
             user_id=user_id,
-            limit=limit,
-            min_similarity=min_similarity
+            min_text_similarity=min_similarity,
+            min_emotion_similarity=min_similarity
         )
-        print(f"[유사일기검색] 결과: {type(similar_diaries)}, 개수: {len(similar_diaries) if similar_diaries is not None else 'None'}")
+        print(f"[유사일기검색] 결과: {type(result)}")
         
         # 모델이 로드되지 않았을 경우
-        if similar_diaries is None:
+        if result is None:
             print("⚠️ [유사일기검색] 모델 로드 실패로 None 반환")
             return jsonify({
                 "success": False,
                 "error": "유사 일기 검색 모델이 로드되지 않았습니다.",
-                "hint": "모델 파일이 없거나 손상되었을 수 있습니다. train_diary_similarity.py 스크립트로 모델을 학습시켜주세요."
+                "hint": "sentence-transformers가 설치되지 않았을 수 있습니다. pip install sentence-transformers로 설치해주세요."
             }), 503
         
         return jsonify({
             "success": True,
-            "similar_diaries": similar_diaries,
-            "count": len(similar_diaries)
+            "text_similar": result.get("text_similar"),
+            "emotion_similar": result.get("emotion_similar")
         })
     except Exception as e:
         print(f"❌ [유사일기검색] 오류: {e}")

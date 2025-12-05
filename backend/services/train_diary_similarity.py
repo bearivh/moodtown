@@ -1,6 +1,6 @@
 """
 유사 일기 검색을 위한 Doc2Vec 모델 학습 스크립트
-감성대화말뭉치 데이터와 사용자 일기 데이터를 활용하여 학습
+감성대화말뭉치 데이터를 활용하여 학습
 """
 import os
 import json
@@ -18,7 +18,6 @@ except ImportError:
 
 from joblib import dump
 import json as jsonlib
-import sqlite3
 
 # -----------------------------
 # 경로 설정
@@ -30,7 +29,6 @@ DATA_CANDIDATES = [
     os.path.join(BACKEND_DIR, "감성대화말뭉치(최종데이터)_Training.json"),
 ]
 DATA_FILE = next((p for p in DATA_CANDIDATES if os.path.exists(p)), DATA_CANDIDATES[0])
-DB_PATH = os.path.join(BACKEND_DIR, "moodtown.db")
 OUT_DIR = os.path.join(os.path.dirname(__file__), "models")
 OUT_FILE = os.path.join(OUT_DIR, "diary_similarity_doc2vec.model")
 
@@ -81,27 +79,6 @@ def load_dataset(path: str) -> List[str]:
     return texts
 
 
-def load_user_diaries(db_path: str) -> List[str]:
-    """데이터베이스에서 사용자 일기 텍스트 로드"""
-    diaries = []
-    if not os.path.exists(db_path):
-        return diaries
-    
-    try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        cursor.execute("SELECT content FROM diaries WHERE content IS NOT NULL AND content != ''")
-        rows = cursor.fetchall()
-        for row in rows:
-            if row[0]:
-                diaries.append(row[0])
-        conn.close()
-    except Exception as e:
-        print(f"⚠️ 사용자 일기 로드 실패: {e}")
-    
-    return diaries
-
-
 def simple_tokenize(text: str) -> List[str]:
     """
     간단한 토큰화 (한국어 기본 토큰화)
@@ -137,18 +114,13 @@ def main():
     print(f"[train] 설정: vector_size={args.vector_size}, window={args.window}, epochs={args.epochs}")
     
     # 1. 말뭉치 데이터 로드
-    print(f"\n[1/4] 말뭉치 데이터 로드: {DATA_FILE}")
+    print(f"\n[1/3] 말뭉치 데이터 로드: {DATA_FILE}")
     corpus_texts = load_dataset(DATA_FILE)
     print(f"[train] 말뭉치 샘플 수: {len(corpus_texts)}")
     
-    # 2. 사용자 일기 데이터 로드
-    print(f"\n[2/4] 사용자 일기 데이터 로드: {DB_PATH}")
-    user_diaries = load_user_diaries(DB_PATH)
-    print(f"[train] 사용자 일기 수: {len(user_diaries)}")
-    
-    # 3. 전체 텍스트 합치기 및 토큰화
-    print(f"\n[3/4] 텍스트 토큰화 중...")
-    all_texts = corpus_texts + user_diaries
+    # 2. 텍스트 토큰화
+    print(f"\n[2/3] 텍스트 토큰화 중...")
+    all_texts = corpus_texts
     print(f"[train] 총 텍스트 수: {len(all_texts)}")
     
     # TaggedDocument 생성 (각 문서에 고유 ID 부여)
@@ -164,8 +136,8 @@ def main():
         print("⚠️ 학습할 문서가 너무 적습니다. 최소 10개 이상의 문서가 필요합니다.")
         return
     
-    # 4. Doc2Vec 모델 학습
-    print(f"\n[4/4] Doc2Vec 모델 학습 중... (시간이 걸릴 수 있습니다)")
+    # 3. Doc2Vec 모델 학습
+    print(f"\n[3/3] Doc2Vec 모델 학습 중... (시간이 걸릴 수 있습니다)")
     os.makedirs(OUT_DIR, exist_ok=True)
     
     model = Doc2Vec(
@@ -202,8 +174,7 @@ def main():
         "epochs": args.epochs,
         "vocab_size": len(model.wv.key_to_index),
         "total_documents": len(documents),
-        "corpus_texts": len(corpus_texts),
-        "user_diaries": len(user_diaries)
+        "corpus_texts": len(corpus_texts)
     }
     
     metadata_file = os.path.join(OUT_DIR, "diary_similarity_metadata.json")
