@@ -505,7 +505,7 @@ def get_similar_diaries(diary_id):
         }), 503
     
     limit = request.args.get("limit", 5, type=int)
-    min_similarity = request.args.get("min_similarity", 0.3, type=float)
+    min_similarity = request.args.get("min_similarity", 0.2, type=float)  # 기본값을 0.3에서 0.2로 낮춤
     
     try:
         print(f"[유사일기검색] 일기 ID: {diary_id}, user_id: {user_id}, min_similarity: {min_similarity}")

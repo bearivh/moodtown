@@ -209,6 +209,8 @@ def find_similar_diaries_separated(
             
             filtered_diaries.append(diary)
         
+        print(f"[유사일기검색] 전체 일기 개수: {len(all_diaries)}, 필터링 후: {len(filtered_diaries)}")
+        
     except Exception as e:
         print(f"⚠️ 일기 목록 조회 실패: {e}")
         import traceback
@@ -219,6 +221,9 @@ def find_similar_diaries_separated(
     text_similarities = []
     emotion_similarities = []
     target_emotion_scores = target_diary.get("emotion_scores", {}) if target_diary else {}
+    
+    print(f"[유사일기검색] 필터링된 일기 개수: {len(filtered_diaries)}")
+    print(f"[유사일기검색] 최소 텍스트 유사도: {min_text_similarity}, 최소 감정 유사도: {min_emotion_similarity}")
     
     for diary in filtered_diaries:
         diary_id = diary.get("id")
@@ -247,37 +252,58 @@ def find_similar_diaries_separated(
         # 감정 유사도 계산
         emotion_sim = calculate_emotion_similarity(target_emotion_scores, diary_emotion_scores)
         
-        # 텍스트 유사도 저장
-        if text_sim >= min_text_similarity:
-            text_similarities.append({
-                "id": diary_id,
-                "date": diary.get("date", ""),
-                "title": diary.get("title", ""),
-                "content": diary_content[:200] + "..." if len(diary_content) > 200 else diary_content,
-                "similarity": float(text_sim),
-                "emotion_scores": diary_emotion_scores
-            })
+        # 모든 유사도 저장 (임계값과 관계없이)
+        text_similarities.append({
+            "id": diary_id,
+            "date": diary.get("date", ""),
+            "title": diary.get("title", ""),
+            "content": diary_content[:200] + "..." if len(diary_content) > 200 else diary_content,
+            "similarity": float(text_sim),
+            "emotion_scores": diary_emotion_scores
+        })
         
-        # 감정 유사도 저장
-        if emotion_sim >= min_emotion_similarity:
-            emotion_similarities.append({
-                "id": diary_id,
-                "date": diary.get("date", ""),
-                "title": diary.get("title", ""),
-                "content": diary_content[:200] + "..." if len(diary_content) > 200 else diary_content,
-                "similarity": float(emotion_sim),
-                "emotion_scores": diary_emotion_scores
-            })
+        emotion_similarities.append({
+            "id": diary_id,
+            "date": diary.get("date", ""),
+            "title": diary.get("title", ""),
+            "content": diary_content[:200] + "..." if len(diary_content) > 200 else diary_content,
+            "similarity": float(emotion_sim),
+            "emotion_scores": diary_emotion_scores
+        })
     
     # 텍스트 유사도 순으로 정렬
     text_similarities.sort(key=lambda x: x["similarity"], reverse=True)
     # 감정 유사도 순으로 정렬
     emotion_similarities.sort(key=lambda x: x["similarity"], reverse=True)
     
-    # 각각 1개씩만 반환
+    print(f"[유사일기검색] 텍스트 유사도 후보: {len(text_similarities)}개")
+    print(f"[유사일기검색] 감정 유사도 후보: {len(emotion_similarities)}개")
+    
+    # 임계값을 만족하는 것 중 최상위 1개 선택, 없으면 전체 중 최상위 1개 선택
+    text_result = None
+    emotion_result = None
+    
+    # 텍스트 유사도: 임계값 이상인 것 중 최상위, 없으면 전체 중 최상위
+    for item in text_similarities:
+        if item["similarity"] >= min_text_similarity:
+            text_result = item
+            break
+    if text_result is None and text_similarities:
+        text_result = text_similarities[0]
+        print(f"[유사일기검색] 텍스트 유사도 임계값 미만이지만 최상위 결과 반환: {text_result['similarity']:.3f}")
+    
+    # 감정 유사도: 임계값 이상인 것 중 최상위, 없으면 전체 중 최상위
+    for item in emotion_similarities:
+        if item["similarity"] >= min_emotion_similarity:
+            emotion_result = item
+            break
+    if emotion_result is None and emotion_similarities:
+        emotion_result = emotion_similarities[0]
+        print(f"[유사일기검색] 감정 유사도 임계값 미만이지만 최상위 결과 반환: {emotion_result['similarity']:.3f}")
+    
     result = {
-        "text_similar": text_similarities[0] if text_similarities else None,
-        "emotion_similar": emotion_similarities[0] if emotion_similarities else None
+        "text_similar": text_result,
+        "emotion_similar": emotion_result
     }
     
     return result
