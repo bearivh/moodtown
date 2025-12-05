@@ -61,26 +61,53 @@ if DATABASE_URL:
     print(f"🔍 DATABASE_URL 설정됨: {url_preview}@{host_info.split(':')[0] if ':' in host_info else '***'}:{host_info.split(':')[1] if ':' in host_info else '***'}")
 
 def get_db():
-    """PostgreSQL 연결 객체 반환"""
+    """PostgreSQL 연결 객체 반환 (재시도 로직 포함)"""
     if not DATABASE_URL:
         raise RuntimeError("DATABASE_URL이 설정되지 않았습니다.")
     
-    try:
-        # 연결 타임아웃 설정 (5초)
-        conn = psycopg2.connect(
-            DATABASE_URL, 
-            cursor_factory=RealDictCursor,
-            connect_timeout=5  # 5초 타임아웃
-        )
-        return conn
-    except psycopg2.OperationalError as e:
-        print(f"⚠️  PostgreSQL 연결 실패 (운영 오류): {e}")
-        print(f"🔍 연결 시도한 DATABASE_URL: {DATABASE_URL.split('@')[0] if '@' in DATABASE_URL else 'N/A'}@***")
-        raise
-    except Exception as e:
-        print(f"⚠️  PostgreSQL 연결 실패: {e}")
-        print(f"🔍 연결 시도한 DATABASE_URL: {DATABASE_URL.split('@')[0] if '@' in DATABASE_URL else 'N/A'}@***")
-        raise
+    import time
+    max_retries = 3
+    retry_delay = 1  # 초
+    
+    for attempt in range(max_retries):
+        try:
+            # 연결 타임아웃 설정 (5초)
+            # keepalive 설정으로 연결 유지
+            conn = psycopg2.connect(
+                DATABASE_URL, 
+                cursor_factory=RealDictCursor,
+                connect_timeout=5,  # 5초 타임아웃
+                keepalives=1,  # TCP keepalive 활성화
+                keepalives_idle=30,  # 30초 후 keepalive 시작
+                keepalives_interval=10,  # 10초마다 keepalive 패킷
+                keepalives_count=3  # 3번 실패 시 연결 종료
+            )
+            return conn
+        except psycopg2.OperationalError as e:
+            error_msg = str(e)
+            # "invalid length of startup packet" 같은 에러는 재시도하지 않음
+            if "invalid length" in error_msg.lower() or "startup packet" in error_msg.lower():
+                # 이런 에러는 서버 측 문제이므로 즉시 실패
+                print(f"⚠️  PostgreSQL 서버 측 연결 오류 (재시도 불가): {error_msg[:100]}")
+                raise
+            elif attempt < max_retries - 1:
+                print(f"⚠️  PostgreSQL 연결 실패 (시도 {attempt + 1}/{max_retries}): {error_msg[:100]}")
+                time.sleep(retry_delay * (attempt + 1))  # 지수 백오프
+                continue
+            else:
+                print(f"⚠️  PostgreSQL 연결 실패 (최종): {error_msg}")
+                print(f"🔍 연결 시도한 DATABASE_URL: {DATABASE_URL.split('@')[0] if '@' in DATABASE_URL else 'N/A'}@***")
+                raise
+        except Exception as e:
+            error_msg = str(e)
+            if attempt < max_retries - 1:
+                print(f"⚠️  PostgreSQL 연결 실패 (시도 {attempt + 1}/{max_retries}): {error_msg[:100]}")
+                time.sleep(retry_delay * (attempt + 1))
+                continue
+            else:
+                print(f"⚠️  PostgreSQL 연결 실패 (최종): {error_msg}")
+                print(f"🔍 연결 시도한 DATABASE_URL: {DATABASE_URL.split('@')[0] if '@' in DATABASE_URL else 'N/A'}@***")
+                raise
 
 # =========================================
 # 날짜 파싱 안전 함수

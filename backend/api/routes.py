@@ -55,10 +55,24 @@ def analyze_v2():
         if ml_predict is None:
             return jsonify({"error": "ML 분석 모듈이 로드되지 않았습니다."}), 500
         ml_out = ml_predict(text)
+        model_type = ml_out.get("model_type", "unknown")
+        
+        # 모델 타입에 따라 source 구분
+        if model_type == "transformers":
+            source = "transformers-ml"
+        elif model_type == "heuristic":
+            source = "heuristic-ml"
+        else:
+            source = "unknown-ml"
+        
         return jsonify({
             "mode": "ml",
             "result": {"label": ml_out.get("label", "기쁨"), "scores": ml_out.get("scores", {})},
-            "meta": {"source": "demo-ml", "persisted": False}
+            "meta": {
+                "source": source,
+                "model_type": model_type,
+                "persisted": False
+            }
         })
     elif mode == "gpt":
         emo_result = analyze_emotions_with_gpt(text)

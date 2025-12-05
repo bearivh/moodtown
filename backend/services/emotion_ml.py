@@ -2,39 +2,107 @@ import os
 import json
 from typing import Dict, Tuple, List, Optional
 
+# Transformers 모델 사용
 try:
-    from joblib import load as joblib_load
-except Exception:
-    joblib_load = None
+    from transformers import AutoModelForSequenceClassification, AutoTokenizer
+    import torch
+    TRANSFORMERS_AVAILABLE = True
+    print("[Transformers] 라이브러리 import 성공")
+except Exception as e:
+    TRANSFORMERS_AVAILABLE = False
+    print(f"[Transformers] 라이브러리 import 실패: {e}")
+    import traceback
+    traceback.print_exc()
 
-MODEL_FILE = os.path.join(os.path.dirname(__file__), "models", "emotion_ml.joblib")
+# Transformers 모델 경로
+TRANSFORMERS_MODEL_PATH = os.path.join(
+    os.path.dirname(__file__), 
+    "models", 
+    "moodtown_emotion_model"
+)
 
 LABELS = ["분노", "슬픔", "불안", "상처", "당황", "기쁨"]  # 휴리스틱 fallback용 (모델 없을 때)
 
-_clf = None
-_vectorizer = None
-_classes: Optional[List[str]] = None
+# 전역 변수
+_model = None
+_tokenizer = None
 
 
-def _load_model_if_available() -> bool:
-    global _clf, _vectorizer, _classes
-
-    if _clf is not None and _vectorizer is not None:
+def _load_transformers_model_if_available() -> bool:
+    """Transformers 모델 로드"""
+    global _model, _tokenizer
+    
+    if _model is not None and _tokenizer is not None:
+        print("[Transformers] 모델이 이미 로드되어 있습니다.")
         return True
-
-    if joblib_load is None:
+    
+    if not TRANSFORMERS_AVAILABLE:
+        print("[Transformers] Transformers 라이브러리를 사용할 수 없습니다.")
         return False
-    if not os.path.exists(MODEL_FILE):
+    
+    if not os.path.exists(TRANSFORMERS_MODEL_PATH):
+        print(f"[Transformers] 모델 경로가 존재하지 않습니다: {TRANSFORMERS_MODEL_PATH}")
+        print(f"[Transformers] 절대 경로: {os.path.abspath(TRANSFORMERS_MODEL_PATH)}")
         return False
-
+    
     try:
-        obj = joblib_load(MODEL_FILE)
-        _clf = obj.get("clf")
-        _vectorizer = obj.get("vectorizer")
-        _classes = obj.get("classes")
-        return _clf is not None and _vectorizer is not None
-    except Exception:
+        print(f"[Transformers] 모델 로드 시작: {TRANSFORMERS_MODEL_PATH}")
+        _tokenizer = AutoTokenizer.from_pretrained(TRANSFORMERS_MODEL_PATH)
+        print("[Transformers] Tokenizer 로드 완료")
+        _model = AutoModelForSequenceClassification.from_pretrained(TRANSFORMERS_MODEL_PATH)
+        print("[Transformers] Model 로드 완료")
+        _model.eval()  # 평가 모드로 설정
+        print("[Transformers] 모델 로드 성공!")
+        return True
+    except Exception as e:
+        import traceback
+        print(f"[Transformers] 모델 로드 실패: {e}")
+        print(f"[Transformers] 상세 에러:")
+        traceback.print_exc()
         return False
+
+
+def _predict_with_transformers(text: str) -> Dict[str, float]:
+    """Transformers 모델로 예측"""
+    global _model, _tokenizer
+    
+    if _model is None or _tokenizer is None:
+        return {}
+    
+    try:
+        # 토크나이징
+        inputs = _tokenizer(
+            text,
+            return_tensors="pt",
+            truncation=True,
+            max_length=512,
+            padding=True
+        )
+        
+        # 예측
+        with torch.no_grad():
+            outputs = _model(**inputs)
+            logits = outputs.logits
+            probs = torch.softmax(logits, dim=-1)[0]
+        
+        # 라벨 매핑 (모델의 5개 라벨)
+        id2label = {
+            0: "기쁨",
+            1: "당황",
+            2: "분노",
+            3: "불안",
+            4: "슬픔"
+        }
+        
+        scores = {}
+        for idx, prob in enumerate(probs):
+            label = id2label.get(idx, f"label_{idx}")
+            scores[label] = float(prob)
+        
+        return scores
+    except Exception as e:
+        print(f"Transformers 예측 실패: {e}")
+        return {}
 
 
 def _heuristic_predict(text: str) -> Tuple[str, Dict[str, float]]:
@@ -74,376 +142,127 @@ def _heuristic_predict(text: str) -> Tuple[str, Dict[str, float]]:
 
 def predict(text: str) -> Dict:
     if not text or not text.strip():
-        # 빈 입력 → 균등 분포
-        base = 1.0 / len(LABELS)
-        return {"label": "기쁨", "scores": {k: base for k in LABELS}}
+        # 빈 입력 → 균등 분포 (7개 감정)
+        base = 1.0 / 7
+        return {
+            "label": "기쁨", 
+            "scores": {
+                "기쁨": base, "사랑": base, "놀람": base, "두려움": base,
+                "분노": base, "부끄러움": base, "슬픔": base
+            },
+            "model_type": "heuristic"
+        }
 
-    # ML 모델이 있으면 사용
-    if _load_model_if_available():
+    # 1순위: Transformers 모델 사용
+    if _load_transformers_model_if_available():
         try:
-            X = _vectorizer.transform([text])
-
-            if hasattr(_clf, "predict_proba"):
-                proba = _clf.predict_proba(X)[0]
-                class_list = list(_clf.classes_)
-            else:
-                # decision_function softmax 변환
-                import numpy as np
-                decision = _clf.decision_function(X)[0]
-                if not hasattr(decision, "__len__"):
-                    decision = [decision, -decision]
-
-                exps = np.exp(decision - np.max(decision))
-                proba = exps / np.sum(exps)
-                class_list = list(_clf.classes_)
-
-            # 클래스 순서대로 매칭
-            scores = {str(label): float(p) for label, p in zip(class_list, proba)}
-
-            # 모델이 저장한 classes가 있으면 그 순서를 우선 사용
-            if _classes:
-                scores = {str(label): scores.get(str(label), 0.0) for label in _classes}
+            print("[Transformers] 예측 시작")
+            model_scores = _predict_with_transformers(text)
             
-            # ML 모델 라벨 → 7개 감정 시스템 매핑
-            # 모델 라벨: ["분노", "슬픔", "불안", "상처", "당황", "기쁨"]
-            emotion_scores = {
-                "기쁨": 0.0,
-                "사랑": 0.0,
-                "놀람": 0.0,
-                "두려움": 0.0,
-                "분노": 0.0,
-                "부끄러움": 0.0,
-                "슬픔": 0.0
-            }
-            
-            # 직접 매칭되는 감정
-            emotion_scores["기쁨"] = scores.get("기쁨", 0.0)
-            emotion_scores["분노"] = scores.get("분노", 0.0)
-            emotion_scores["슬픔"] = scores.get("슬픔", 0.0)
-            
-            # 매핑이 필요한 감정들
-            # "불안" → "두려움" (하지만 두려움 점수 제한)
-            fear_score = scores.get("불안", 0.0)
-            emotion_scores["두려움"] = fear_score * 0.7  # 두려움 점수를 70%로 축소
-            
-            # "상처" → "슬픔"에 추가 (비율 감소로 슬픔 과다 증가 방지)
-            hurt_score = scores.get("상처", 0.0)
-            emotion_scores["슬픔"] += hurt_score * 0.5  # 0.8 → 0.5로 감소
-            
-            # "당황" → "놀람" (50%) + "부끄러움" (50%)으로 분산
-            panic_score = scores.get("당황", 0.0)
-            emotion_scores["놀람"] += panic_score * 0.5
-            emotion_scores["부끄러움"] += panic_score * 0.5
-            
-            # "기쁨" → "사랑" 매핑 (키워드 기반)
-            # 사랑 관련 키워드가 있으면 "기쁨"의 일부를 "사랑"으로 재분배
-            love_keywords = [
-                "사랑", "좋아", "애정", "그리움", "보고싶", "그리워", "사랑해", "좋아해",
-                "예뻐", "귀여워", "소중", "소중해", "사랑스러워", "고마워", "감사", "고마",
-                "사랑한다", "좋아한다", "그리워해", "보고파", "보고싶어", "좋아하는", "사랑하는",
-                "마음에 들어", "정들었", "애정", "애착", "사랑스럽"
-            ]
-            text_lower = text.lower()
-            love_count = sum(1 for keyword in love_keywords if keyword in text_lower)
-            
-            if love_count > 0 and emotion_scores["기쁨"] > 0:
-                # "기쁨" 점수의 30%를 "사랑"으로 재분배
-                love_portion = emotion_scores["기쁨"] * 0.3
-                emotion_scores["기쁨"] -= love_portion
-                emotion_scores["사랑"] += love_portion
-            
-            # 정규화 (합이 1이 되도록)
-            total = sum(emotion_scores.values())
-            if total > 0:
-                emotion_scores = {k: v / total for k, v in emotion_scores.items()}
-            else:
-                base = 1.0 / len(emotion_scores)
-                emotion_scores = {k: base for k in emotion_scores}
-            
-            # 후처리 규칙: 부정적인 키워드가 있으면 기쁨 점수 감소
-            # 두려움 관련 키워드 (별도로 분리하여 두려움 점수 직접 감소에 사용)
-            fear_keywords = [
-                "불안", "걱정", "두렵", "무서", "초조", "불안해", "걱정돼", "두려워", "무서워",
-                "불안하다", "걱정된다", "두려워한다", "무서워한다", "초조하다"
-            ]
-            
-            # 분노 관련 키워드
-            anger_keywords = [
-                "화나", "짜증", "분노", "열받", "빡치", "화났", "짜증나", "화나서", "짜증나서",
-                "열받아", "빡쳐", "성나", "화났어", "짜증났어"
-            ]
-            
-            # 슬픔 관련 키워드
-            sadness_keywords = [
-                "슬프", "우울", "눈물", "서럽", "속상", "섭섭", "상처", "서운", "슬펐",
-                "우울해", "눈물나", "서러워", "속상해", "슬퍼서"
-            ]
-            
-            # 일반 부정 키워드
-            negative_keywords = [
-                "복잡", "힘들", "어렵", "스트레스", "피곤", "지치", "지침",
-                "실망", "후회", "아쉬", "답답", "막막", "힘없", "무기력", "집중 안", "안 돼",
-                "못하", "실패", "떨어", "망치", "놓칠", "잘못", "문제", "고민",
-                "미안", "죄송", "부담", "압박", "불편", "아픔", "아프", "힘겨", "고생",
-                "번아웃", "지루", "따분", "심심", "외로", "외롭", "쓸쓸", "허탈", "허전",
-                "서러", "서글", "안타깝", "안타까", "한심", "비참", "비관", "절망", "포기",
-                "힘들어", "어려워", "안 되", "안돼", "안되는", "안되는데", "안되네", "안되겠",
-                "못해", "못했", "못하겠", "못하네", "못하는", "못했어", "못했네", "못했는데",
-                "예민", "예민해", "예민해지", "조금씩만", "부족", "부족하"
-            ]
-            
-            # 강한 긍정 키워드
-            strong_positive_keywords = [
-                "행복", "기쁘", "좋았", "좋다", "즐거", "신났", "신나", "만족", "뿌듯",
-                "즐겁", "재미", "재밌", "웃", "웃음", "기분 좋", "기분이 좋",
-                "성취", "성공", "완벽", "완성", "해결", "좋은", "좋아",
-                "가족", "여행", "추억", "즐거운", "기쁜", "행복한", "신나는"
-            ]
-            
-            text_lower = text.lower()
-            
-            # 감정별 키워드 카운트
-            fear_count = sum(1 for keyword in fear_keywords if keyword in text_lower)
-            anger_count = sum(1 for keyword in anger_keywords if keyword in text_lower)
-            sadness_count = sum(1 for keyword in sadness_keywords if keyword in text_lower)
-            negative_count = sum(1 for keyword in negative_keywords if keyword in text_lower) + fear_count + anger_count + sadness_count
-            strong_positive_count = sum(1 for keyword in strong_positive_keywords if keyword in text_lower)
-            
-            # 두려움 키워드가 많으면 두려움 점수를 직접 조정 (다른 감정으로 재분배)
-            if fear_count == 0 and emotion_scores.get("두려움", 0) > 0.25:
-                # 두려움 키워드가 없는데 두려움이 높으면 다른 감정으로 재분배
-                excess_fear = emotion_scores["두려움"] - 0.2
-                if excess_fear > 0:
-                    emotion_scores["두려움"] = 0.2
-                    # 슬픔과 분노에 재분배
-                    emotion_scores["슬픔"] = emotion_scores.get("슬픔", 0) + excess_fear * 0.5
-                    emotion_scores["분노"] = emotion_scores.get("분노", 0) + excess_fear * 0.5
-                    # 재정규화
-                    total = sum(emotion_scores.values())
-                    if total > 0:
-                        emotion_scores = {k: v / total for k, v in emotion_scores.items()}
-            
-            # 분노 키워드가 많으면 분노 점수 증가, 두려움 감소
-            if anger_count >= 2 and emotion_scores.get("두려움", 0) > 0.15:
-                fear_penalty = emotion_scores["두려움"] * 0.5
-                emotion_scores["두려움"] = max(0.05, emotion_scores["두려움"] - fear_penalty)
-                emotion_scores["분노"] = emotion_scores.get("분노", 0) + fear_penalty * 0.8
-                emotion_scores["슬픔"] = emotion_scores.get("슬픔", 0) + fear_penalty * 0.2
-                # 재정규화
-                total = sum(emotion_scores.values())
-                if total > 0:
-                    emotion_scores = {k: v / total for k, v in emotion_scores.items()}
-            
-            # 슬픔 키워드가 많으면 슬픔 점수 증가, 두려움 감소
-            if sadness_count >= 2 and emotion_scores.get("두려움", 0) > 0.15:
-                fear_penalty = emotion_scores["두려움"] * 0.4
-                emotion_scores["두려움"] = max(0.05, emotion_scores["두려움"] - fear_penalty)
-                emotion_scores["슬픔"] = emotion_scores.get("슬픔", 0) + fear_penalty
-                # 재정규화
-                total = sum(emotion_scores.values())
-                if total > 0:
-                    emotion_scores = {k: v / total for k, v in emotion_scores.items()}
-            
-            original_joy = emotion_scores.get("기쁨", 0.0)
-            should_reduce_joy = False
-            reduction_factor = 1.0
-            
-            # 규칙 1: 부정 키워드가 많을 때만 기쁨 감소 (threshold 증가)
-            # 긍정 키워드가 부정 키워드보다 많으면 기쁨 감소 안 함
-            if negative_count >= 3 and strong_positive_count < negative_count:
-                should_reduce_joy = True
-                if negative_count >= 5:
-                    reduction_factor = 0.1 if strong_positive_count < 2 else 0.3
-                elif negative_count >= 4:
-                    reduction_factor = 0.2 if strong_positive_count < 2 else 0.4
-                else:  # negative_count >= 3
-                    reduction_factor = 0.3 if strong_positive_count < 2 else 0.5
-            
-            # 규칙 2: 기쁨 점수가 매우 높을 때만 약간 감소 (규칙 완화)
-            if original_joy >= 0.5 and negative_count >= 3:
-                should_reduce_joy = True
-                reduction_factor = min(reduction_factor, 0.8)  # 약간만 감소
-            
-            # 규칙 3: 기쁨이 가장 높은 감정인데 부정 키워드가 많으면 감소
-            sorted_emotions = sorted(emotion_scores.items(), key=lambda x: x[1], reverse=True)
-            top_emotion = sorted_emotions[0][0] if sorted_emotions else None
-            if top_emotion == "기쁨" and negative_count >= 3 and strong_positive_count < negative_count:
-                should_reduce_joy = True
-                if negative_count >= 4:
-                    reduction_factor = min(reduction_factor, 0.3)
-                else:
-                    reduction_factor = min(reduction_factor, 0.5)
-            
-            # 규칙 4: 긍정 키워드가 많으면 기쁨 증가 (부정 키워드가 있어도 허용)
-            should_boost_joy = False
-            boost_factor = 1.0
-            
-            # 긍정 키워드가 부정 키워드보다 많거나 같으면 기쁨 증가
-            if strong_positive_count >= 1 and strong_positive_count >= negative_count * 0.7:
-                should_boost_joy = True
-                if strong_positive_count >= 4:
-                    boost_factor = 2.5  # 기쁨을 2.5배 증가
-                elif strong_positive_count >= 3:
-                    boost_factor = 2.0
-                elif strong_positive_count >= 2:
-                    boost_factor = 1.7
-                else:
-                    boost_factor = 1.4
+            if model_scores:
+                print(f"[Transformers] 예측 성공: {model_scores}")
+                # 모델 라벨 → 7개 감정 시스템 매핑
+                # 모델 라벨: ["기쁨", "당황", "분노", "불안", "슬픔"]
+                emotion_scores = {
+                    "기쁨": 0.0,
+                    "사랑": 0.0,
+                    "놀람": 0.0,
+                    "두려움": 0.0,
+                    "분노": 0.0,
+                    "부끄러움": 0.0,
+                    "슬픔": 0.0
+                }
                 
-                # 부정 키워드가 있으면 증가 폭을 약간 줄임
-                if negative_count > 0:
-                    boost_factor *= 0.85
-            
-            # 기쁨 점수 조정 적용 (부정 키워드가 있을 때 감소)
-            if should_reduce_joy:
-                new_joy = max(0.02, original_joy * reduction_factor)
-                joy_reduction = original_joy - new_joy
-                emotion_scores["기쁨"] = new_joy
+                # 직접 매칭되는 감정
+                emotion_scores["기쁨"] = model_scores.get("기쁨", 0.0)
+                emotion_scores["분노"] = model_scores.get("분노", 0.0)
+                emotion_scores["슬픔"] = model_scores.get("슬픔", 0.0)
                 
-                # 감소한 기쁨 점수를 다른 감정에 재분배 (부정 감정 우선, 두려움 과도 증가 방지)
-                if joy_reduction > 0:
-                    negative_emotions = ["슬픔", "분노", "놀람"]  # 두려움 제외 (재분배 안 함)
-                    two_fear_emotions = ["부끄러움", "두려움"]  # 두려움 계열은 별도 처리
-                    neg_total = sum(emotion_scores.get(e, 0) for e in negative_emotions)
+                # 매핑이 필요한 감정들
+                # "불안" → "두려움" (100% 그대로 사용)
+                fear_score = model_scores.get("불안", 0.0)
+                emotion_scores["두려움"] = fear_score
+                
+                # "당황" → "놀람" + "부끄러움" (키워드 기반 분산)
+                panic_score = model_scores.get("당황", 0.0)
+                if panic_score > 0:
+                    # 놀람 관련 키워드
+                    surprise_keywords = [
+                        "놀라", "놀랐", "놀람", "충격", "황당", "어이없", "신기", "대박",
+                        "기쁜 소식", "좋은 소식", "반가운", "합격", "성공", "축하",
+                        "실망", "문제 생겼", "사고", "망했", "나쁜 소식", "멘붕", "큰일"
+                    ]
+                    # 부끄러움 관련 키워드
+                    shy_keywords = [
+                        "부끄러", "부끄럽", "창피", "민망", "수치심", "망신", "무안",
+                        "머쓱", "당황", "난처", "설레", "두근", "얼굴 빨개졌",
+                        "좋아하는 사람", "썸", "욕먹었", "오해받", "실수해서", "잘못해서"
+                    ]
                     
-                    # 두려움 재분배 비중을 매우 낮게 설정 (10%)
-                    fear_reduction_ratio = 0.1
+                    text_lower = text.lower()
+                    surprise_count = sum(1 for keyword in surprise_keywords if keyword in text_lower)
+                    shy_count = sum(1 for keyword in shy_keywords if keyword in text_lower)
                     
-                    if neg_total > 0:
-                        # 주로 슬픔, 분노, 놀람에 재분배 (90%)
-                        for neg_emo in negative_emotions:
-                            if neg_emo in emotion_scores:
-                                ratio = emotion_scores[neg_emo] / neg_total
-                                emotion_scores[neg_emo] += joy_reduction * ratio * 0.9
-                        
-                        # 두려움과 부끄러움에는 최소한만 재분배 (10%)
-                        fear_total = sum(emotion_scores.get(e, 0) for e in two_fear_emotions)
-                        if fear_total > 0:
-                            for fear_emo in two_fear_emotions:
-                                if fear_emo in emotion_scores:
-                                    ratio = emotion_scores[fear_emo] / fear_total
-                                    emotion_scores[fear_emo] += joy_reduction * ratio * 0.1
+                    # 키워드 기반 분산
+                    if surprise_count > 0 or shy_count > 0:
+                        total_count = surprise_count + shy_count
+                        if total_count > 0:
+                            # 키워드 비율에 따라 분산
+                            surprise_ratio = surprise_count / total_count
+                            shy_ratio = shy_count / total_count
                         else:
-                            # 두려움 계열이 없으면 균등 분배 (최소한만)
-                            per_fear_emo = joy_reduction * 0.05
-                            for fear_emo in two_fear_emotions:
-                                emotion_scores[fear_emo] = emotion_scores.get(fear_emo, 0) + per_fear_emo
+                            # 키워드가 둘 다 있으면 균등 분산
+                            surprise_ratio = 0.5
+                            shy_ratio = 0.5
                     else:
-                        # 부정 감정이 없으면 슬픔, 분노에 주로 분배 (두려움 최소)
-                        emotion_scores["슬픔"] = emotion_scores.get("슬픔", 0) + joy_reduction * 0.45
-                        emotion_scores["분노"] = emotion_scores.get("분노", 0) + joy_reduction * 0.45
-                        emotion_scores["놀람"] = emotion_scores.get("놀람", 0) + joy_reduction * 0.05
-                        emotion_scores["두려움"] = emotion_scores.get("두려움", 0) + joy_reduction * 0.05
+                        # 키워드가 없으면 기본적으로 놀람에 더 많이 할당 (당황의 본질)
+                        surprise_ratio = 0.7
+                        shy_ratio = 0.3
+                    
+                    emotion_scores["놀람"] += panic_score * surprise_ratio
+                    emotion_scores["부끄러움"] += panic_score * shy_ratio
+                else:
+                    # 당황 점수가 0이면 분산하지 않음
+                    pass
                 
-                # 재정규화
+                # "기쁨" → "사랑" 매핑 (키워드 기반)
+                love_keywords = [
+                    "사랑", "좋아", "애정", "그리움", "보고싶", "그리워", "사랑해", "좋아해",
+                    "예뻐", "귀여워", "소중", "소중해", "사랑스러워", "고마워", "감사", "고마",
+                    "사랑한다", "좋아한다", "그리워해", "보고파", "보고싶어", "좋아하는", "사랑하는",
+                    "마음에 들어", "정들었", "애정", "애착", "사랑스럽"
+                ]
+                text_lower = text.lower()
+                love_count = sum(1 for keyword in love_keywords if keyword in text_lower)
+                
+                if love_count > 0 and emotion_scores["기쁨"] > 0:
+                    # "기쁨" 점수의 30%를 "사랑"으로 재분배
+                    love_portion = emotion_scores["기쁨"] * 0.3
+                    emotion_scores["기쁨"] -= love_portion
+                    emotion_scores["사랑"] += love_portion
+                
+                # 정규화 (합이 1이 되도록)
                 total = sum(emotion_scores.values())
                 if total > 0:
                     emotion_scores = {k: v / total for k, v in emotion_scores.items()}
-            
-            # 슬픔 점수가 과도하게 높으면 (0.4 이상) 기쁨으로 일부 재분배
-            sadness_score = emotion_scores.get("슬픔", 0)
-            if sadness_score > 0.4:
-                # 0.35로 제한
-                max_sadness = 0.35
-                if sadness_score > max_sadness:
-                    excess_sadness = sadness_score - max_sadness
-                    emotion_scores["슬픔"] = max_sadness
-                    
-                    # 초과분의 30%를 기쁨으로 재분배 (기쁨 증가)
-                    joy_boost = excess_sadness * 0.3
-                    emotion_scores["기쁨"] = emotion_scores.get("기쁨", 0) + joy_boost
-                    
-                    # 나머지 70%는 다른 감정에 재분배
-                    other_emotions = ["분노", "놀람", "부끄러움", "두려움"]
-                    other_total = sum(emotion_scores.get(e, 0) for e in other_emotions)
-                    
-                    if other_total > 0:
-                        for emo in other_emotions:
-                            if emo in emotion_scores:
-                                ratio = emotion_scores[emo] / other_total
-                                emotion_scores[emo] += excess_sadness * 0.7 * ratio
-                    else:
-                        # 다른 감정이 없으면 분노와 놀람에 균등 분배
-                        emotion_scores["분노"] = emotion_scores.get("분노", 0) + excess_sadness * 0.35
-                        emotion_scores["놀람"] = emotion_scores.get("놀람", 0) + excess_sadness * 0.35
-                    
-                    # 재정규화
-                    total = sum(emotion_scores.values())
-                    if total > 0:
-                        emotion_scores = {k: v / total for k, v in emotion_scores.items()}
-            
-            # 두려움 점수가 과도하게 높으면 (0.3 이상) 다른 감정으로 재분배 (더 강하게 제한)
-            fear_score = emotion_scores.get("두려움", 0)
-            if fear_score > 0.3:
-                # 0.25로 제한 (더 강하게 제한)
-                max_fear = 0.25
-                if fear_score > max_fear:
-                    excess_fear = fear_score - max_fear
-                    emotion_scores["두려움"] = max_fear
+                else:
+                    base = 1.0 / len(emotion_scores)
+                    emotion_scores = {k: base for k in emotion_scores}
                 
-                    # 초과분의 일부를 기쁨으로 재분배 (10%)
-                    joy_boost = excess_fear * 0.1
-                    emotion_scores["기쁨"] = emotion_scores.get("기쁨", 0) + joy_boost
-                    
-                    # 나머지 90%는 다른 부정 감정에 재분배 (슬픔, 분노 우선)
-                    other_negative = ["슬픔", "분노", "놀람", "부끄러움"]
-                    other_total = sum(emotion_scores.get(e, 0) for e in other_negative)
-                    
-                    if other_total > 0:
-                        for emo in other_negative:
-                            if emo in emotion_scores:
-                                ratio = emotion_scores[emo] / other_total
-                                emotion_scores[emo] += excess_fear * 0.9 * ratio
-                    else:
-                        # 다른 부정 감정이 없으면 슬픔과 분노에 균등 분배
-                        emotion_scores["슬픔"] = emotion_scores.get("슬픔", 0) + excess_fear * 0.45
-                        emotion_scores["분노"] = emotion_scores.get("분노", 0) + excess_fear * 0.45
-                    
-                    # 재정규화
-                    total = sum(emotion_scores.values())
-                    if total > 0:
-                        emotion_scores = {k: v / total for k, v in emotion_scores.items()}
-            
-            # 긍정 키워드가 많을 때 기쁨 증가 및 부정 감정 감소
-            if should_boost_joy:
-                original_joy = emotion_scores.get("기쁨", 0.0)
-                new_joy = min(0.85, original_joy * boost_factor)  # 최대 85%로 제한
-                joy_increase = new_joy - original_joy
-                emotion_scores["기쁨"] = new_joy
+                # 최종 라벨
+                label = max(emotion_scores.items(), key=lambda x: x[1])[0]
                 
-                # 부정 감정 점수 감소
-                negative_emotions = ["슬픔", "두려움", "분노", "부끄러움"]
-                neg_total = sum(emotion_scores.get(e, 0) for e in negative_emotions)
-                
-                if neg_total > 0 and joy_increase > 0:
-                    # 부정 감정에서 감소시킬 양 계산
-                    reduction_amount = min(joy_increase * 0.8, neg_total * 0.6)  # 부정 감정의 최대 60%까지만 감소
-                    
-                    for neg_emo in negative_emotions:
-                        if neg_emo in emotion_scores and emotion_scores[neg_emo] > 0:
-                            ratio = emotion_scores[neg_emo] / neg_total
-                            reduction = reduction_amount * ratio
-                            emotion_scores[neg_emo] = max(0.01, emotion_scores[neg_emo] - reduction)
-                    
-                    # 놀람도 약간 감소 (긍정 일기에서 놀람이 높게 나오는 것 방지)
-                    if emotion_scores.get("놀람", 0) > 0.15:
-                        surprise_reduction = min(emotion_scores["놀람"] * 0.3, 0.1)
-                        emotion_scores["놀람"] = max(0.05, emotion_scores["놀람"] - surprise_reduction)
-                        emotion_scores["기쁨"] += surprise_reduction
-                
-                # 재정규화
-                total = sum(emotion_scores.values())
-                if total > 0:
-                    emotion_scores = {k: v / total for k, v in emotion_scores.items()}
-            
-            # 최종 라벨
-            label = max(emotion_scores.items(), key=lambda x: x[1])[0]
-
-            return {"label": label, "scores": emotion_scores}
-
-        except Exception:
-            pass  # 아래 휴리스틱 fallback
+                print("[Transformers] 최종 결과 반환")
+                return {"label": label, "scores": emotion_scores, "model_type": "transformers"}
+            else:
+                print("[Transformers] 예측 결과가 비어있습니다. fallback으로 진행")
+        except Exception as e:
+            import traceback
+            print(f"[Transformers] 모델 예측 중 오류: {e}")
+            print(f"[Transformers] 상세 에러:")
+            traceback.print_exc()
+            # fallback으로 계속 진행
 
     # fallback
     label, scores = _heuristic_predict(text)
-    return {"label": label, "scores": scores}
+    return {"label": label, "scores": scores, "model_type": "heuristic"}
