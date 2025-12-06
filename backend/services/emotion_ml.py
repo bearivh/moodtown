@@ -47,6 +47,21 @@ def _load_transformers_model_if_available() -> bool:
     
     try:
         print(f"[Transformers] 모델 로드 시작: {TRANSFORMERS_MODEL_PATH}")
+        
+        # 모델 파일 검증 (safetensors 파일 확인)
+        model_files = os.listdir(TRANSFORMERS_MODEL_PATH) if os.path.isdir(TRANSFORMERS_MODEL_PATH) else []
+        safetensors_files = [f for f in model_files if f.endswith('.safetensors')]
+        
+        if safetensors_files:
+            # safetensors 파일 크기 확인 (Git LFS 포인터 파일인지 확인)
+            for sf in safetensors_files:
+                sf_path = os.path.join(TRANSFORMERS_MODEL_PATH, sf)
+                file_size = os.path.getsize(sf_path)
+                print(f"[Transformers] {sf} 파일 크기: {file_size} bytes")
+                # Git LFS 포인터 파일은 보통 100-200 bytes 정도
+                if file_size < 1000:
+                    print(f"⚠️ [Transformers] {sf} 파일이 너무 작습니다. Git LFS 파일이 제대로 다운로드되지 않았을 수 있습니다.")
+        
         _tokenizer = AutoTokenizer.from_pretrained(TRANSFORMERS_MODEL_PATH)
         print("[Transformers] Tokenizer 로드 완료")
         _model = AutoModelForSequenceClassification.from_pretrained(TRANSFORMERS_MODEL_PATH)
@@ -56,7 +71,17 @@ def _load_transformers_model_if_available() -> bool:
         return True
     except Exception as e:
         import traceback
-        print(f"[Transformers] 모델 로드 실패: {e}")
+        error_msg = str(e)
+        print(f"⚠️ [Transformers] 모델 로드 실패: {error_msg}")
+        
+        # 특정 에러에 대한 안내
+        if "header too large" in error_msg.lower() or "safetensor" in error_msg.lower():
+            print("⚠️ [Transformers] 모델 파일이 손상되었거나 Git LFS 파일이 제대로 다운로드되지 않았습니다.")
+            print("⚠️ [Transformers] Railway 배포 환경에서 Git LFS 파일을 가져오려면:")
+            print("   1. Railway에서 Git LFS를 지원하는지 확인")
+            print("   2. 또는 모델 파일을 직접 업로드하는 방법 사용")
+            print("⚠️ [Transformers] Heuristic fallback으로 계속 진행합니다.")
+        
         print(f"[Transformers] 상세 에러:")
         traceback.print_exc()
         return False
@@ -265,4 +290,69 @@ def predict(text: str) -> Dict:
 
     # fallback
     label, scores = _heuristic_predict(text)
-    return {"label": label, "scores": scores, "model_type": "heuristic"}
+    
+    # heuristic 결과도 7개 감정으로 매핑
+    emotion_scores = {
+        "기쁨": 0.0,
+        "사랑": 0.0,
+        "놀람": 0.0,
+        "두려움": 0.0,
+        "분노": 0.0,
+        "부끄러움": 0.0,
+        "슬픔": 0.0
+    }
+    
+    # 직접 매칭
+    emotion_scores["기쁨"] = scores.get("기쁨", 0.0)
+    emotion_scores["분노"] = scores.get("분노", 0.0)
+    emotion_scores["슬픔"] = scores.get("슬픔", 0.0)
+    
+    # "불안" → "두려움"
+    emotion_scores["두려움"] = scores.get("불안", 0.0)
+    
+    # "당황" → "놀람" + "부끄러움" (키워드 기반 분산)
+    panic_score = scores.get("당황", 0.0)
+    if panic_score > 0:
+        text_lower = text.lower()
+        surprise_keywords = ["놀라", "놀랐", "놀람", "충격", "황당", "어이없", "신기", "대박"]
+        shy_keywords = ["부끄러", "부끄럽", "창피", "민망", "수치심", "머쓱", "당황", "난처"]
+        
+        surprise_count = sum(1 for keyword in surprise_keywords if keyword in text_lower)
+        shy_count = sum(1 for keyword in shy_keywords if keyword in text_lower)
+        
+        if surprise_count > 0 or shy_count > 0:
+            total_count = surprise_count + shy_count
+            surprise_ratio = surprise_count / total_count if total_count > 0 else 0.5
+            shy_ratio = shy_count / total_count if total_count > 0 else 0.5
+        else:
+            surprise_ratio = 0.7
+            shy_ratio = 0.3
+        
+        emotion_scores["놀람"] += panic_score * surprise_ratio
+        emotion_scores["부끄러움"] += panic_score * shy_ratio
+    
+    # "상처" → "슬픔" (상처는 슬픔에 포함)
+    emotion_scores["슬픔"] += scores.get("상처", 0.0)
+    
+    # "기쁨" → "사랑" 매핑 (키워드 기반)
+    love_keywords = ["사랑", "좋아", "애정", "그리움", "보고싶", "그리워", "사랑해", "좋아해"]
+    text_lower = text.lower()
+    love_count = sum(1 for keyword in love_keywords if keyword in text_lower)
+    
+    if love_count > 0 and emotion_scores["기쁨"] > 0:
+        love_portion = emotion_scores["기쁨"] * 0.3
+        emotion_scores["기쁨"] -= love_portion
+        emotion_scores["사랑"] += love_portion
+    
+    # 정규화
+    total = sum(emotion_scores.values())
+    if total > 0:
+        emotion_scores = {k: v / total for k, v in emotion_scores.items()}
+    else:
+        base = 1.0 / len(emotion_scores)
+        emotion_scores = {k: base for k in emotion_scores}
+    
+    # 최종 라벨
+    label = max(emotion_scores.items(), key=lambda x: x[1])[0]
+    
+    return {"label": label, "scores": emotion_scores, "model_type": "heuristic"}
