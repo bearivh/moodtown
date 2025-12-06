@@ -53,7 +53,7 @@ def analyze_v2():
         return jsonify({"error": "content 필드가 비어 있습니다."}), 400
     if mode == "ml":
         if ml_predict is None:
-            return jsonify({"error": "ML 분석 모듈이 로드되지 않았습니다."}), 500
+            return jsonify({"error": "딥러닝 분석 모듈이 로드되지 않았습니다."}), 500
         ml_out = ml_predict(text)
         model_type = ml_out.get("model_type", "unknown")
         

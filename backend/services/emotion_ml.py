@@ -15,10 +15,15 @@ except Exception as e:
     traceback.print_exc()
 
 # Transformers 모델 경로
-TRANSFORMERS_MODEL_PATH = os.path.join(
-    os.path.dirname(__file__), 
-    "models", 
-    "moodtown_emotion_model"
+# 환경 변수에서 가져오기 (Railway에서 설정한 Hugging Face Hub 경로)
+# 없으면 로컬 경로 사용 (개발 환경용)
+TRANSFORMERS_MODEL_PATH = os.environ.get(
+    "TRANSFORMERS_MODEL_PATH",
+    os.path.join(
+        os.path.dirname(__file__), 
+        "models", 
+        "moodtown_emotion_model"
+    )
 )
 
 LABELS = ["분노", "슬픔", "불안", "상처", "당황", "기쁨"]  # 휴리스틱 fallback용 (모델 없을 때)
@@ -40,27 +45,40 @@ def _load_transformers_model_if_available() -> bool:
         print("[Transformers] Transformers 라이브러리를 사용할 수 없습니다.")
         return False
     
-    if not os.path.exists(TRANSFORMERS_MODEL_PATH):
+    # Hugging Face Hub 경로인지 확인 (슬래시가 있으면 Hub 경로)
+    is_hub_path = "/" in TRANSFORMERS_MODEL_PATH and not os.path.isabs(TRANSFORMERS_MODEL_PATH) and not os.path.exists(TRANSFORMERS_MODEL_PATH)
+    
+    if not is_hub_path and not os.path.exists(TRANSFORMERS_MODEL_PATH):
         print(f"[Transformers] 모델 경로가 존재하지 않습니다: {TRANSFORMERS_MODEL_PATH}")
         print(f"[Transformers] 절대 경로: {os.path.abspath(TRANSFORMERS_MODEL_PATH)}")
         return False
     
+    if is_hub_path:
+        print(f"[Transformers] Hugging Face Hub에서 모델 로드: {TRANSFORMERS_MODEL_PATH}")
+    else:
+        print(f"[Transformers] 로컬 경로에서 모델 로드: {TRANSFORMERS_MODEL_PATH}")
+    
     try:
         print(f"[Transformers] 모델 로드 시작: {TRANSFORMERS_MODEL_PATH}")
         
-        # 모델 파일 검증 (safetensors 파일 확인)
-        model_files = os.listdir(TRANSFORMERS_MODEL_PATH) if os.path.isdir(TRANSFORMERS_MODEL_PATH) else []
-        safetensors_files = [f for f in model_files if f.endswith('.safetensors')]
+        # Hugging Face Hub 경로인지 확인
+        is_hub_path = "/" in TRANSFORMERS_MODEL_PATH and not os.path.isabs(TRANSFORMERS_MODEL_PATH) and not os.path.exists(TRANSFORMERS_MODEL_PATH)
         
-        if safetensors_files:
-            # safetensors 파일 크기 확인 (Git LFS 포인터 파일인지 확인)
-            for sf in safetensors_files:
-                sf_path = os.path.join(TRANSFORMERS_MODEL_PATH, sf)
-                file_size = os.path.getsize(sf_path)
-                print(f"[Transformers] {sf} 파일 크기: {file_size} bytes")
-                # Git LFS 포인터 파일은 보통 100-200 bytes 정도
-                if file_size < 1000:
-                    print(f"⚠️ [Transformers] {sf} 파일이 너무 작습니다. Git LFS 파일이 제대로 다운로드되지 않았을 수 있습니다.")
+        # 로컬 경로인 경우에만 파일 검증
+        if not is_hub_path and os.path.isdir(TRANSFORMERS_MODEL_PATH):
+            # 모델 파일 검증 (safetensors 파일 확인)
+            model_files = os.listdir(TRANSFORMERS_MODEL_PATH)
+            safetensors_files = [f for f in model_files if f.endswith('.safetensors')]
+            
+            if safetensors_files:
+                # safetensors 파일 크기 확인 (Git LFS 포인터 파일인지 확인)
+                for sf in safetensors_files:
+                    sf_path = os.path.join(TRANSFORMERS_MODEL_PATH, sf)
+                    file_size = os.path.getsize(sf_path)
+                    print(f"[Transformers] {sf} 파일 크기: {file_size} bytes")
+                    # Git LFS 포인터 파일은 보통 100-200 bytes 정도
+                    if file_size < 1000:
+                        print(f"⚠️ [Transformers] {sf} 파일이 너무 작습니다. Git LFS 파일이 제대로 다운로드되지 않았을 수 있습니다.")
         
         _tokenizer = AutoTokenizer.from_pretrained(TRANSFORMERS_MODEL_PATH)
         print("[Transformers] Tokenizer 로드 완료")

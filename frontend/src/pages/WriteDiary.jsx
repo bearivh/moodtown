@@ -716,13 +716,13 @@ function WriteDiary({ onNavigate, selectedDate }) {
                 onClick={handleAnalyzeDemoML}
                 disabled={demoLoading || !content.trim()}
               >
-                {demoLoading ? '분석 중...' : 'ML 모델로 감정 분석하기'}
+                {demoLoading ? '분석 중...' : '딥러닝 모델로 감정 분석하기'}
               </button>
               <div className="analyze-tooltip-container">
                 <span className="analyze-tooltip-icon">?</span>
                 <div className="analyze-tooltip">
-                  <strong>ML 모델로 분석하기란?</strong>
-                  <p>머신러닝으로 학습된 감정 분석 모델이 일기의 감정 통계를 간단히 보여 줘요.</p>
+                  <strong>딥러닝 모델로 분석하기란?</strong>
+                  <p>딥러닝으로 학습된 감정 분석 모델이 일기의 감정 통계를 간단히 보여 줘요.</p>
                   <p>다만 정확도가 낮을 수 있어 참고용으로만 제공돼요.</p>
                 </div>
               </div>
@@ -747,14 +747,14 @@ function WriteDiary({ onNavigate, selectedDate }) {
             </div>
           </div>
           <p style={{ marginTop: 8, fontSize: 12, color: '#666' }}>
-            ML 모델로 분석한 결과는 마을에 반영되지 않아요.
+            딥러닝 모델로 분석한 결과는 마을에 반영되지 않아요.
           </p>
 
           {/* 데모/미리보기 결과 표시 */}
           {demoResult && (
             <div className="demo-result" style={{ marginTop: 12, padding: 12, border: '1px solid #ddd', borderRadius: 8 }}>
               <div style={{ fontWeight: 600, marginBottom: 8 }}>
-                {demoResult.mode === 'ml' ? 'ML 모델 감정 분석 결과' : 'GPT-4o mini 감정 분석 결과'}
+                {demoResult.mode === 'ml' ? '딥러닝 모델 감정 분석 결과' : 'GPT-4o mini 감정 분석 결과'}
               </div>
               {demoResult.mode === 'ml' && (
                 <>
