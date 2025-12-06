@@ -21,7 +21,7 @@
   <text x="620" y="105" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#fff">PostgreSQL</text>
   
   <rect x="730" y="80" width="120" height="40" rx="5" fill="#10a37f" stroke="#4a90e2" stroke-width="2"/>
-  <text x="790" y="105" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#fff">OpenAI GPT-4o</text>
+  <text x="790" y="105" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#fff">OpenAI GPT-4o-mini</text>
   
   <!-- 수평선 -->
   <line x1="110" y1="150" x2="110" y2="600" stroke="#ccc" stroke-width="1" stroke-dasharray="5,5"/>
