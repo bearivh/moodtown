@@ -790,7 +790,7 @@ This project is licensed under the MIT License
 ### AI 모델 / API
 | 리소스 | 설명 | 링크 |
 |--------|------|------|
-| **OpenAI GPT-4o-mini** | 감정 분석, 주민 대화 생성, 편지 생성에 사용된 LLM | - |
+| **OpenAI GPT-4o-mini** | 감정 분석, 주민 대화 생성, 편지 생성에 사용된 LLM | https://platform.openai.com/docs/models/gpt-4o-mini |
 | **KLUE/RoBERTa-base** | 일기 감정 분석을 위한 moodtown-emotion-model 파인튜닝 기반 모델 | (https://huggingface.co/klue/roberta-base) |
 | **jhgan/ko-sbert-sts** | 유사 일기 검색을 위한 사전학습 Sentence Transformer 모델 | https://huggingface.co/jhgan/ko-sbert-sts |
 
