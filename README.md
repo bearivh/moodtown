@@ -356,7 +356,7 @@ moodtown은 단순한 일기 앱을 넘어서, 감정을 시각화하고 게임�
   
   → 사용자의 감정 패턴 파악과 자기 이해를 돕습니다.
 
-> **참고**: 마을 사무소는 무조건 서비스 사용 당시 날짜(오늘)을 기준으로 통계를 제공합니다. 사용자는 과거의 날짜를 자유롭게 선택하여 일기를 작성할 수 있고, 이로 인한 통계 표시 혼란을 방지하기 위함입니다.
+> **참고**: 마을 사무소는 무조건 서비스 사용 당시 날짜(오늘)을 기준으로 통계를 제공합니다. 사용자는 과거의 날짜를 자유롭게 선택하여 마을에 입장해해 일기를 작성할 수 있고, 이로 인한 통계 표시 혼란을 방지하기 위함입니다.
 
 ![office1](screenshots/office1.png)
 ![office2](screenshots/office2.png)
@@ -433,19 +433,21 @@ moodtown은 두 가지 **딥러닝 기반 모델**을 활용하여 감정 분석
 이 모델은 **참고용 감정 분류 결과**를 제공하며, 실제 마을 시스템의 감정 점수는 GPT-4o-mini가 생성한 결과를 사용합니다.
 
 ### 모델 정보
-- **기반 모델**: KLUE-RoBERTa-base  
+- [moodtown-emotion-model](https://huggingface.co/sihyeonmoon/moodtown-emotion-model)
+- **기반 모델**: [KLUE-RoBERTa-base](https://huggingface.co/klue/roberta-base)  
 - **모델 타입**: RobertaForSequenceClassification  
 - **감정 라벨**: 5개 (기쁨, 당황, 분노, 불안, 슬픔)  
 - **입력 길이**: 최대 128 토큰  
 
 ### 데이터셋
-- **출처**: AI Hub 감성 대화 말뭉치  
-- **사용 샘플 수**: 총 51,628개 (HS01 발화)  
+- **출처**: [AI Hub 감성 대화 말뭉치](https://aihub.or.kr/aihubdata/data/view.do?dataSetSn=86)  
+- **사용 샘플 수**: 총 51,628개 (HS01 발화만 사용)
 - **라벨 매핑**:  
   - E10~E19 → 분노  
   - E20~E29 → 슬픔  
   - E30~E39 → 불안  
-  - E40~E59 → 당황/상처 (통합)  
+  - E40~E59 → 당황/상처 (통합)
+    - 원래 데이터는 E40~E49->당황, E50~59->상처로 되어 있으나, 모델의 분류 정확도를 위해 두 라벨을 통합했습니다.
   - E60~E69 → 기쁨  
 
 ### 학습 설정
@@ -464,9 +466,9 @@ moodtown은 두 가지 **딥러닝 기반 모델**을 활용하여 감정 분석
 
 ![Confusion Matrix](screenshots/confusion_matrix.png)
 
-혼동행렬을 통해 확인할 수 있듯이, '당황' 감정이 다른 감정(불안·슬픔 등)과 혼동되는 경우가 특히 많이 발생했습니다.  
+혼동행렬을 통해 확인할 수 있듯이, '당황' 감정이 다른 감정(불안·슬픔·분노 등)과 혼동되는 경우가 특히 많이 발생했습니다.  
 
-이는 데이터셋의 라벨 구조상 '당황'과 '상처'의 경계가 모호하고, 감정 간 표현이 서로 겹치는 특성이 있어 정확도 향상에 구조적인 한계가 있었기 때문입니다.
+이는 데이터셋의 라벨 구조상 부정적인 감정이 세분화되어 있고, 감정 간 표현이 서로 겹치는 특성이 있어 정확도 향상에 구조적인 한계가 있었기 때문입니다.
 
 ### 서비스 라벨 매핑 (5 → 7 감정)
 - 기쁨 → 기쁨  
@@ -490,7 +492,7 @@ moodtown의 “유사한 일기 찾기” 기능은
 추가 학습(fine-tuning)은 진행하지 않았습니다.
 
 ### 모델 정보
-- **기반 모델**: `jhgan/ko-sentence-transformer-multilingual`  
+- **기반 모델**: [jhgan/ko-sbert-sts](https://huggingface.co/jhgan/ko-sbert-sts)  
 - **모델 타입**: Sentence Transformer  
 - **특징**: 한국어 특화, 문맥 의미 기반 임베딩  
 
@@ -510,7 +512,7 @@ moodtown의 “유사한 일기 찾기” 기능은
 | 모델 | 유형 | 학습 여부 | 사용 목적 |
 |------|------|-----------|------------|
 | 감정 분류 모델 | 딥러닝 (Transformer) | ✔ 직접 학습 | 참고용 감정 분류 |
-| Sentence Transformer | 딥러닝 (Pretrained) | ✖ 학습 안 함 | 유사 일기 검색 |
+| Sentence Transformer | 딥러닝 (Pretrained) | ✖ 학습 안 함(사전 학습) | 유사 일기 검색 |
 
 <br>
 
@@ -697,7 +699,7 @@ moodtown/
 │   │   ├── models/                    # 학습된 딥러닝/머신러닝 모델
 │   │   │   └── moodtown_emotion_model/  # Transformers 감정 분석 모델
 │   │   │   └── (Sentence Transformer 모델은 사전 학습된 모델을 사용하므로 별도 모델 파일 없음)
-│   │   └── train_emotion.ipynb        # 감정 분석 모델 학습 스크립트 (Jupyter Notebook)
+│   │   └── train_emotion.ipynb        # 감정 분석 모델 학습 스크립트 (Jupyter Notebook) - Google Colab에서 학습 진행
 │   ├── core/                          # 공통 모듈
 │   │   ├── __init__.py
 │   │   └── common.py                  # 공통 유틸리티
@@ -772,6 +774,7 @@ moodtown/
 # 라이선스
 
 This project is licensed under the MIT License
+자세한 내용은 [`LICENSE`](./LICENSE) 파일을 참고해주세요.
 
 <br>
 
@@ -780,22 +783,23 @@ This project is licensed under the MIT License
 이 프로젝트는 다음 외부 리소스를 기반으로 개발되었습니다:
 
 ### 데이터셋
-| 리소스 | 설명 |
-|--------|------|
-| **AI Hub – 감성대화말뭉치** | 감정 분류 딥러닝 모델 학습에 사용한 한국어 감성 대화 데이터 |
+| 리소스 | 설명 | 링크 |
+|--------|------|------|
+| **AI Hub – 감성 대화 말뭉치** | 감정 분류 딥러닝 모델 학습에 사용한 한국어 감성 대화 데이터 | https://aihub.or.kr/aihubdata/data/view.do?dataSetSn=86 |
 
 ### AI 모델 / API
-| 리소스 | 설명 |
-|--------|------|
-| **OpenAI GPT-4o-mini** | 감정 분석, 주민 대화 생성, 편지 생성에 사용된 LLM |
-| **jhgan/ko-sentence-transformer-multilingual** | 유사 일기 검색을 위한 사전학습 Sentence Transformer 모델 |
+| 리소스 | 설명 | 링크 |
+|--------|------| ------ |
+| **OpenAI GPT-4o-mini** | 감정 분석, 주민 대화 생성, 편지 생성에 사용된 LLM | - |
+| **KLUE/RoBERTa-base** | 일기 감정 분석을 위한 moodtown-emotion-model 파인튜닝 기반 모델 | (https://huggingface.co/klue/roberta-base) |
+| **jhgan/ko-sbert-sts** | 유사 일기 검색을 위한 사전학습 Sentence Transformer 모델 | https://huggingface.co/jhgan/ko-sbert-sts |
 
 ### 참고한 기술 문서 / 자료
-| 리소스 | 설명 |
-|--------|------|
-| **HuggingFace Transformers Docs** | 감정 분류 모델 구현 참고 |
-| **Sentence-Transformers Docs** | 유사도 계산 및 임베딩 적용 참고 |
-| **OpenAI API Reference** | GPT 기반 분석 및 텍스트 생성 기능 구현 참고 |
+| 리소스 | 설명 | 링크 |
+|--------|------|------|
+| **HuggingFace Transformers Docs** | 감정 분류 모델 구현 참고 | https://huggingface.co/docs/transformers/index |
+| **Sentence-Transformers Docs** | 유사도 계산 및 임베딩 적용 참고 | https://sbert.net/ |
+| **OpenAI API Reference** | GPT 기반 분석 및 텍스트 생성 기능 구현 참고 | https://platform.openai.com/docs/api-reference/introduction |
 
 
 <br>
@@ -837,3 +841,25 @@ AI Hub 감성대화말뭉치를 기반으로 학습한 모델은 약 63%의 정�
 - **학습 환경 제약**: Google Colab의 GPU 사용 시간 제한으로 하이퍼파라미터 실험 제한
 
 **개선 방향**: 자체 일기 기반 데이터셋 수집, 도메인 적응 기법 도입, 장시간 학습 및 하이퍼파라미터 실험 수행
+
+---
+
+### 기여 가이드
+
+moodtown은 개인 프로젝트지만, 아이디어 제안이나 버그 제보, 코드 기여는 언제든지 환영합니다.
+
+#### 이슈 제보
+
+- 버그 제보, 개선 제안, 문서 오타 등은 GitHub Issues로 등록해 주세요.
+
+#### Pull Request
+
+간단한 수정(PR)도 환영합니다.
+1. 이 레포지토리를 **fork** 합니다.
+2. 새로운 브랜치를 만듭니다.  
+   예) `feat/add-some-feature`, `fix/bug-...`
+3. 변경사항을 커밋하고, PR을 생성합니다.
+4. PR 설명에 변경 이유와 내용을 간단히 적어 주세요.
+
+
+
