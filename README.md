@@ -102,8 +102,8 @@ moodtown은 단순한 일기 앱을 넘어서, 감정을 시각화하고 게임�
 
 ### 분석 방식 비교
 
-| 유형 | 역할 | 정확도 | 실제 사용 | 속도 |
-|------|------|---------|-----------|------|
+| 유형 | 역할 | 정확도 | 마을 시스템에 반영 여부 | 속도 |
+|------|------|---------|----------------------|------|
 | 딥러닝 모델 | 참고용 감정 분류 | 보통 (63.90%) | ❌ | 빠름 |
 | GPT-4o-mini | 실제 감정 분석 | 높음 | ✔ | 보통 |
 
@@ -789,7 +789,7 @@ This project is licensed under the MIT License
 
 ### AI 모델 / API
 | 리소스 | 설명 | 링크 |
-|--------|------| ------ |
+|--------|------|------|
 | **OpenAI GPT-4o-mini** | 감정 분석, 주민 대화 생성, 편지 생성에 사용된 LLM | - |
 | **KLUE/RoBERTa-base** | 일기 감정 분석을 위한 moodtown-emotion-model 파인튜닝 기반 모델 | (https://huggingface.co/klue/roberta-base) |
 | **jhgan/ko-sbert-sts** | 유사 일기 검색을 위한 사전학습 Sentence Transformer 모델 | https://huggingface.co/jhgan/ko-sbert-sts |
